@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec next typegen && pnpm typecheck
+      - run: pnpm test
+      - name: DB integration (embedded Postgres)
+        run: |
+          pnpm db:start > /tmp/pg.log 2>&1 &
+          for i in $(seq 1 60); do grep -q "ready" /tmp/pg.log && break; sleep 1; done
+          pnpm db:test:prepare
+          pnpm test:integration

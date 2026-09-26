@@ -38,7 +38,7 @@ export async function createNonce(address: string, sql: postgres.Sql = defaultSq
   if (!isSolanaAddress(address)) throw new Error('invalid address');
   const nonce = randomBytes(16).toString('hex');
   const issuedAt = new Date().toISOString();
-  await sql`insert into auth_nonces (nonce, address, chain_family, expires_at) values (${nonce}, ${address}, 'solana', now() + make_interval(mins => ${NONCE_MINUTES}))`;
+  await sql`insert into auth_nonces (nonce, address, chain_family, expires_at, issued_at) values (${nonce}, ${address}, 'solana', now() + make_interval(mins => ${NONCE_MINUTES}), ${issuedAt})`;
   return { nonce, issuedAt, message: signInMessage(address, nonce, issuedAt) };
 }
 
@@ -48,11 +48,19 @@ export function isSolanaAddress(a: string) {
 
 /** LAB-AC-005: a nonce works once and expires after 5 minutes. Returns the user id and sets the session cookie. */
 export async function verifySignIn(p: { address: string; nonce: string; issuedAt: string; signature: string }, sql: postgres.Sql = defaultSql): Promise<string> {
+  const { userId, token } = await signInCore(p, sql);
+  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * SESSION_DAYS });
+  return userId;
+}
+
+/** Cookie-free core (testable): checks the signature, consumes the nonce once, creates/looks up the user, opens a session. */
+export async function signInCore(p: { address: string; nonce: string; issuedAt: string; signature: string }, sql: postgres.Sql = defaultSql): Promise<{ userId: string; token: string }> {
   const message = signInMessage(p.address, p.nonce, p.issuedAt);
   const ok = nacl.sign.detached.verify(new TextEncoder().encode(message), bs58.decode(p.signature), bs58.decode(p.address));
   if (!ok) throw new Error('bad signature');
+  if (Math.abs(Date.now() - Date.parse(p.issuedAt)) > NONCE_MINUTES * 60_000) throw new Error('sign-in message expired');
   const userId = await sql.begin(async (tx) => {
-    const [n] = await tx`update auth_nonces set used_at = now() where nonce = ${p.nonce} and address = ${p.address} and used_at is null and expires_at > now() returning nonce`;
+    const [n] = await tx`update auth_nonces set used_at = now() where nonce = ${p.nonce} and address = ${p.address} and issued_at = ${p.issuedAt} and used_at is null and expires_at > now() returning nonce`;
     if (!n) throw new Error('nonce expired or already used');
     const [w] = await tx<{ user_id: string }[]>`select user_id from wallets where chain_family = 'solana' and address = ${p.address}`;
     if (w) return w.user_id;
@@ -62,8 +70,7 @@ export async function verifySignIn(p: { address: string; nonce: string; issuedAt
   });
   const token = randomBytes(32).toString('base64url');
   await sql`insert into sessions (token_hash, user_id, expires_at) values (${hashToken(token)}, ${userId}, now() + make_interval(days => ${SESSION_DAYS}))`;
-  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * SESSION_DAYS });
-  return userId;
+  return { userId, token };
 }
 
 export async function signOut(sql: postgres.Sql = defaultSql) {

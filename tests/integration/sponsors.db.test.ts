@@ -11,7 +11,7 @@ async function reset() {
 }
 
 async function userWithWallet(address: string) {
-  const [u] = await sql<{ id: string }[]>`insert into users default values returning id`;
+  const [u] = await sql<{ id: string }[]>`insert into users (created_at) values (now() - interval '2 days') returning id`;
   await sql`insert into wallets (user_id, chain_family, address) values (${u.id}, 'solana', ${address})`;
   return u.id;
 }
@@ -68,6 +68,17 @@ run('sponsored cases (LAB R4)', () => {
     const reds = await sql`select status from redemptions`;
     expect(reds.every((r) => r.status === 'pending')).toBe(true); // distribution is a separate, default-off job
     expect(await claim(player, 'daily-checkin')).toMatchObject({ points: 50 });
+  });
+
+  it('accounts younger than 24 h cannot spend points (AC-055)', async () => {
+    const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
+    const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', campaign);
+    await passGates();
+    await reviewCampaign(c.id, 'approve', 'admin', 'ok');
+    const [u] = await sql<{ id: string }[]>`insert into users default values returning id`;
+    await sql`insert into wallets (user_id, chain_family, address) values (${u.id}, 'solana', 'Young1111111111111111111111111111111111111111')`;
+    for (let d = 0; d < 12; d++) await sql`insert into points_ledger (user_id, delta, reason, ref) values (${u.id}, 50, 'task:daily-checkin', ${`d${d}`})`;
+    await expect(openSponsored(u.id)).rejects.toThrow(/24 hours/);
   });
 
   it('the sponsored case is never rolled for free', async () => {

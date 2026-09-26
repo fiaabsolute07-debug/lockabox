@@ -81,7 +81,8 @@ export async function openSponsored(userId: string, sql: postgres.Sql = defaultS
   if (!wallet) throw new SponsorError('needs_wallet', 'sign in with a Solana wallet first');
   const seed = await activeSeed(sql);
   return sql.begin(async (tx) => {
-    await tx`select 1 from users where id = ${userId} for update`;
+    const [age] = await tx<{ young: boolean }[]>`select created_at > now() - interval '24 hours' as young from users where id = ${userId} for update`;
+    if (age?.young) throw new SponsorError('insufficient_points', 'new accounts can spend points after 24 hours'); // LAB-AC-055 anti-sybil
     const { items, rows } = await liveSponsoredItems(tx as unknown as postgres.Sql);
     if (!items.length) throw new SponsorError('empty', 'no sponsored drops are live right now');
     const cost = Math.max(...rows.map((r) => r.cost_points), 500);
