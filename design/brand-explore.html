@@ -1,0 +1,119 @@
+<!doctype html>
+<!-- Lockabox brand exploration, round 1: three colour/type directions sharing one mascot (Locky, a mimic chest). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox brand directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lilita+One&family=Rubik+Mono+One&family=Nunito:wght@600;800;900&display=block" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2400px;background:#1a1a1c;display:flex;gap:24px;padding:24px;font-family:Nunito,sans-serif}
+.dir{position:relative;flex:1;height:1180px;border-radius:28px;overflow:hidden;background:var(--bg);color:var(--text);padding:44px 44px 40px;display:flex;flex-direction:column}
+.dir::before{content:'';position:absolute;inset:0;background:var(--pattern);opacity:var(--pop,.5);pointer-events:none}
+.dir>*{position:relative}
+.tag{font:900 18px Nunito;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.name{font-family:var(--display);font-size:34px;margin-top:6px;letter-spacing:var(--ls,0)}
+.hero{display:flex;align-items:center;gap:8px;margin-top:34px}
+.hero svg{width:250px;height:250px;flex:none;filter:drop-shadow(0 10px 0 rgba(0,0,0,.25))}
+.bubble{position:relative;background:#fff;color:#111;border:5px solid #111;border-radius:22px;padding:12px 18px;font:900 26px Nunito;transform:rotate(-4deg);margin-top:-120px}
+.bubble::after{content:'';position:absolute;left:-22px;bottom:14px;border:12px solid transparent;border-right:18px solid #111}
+.word{font-family:var(--display);font-size:var(--wsize,86px);line-height:.95;margin-top:18px;color:var(--wordc);-webkit-text-stroke:var(--wstroke,0) #111;paint-order:stroke fill;letter-spacing:var(--ls,0)}
+.tagline{font:800 30px/1.2 Nunito;margin-top:14px}
+.tagline b{color:var(--hi)}
+.ui{margin-top:30px;display:flex;gap:16px;align-items:stretch}
+.roll{flex:1.1;border:5px solid #111;border-radius:22px;background:var(--btn);color:var(--btntext);font-family:var(--display);font-size:40px;display:grid;place-items:center;box-shadow:0 8px 0 #111;letter-spacing:var(--ls,0);padding:18px 0}
+.roll small{display:block;font:900 16px Nunito;letter-spacing:.12em;opacity:.8;margin-top:2px;text-align:center}
+.card{flex:1;border:5px solid #111;border-radius:22px;background:var(--card);color:var(--cardtext);padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 8px 0 #111;transform:rotate(3deg)}
+.av{width:78px;height:78px;border-radius:50%;border:5px solid #111;background:var(--coin);display:grid;place-items:center;font-family:var(--display);font-size:34px;color:#111}
+.card b{font-family:var(--display);font-size:26px;letter-spacing:var(--ls,0)}
+.chip{font:900 14px Nunito;letter-spacing:.1em;padding:5px 12px;border-radius:999px;border:3px solid #111;background:var(--hi);color:#111}
+.sw{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.sw div{height:92px;border-radius:16px;border:4px solid #111;display:flex;align-items:flex-end;padding:8px;font:900 13px Nunito;color:#111}
+.sw div.d{color:#fff}
+.fonts{margin-top:18px;display:flex;justify-content:space-between;font:800 18px Nunito;opacity:.85}
+.fonts span:first-child{font-family:var(--display);font-weight:400;letter-spacing:var(--ls,0)}
+/* A: Neon Gremlin */
+.a{--bg:#1C0B3E;--text:#F6EEFF;--pattern:radial-gradient(circle at 20% 15%,rgba(255,79,216,.35),transparent 40%),radial-gradient(circle at 85% 70%,rgba(245,255,61,.18),transparent 40%),radial-gradient(rgba(255,255,255,.08) 2px,transparent 2.5px) 0 0/26px 26px;--display:'Bungee',sans-serif;--main:#8B5CF6;--band:#F5FF3D;--mouth:#2A0A4A;--tongue:#FF4FD8;--hi:#F5FF3D;--wordc:#FF4FD8;--wstroke:10px;--btn:#F5FF3D;--btntext:#111;--card:#2C1463;--cardtext:#F6EEFF;--coin:#FF4FD8}
+/* B: Gold Rush (light) */
+.b{--bg:#FFF1CC;--text:#1B1206;--pattern:repeating-linear-gradient(-45deg,rgba(255,122,0,.10) 0 18px,transparent 18px 36px);--pop:1;--display:'Lilita One',sans-serif;--main:#FF7A00;--band:#FFC400;--mouth:#3A1A00;--tongue:#FF4F7A;--hi:#FFC400;--wordc:#FF7A00;--wstroke:10px;--wsize:96px;--btn:#111;--btntext:#FFC400;--card:#fff;--cardtext:#1B1206;--coin:#FFC400}
+/* C: Slime */
+.c{--bg:#0B140D;--text:#E9FFF0;--pattern:radial-gradient(circle at 80% 10%,rgba(57,255,136,.25),transparent 45%),radial-gradient(circle at 10% 90%,rgba(255,107,181,.18),transparent 40%);--pop:1;--display:'Rubik Mono One',sans-serif;--ls:-.02em;--main:#39FF88;--band:#FF6BB5;--mouth:#062B14;--tongue:#FF6BB5;--hi:#39FF88;--wordc:#39FF88;--wstroke:0px;--wsize:70px;--btn:#39FF88;--btntext:#062B14;--card:#12261A;--cardtext:#E9FFF0;--coin:#FF6BB5}
+</style>
+</head>
+<body>
+
+<template id="locky">
+<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- coins popping out -->
+  <g stroke="#111" stroke-width="5">
+    <circle cx="70" cy="34" r="15" fill="var(--band)"/><circle cx="150" cy="22" r="12" fill="var(--band)"/><circle cx="118" cy="44" r="10" fill="var(--band)"/>
+  </g>
+  <g font-family="Nunito" font-weight="900" font-size="16" text-anchor="middle" fill="#111"><text x="70" y="40">$</text><text x="150" y="28">$</text></g>
+  <!-- mouth (inside) -->
+  <path d="M34 112 Q110 70 188 104 L186 124 L36 124 Z" fill="var(--mouth)" stroke="#111" stroke-width="7" stroke-linejoin="round"/>
+  <!-- eyes peeking -->
+  <circle cx="86" cy="104" r="15" fill="#fff" stroke="#111" stroke-width="5"/><circle cx="136" cy="100" r="17" fill="#fff" stroke="#111" stroke-width="5"/>
+  <circle cx="90" cy="106" r="6.5" fill="#111"/><circle cx="141" cy="102" r="7.5" fill="#111"/>
+  <circle cx="92" cy="103" r="2" fill="#fff"/><circle cx="143" cy="99" r="2.4" fill="#fff"/>
+  <!-- teeth -->
+  <path d="M52 124 l8 -12 l8 12 M154 124 l8 -12 l8 12" fill="#fff" stroke="#111" stroke-width="4" stroke-linejoin="round"/>
+  <!-- lid, tilted open -->
+  <g transform="rotate(-11 30 110)">
+    <rect x="24" y="66" width="164" height="44" rx="16" fill="var(--main)" stroke="#111" stroke-width="7"/>
+    <rect x="58" y="66" width="16" height="44" fill="var(--band)" stroke="#111" stroke-width="5"/>
+    <rect x="138" y="66" width="16" height="44" fill="var(--band)" stroke="#111" stroke-width="5"/>
+    <path d="M40 80 q20 -8 40 -6" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+  </g>
+  <!-- body -->
+  <rect x="30" y="120" width="160" height="80" rx="16" fill="var(--main)" stroke="#111" stroke-width="7"/>
+  <rect x="62" y="120" width="16" height="80" fill="var(--band)" stroke="#111" stroke-width="5"/>
+  <rect x="142" y="120" width="16" height="80" fill="var(--band)" stroke="#111" stroke-width="5"/>
+  <!-- tongue -->
+  <path d="M92 120 q0 34 18 34 q18 0 18 -34" fill="var(--tongue)" stroke="#111" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M110 126 v18" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+  <!-- keyhole -->
+  <circle cx="110" cy="176" r="8" fill="#111"/><path d="M106 178 h8 l3 16 h-14 z" fill="#111"/>
+</svg>
+</template>
+
+<section class="dir a">
+  <div class="tag">Direction A</div><div class="name">Neon Gremlin</div>
+  <div class="hero"><span class="m"></span><div class="bubble">gm degen</div></div>
+  <div class="word">lockabox</div>
+  <div class="tagline">Roll a box. <b>Get a coin.</b></div>
+  <div class="ui"><div class="roll"><div>ROLL<small>FREE · 50 LEFT</small></div></div>
+    <div class="card"><div class="av">G</div><b>$GLORP</b><span class="chip">MID TIER</span></div></div>
+  <div class="sw"><div class="d" style="background:#1C0B3E">#1C0B3E</div><div style="background:#8B5CF6">#8B5CF6</div><div style="background:#FF4FD8">#FF4FD8</div><div style="background:#F5FF3D">#F5FF3D</div><div style="background:#F6EEFF">#F6EEFF</div></div>
+  <div class="fonts"><span>Bungee</span><span>Nunito 800/900</span></div>
+</section>
+
+<section class="dir b">
+  <div class="tag">Direction B</div><div class="name">Gold Rush</div>
+  <div class="hero"><span class="m"></span><div class="bubble">open me ser</div></div>
+  <div class="word">lockabox</div>
+  <div class="tagline">Roll a box. <b style="color:#FF7A00">Get a coin.</b></div>
+  <div class="ui"><div class="roll"><div>ROLL<small>FREE · 50 LEFT</small></div></div>
+    <div class="card"><div class="av">G</div><b>$GLORP</b><span class="chip">MID TIER</span></div></div>
+  <div class="sw"><div style="background:#FFF1CC">#FFF1CC</div><div style="background:#FF7A00">#FF7A00</div><div style="background:#FFC400">#FFC400</div><div style="background:#FF4F7A">#FF4F7A</div><div class="d" style="background:#1B1206">#1B1206</div></div>
+  <div class="fonts"><span>Lilita One</span><span>Nunito 800/900</span></div>
+</section>
+
+<section class="dir c">
+  <div class="tag">Direction C</div><div class="name">Slime</div>
+  <div class="hero"><span class="m"></span><div class="bubble">wen pull?</div></div>
+  <div class="word">lockabox</div>
+  <div class="tagline">Roll a box. <b>Get a coin.</b></div>
+  <div class="ui"><div class="roll"><div>ROLL<small>FREE · 50 LEFT</small></div></div>
+    <div class="card"><div class="av">G</div><b>$GLORP</b><span class="chip">MID TIER</span></div></div>
+  <div class="sw"><div class="d" style="background:#0B140D">#0B140D</div><div style="background:#39FF88">#39FF88</div><div style="background:#FF6BB5">#FF6BB5</div><div class="d" style="background:#12261A">#12261A</div><div style="background:#E9FFF0">#E9FFF0</div></div>
+  <div class="fonts"><span>Rubik Mono One</span><span>Nunito 800/900</span></div>
+</section>
+
+<script>
+const tpl = document.getElementById('locky').innerHTML;
+document.querySelectorAll('.m').forEach((m) => { m.outerHTML = tpl; });
+</script>
+</body>
+</html>

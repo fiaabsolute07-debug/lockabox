@@ -1,0 +1,52 @@
+{
+  "name": "lockabox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 4310",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 4310",
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental false",
+    "lint": "eslint .",
+    "test": "vitest run tests/unit",
+    "test:integration": "RUN_DB_INTEGRATION=1 vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "db:start": "tsx scripts/postgres.ts start",
+    "db:stop": "tsx scripts/postgres.ts stop",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:test:prepare": "tsx scripts/test-db.ts",
+    "worker": "tsx worker/index.ts",
+    "worker:once": "tsx worker/index.ts --once"
+  },
+  "dependencies": {
+    "@solana/wallet-adapter-base": "^0.9.28",
+    "@solana/wallet-adapter-react": "^0.15.40",
+    "@solana/wallet-adapter-react-ui": "^0.9.40",
+    "@solana/web3.js": "^1.99.0",
+    "bs58": "^6.0.0",
+    "next": "16.3.5",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tweetnacl": "^1.0.3",
+    "viem": "^2.56.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2"
+  }
+}

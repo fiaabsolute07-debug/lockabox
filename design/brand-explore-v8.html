@@ -1,0 +1,176 @@
+<!doctype html>
+<!-- Lockabox round 8: minimal, DeFi-summer-2020 feel (one centred card, soft radial wash, pill nav, big rounded buttons)
+     with a few modern touches (hand-drawn Locky, mono numbers, simulated-tx check, proof link). Unlimited rolls. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox v8 (2020 minimal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Caveat:wght@700&display=block" rel="stylesheet">
+<style>
+:root{--acc:#FF5B1F;--ink:#141416;--mut:#86868F;--line:#EDEDF0;--bg2:#F6F6F8;--ok:#1FA968}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2400px;background:#E9E9EC;padding:28px;font-family:Inter,sans-serif;color:var(--ink);display:grid;grid-template-columns:1fr 470px;gap:28px;align-items:start}
+.mono{font-family:'JetBrains Mono',monospace}
+.hand{font-family:Caveat,cursive;font-weight:700}
+.page{position:relative;height:1130px;border-radius:24px;overflow:hidden;background:
+  radial-gradient(1100px 700px at 50% 0%,rgba(255,91,31,.16),transparent 60%),
+  radial-gradient(800px 500px at 90% 100%,rgba(255,91,31,.07),transparent 60%),#FBFAF9}
+.ann{height:40px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;color:var(--mut);border-bottom:1px solid rgba(0,0,0,.05);background:rgba(255,255,255,.5)}
+.ann b{color:var(--ink);font-weight:600}
+.ann i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+header{display:flex;align-items:center;padding:22px 32px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{width:40px;height:40px}
+.logo b{font-weight:700;font-size:24px;letter-spacing:-.04em}
+.logo b i{font-style:normal;color:var(--acc)}
+.navpill{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:4px;background:#fff;border-radius:16px;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.navpill span{padding:10px 18px;border-radius:12px;font-weight:500;font-size:16px;color:var(--mut)}
+.navpill .on{background:var(--bg2);color:var(--ink);font-weight:600}
+.hr{margin-left:auto;display:flex;gap:8px}
+.pill{height:42px;display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:14px;background:#fff;font-weight:600;font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.pill.pts{color:var(--acc);background:#FFEFE8}
+.pill .av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#9945FF,#14F195)}
+/* the card */
+.wrap{display:flex;justify-content:center;margin-top:56px;position:relative}
+.card{position:relative;width:520px;background:#fff;border-radius:28px;padding:18px;box-shadow:0 0 1px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.05),0 24px 48px rgba(0,0,0,.04)}
+.ch{display:flex;justify-content:space-between;align-items:center;padding:4px 8px 14px}
+.ch b{font-weight:600;font-size:18px}
+.ch span{font-size:20px;color:var(--mut)}
+.sel{display:flex;gap:8px}
+.dd{flex:1;display:flex;justify-content:space-between;align-items:center;height:52px;padding:0 16px;border-radius:18px;background:var(--bg2);font-weight:600;font-size:16px}
+.dd small{display:block;font-size:12px;color:var(--mut);font-weight:500}
+.dd i{font-style:normal;color:var(--mut)}
+.dd .cico{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#9945FF,#14F195);margin-right:8px;display:inline-block;vertical-align:-5px}
+.win{margin-top:10px;position:relative;height:164px;border-radius:20px;background:var(--bg2);overflow:hidden}
+.win::before,.win::after{content:'';position:absolute;top:0;bottom:0;width:90px;z-index:2}
+.win::before{left:0;background:linear-gradient(90deg,var(--bg2),transparent)}
+.win::after{right:0;background:linear-gradient(-90deg,var(--bg2),transparent)}
+.strip{position:absolute;top:18px;left:0;display:flex;gap:10px}
+.it{flex:none;width:112px;height:128px;border-radius:16px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:14px}
+.it .co{width:48px;height:48px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;font-weight:700;font-size:17px}
+.it.w{outline:2px solid var(--acc);box-shadow:0 8px 20px rgba(255,91,31,.18)}
+.it.w .co{background:var(--acc);color:#fff}
+.mk{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink);z-index:3;opacity:.85}
+.res{margin-top:10px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--line)}
+.res .co{width:40px;height:40px;border-radius:50%;background:var(--acc);display:grid;place-items:center;color:#fff;font-weight:700}
+.res b{font-weight:700;font-size:18px}
+.res small{display:block;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.res .tier{margin-left:auto;font:700 11px 'JetBrains Mono';letter-spacing:.08em;padding:5px 9px;border-radius:8px;background:#F1EAFE;color:#6D3BE8}
+.box{margin-top:8px;border-radius:20px;background:var(--bg2);padding:14px 16px}
+.box .l{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);font-weight:500}
+.box .v{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.box .v b{font:500 30px 'JetBrains Mono';letter-spacing:-.02em}
+.tok{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 6px;border-radius:14px;background:#fff;font-weight:600;font-size:16px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.tok i{width:22px;height:22px;border-radius:50%}
+.info{display:flex;justify-content:space-between;padding:10px 8px 4px;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.info .ok{color:var(--ok)}
+.roll{margin-top:10px;height:72px;border-radius:20px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;font-weight:700;font-size:24px;position:relative}
+.roll kbd{position:absolute;right:18px;font:700 11px 'JetBrains Mono';padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.14)}
+.buy{margin-top:8px;height:56px;border-radius:18px;background:#FFEFE8;color:var(--acc);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:18px}
+.foot{display:flex;justify-content:center;gap:14px;padding:12px 0 2px;font-size:12px;color:var(--mut)}
+.foot b{color:var(--ink);font-weight:600}
+.locky{position:absolute;right:-64px;top:-54px;width:120px;height:120px;transform:rotate(10deg)}
+.note{position:absolute;right:-300px;top:78px;color:var(--acc);font-size:30px;transform:rotate(-4deg);white-space:nowrap}
+.note2{position:absolute;left:-250px;top:420px;color:var(--mut);font-size:28px;transform:rotate(-3deg);white-space:nowrap}
+/* live */
+.live{width:520px;margin:18px auto 0;font:500 13px 'JetBrains Mono';color:var(--mut)}
+.live h4{font:600 13px Inter;color:var(--ink);display:flex;align-items:center;gap:8px;margin:0 6px 6px}
+.live h4 i{width:7px;height:7px;border-radius:50%;background:#FF3B3B}
+.lv{display:flex;justify-content:space-between;padding:8px 6px;border-bottom:1px solid rgba(0,0,0,.05)}
+.lv b{color:var(--ink);font-family:Inter;font-weight:600}
+.lv .g{color:#C48600;font-weight:700}
+.lv .up{color:var(--ok)}
+/* mobile */
+.phone{border-radius:44px;background:#FBFAF9;padding:16px;background:radial-gradient(500px 300px at 50% 0%,rgba(255,91,31,.16),transparent 60%),#FBFAF9;box-shadow:0 0 0 10px #141416}
+.phone .card{width:auto;padding:14px;border-radius:24px}
+.phone .it{width:96px;height:116px}
+.phone .win{height:150px}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:4px 4px 14px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <symbol id="locky" viewBox="0 0 120 124">
+    <g filter="url(#rough)" stroke="#141416" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#fff"/>
+      <path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/>
+      <path d="M44 108 v9 M76 108 v9" fill="none"/>
+    </g>
+    <g filter="url(#rough)" fill="#141416"><circle cx="46" cy="66" r="5"/><circle cx="74" cy="66" r="5"/><circle cx="60" cy="84" r="5"/><path d="M57 86 h6 l2 10 h-10 z"/></g>
+  </symbol>
+</defs></svg>
+
+<section class="page">
+  <div class="ann"><i></i><b>0x31…9fe2</b> just pulled <b>$MOOLA</b> · Top tier · +412% since pull <span>· proof ↗</span></div>
+  <header>
+    <div class="logo"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div>
+    <div class="navpill"><span class="on">Roll</span><span>Earn</span><span>Leaderboard</span><span>Verify</span></div>
+    <div class="hr"><div class="pill pts">1,240 pts</div><div class="pill"><span class="av"></span><span class="mono">7xKq…3fPa</span></div></div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <svg class="locky"><use href="#locky"/></svg>
+      <div class="note hand">roll as much as you want ↙</div>
+      <div class="note2 hand">free. every time. →</div>
+      <div class="ch"><b>Roll</b><span>⚙</span></div>
+      <div class="sel">
+        <div class="dd"><div><small>Case</small>Trending</div><i>▾</i></div>
+        <div class="dd"><div><small>Chain</small><span class="cico"></span>Solana</div><i>▾</i></div>
+      </div>
+      <div class="win"><div class="mk"></div><div class="strip" id="s1">
+        <div class="it"><div class="co">B</div>$BONKLE</div><div class="it"><div class="co">P</div>$PUDDLE</div><div class="it"><div class="co">N</div>$NUBBY</div>
+        <div class="it w"><div class="co">G</div>$GLORP</div>
+        <div class="it"><div class="co">Z</div>$ZORT</div><div class="it"><div class="co">W</div>$WEEBO</div><div class="it"><div class="co">T</div>$TOAD</div>
+      </div></div>
+      <div class="res"><div class="co">G</div><div><b>$GLORP</b><small>mcap $4.8M · liq $412K · 2d old · So1a…9xGl ⧉</small></div><span class="tier">MID</span></div>
+      <div class="box"><div class="l"><span>Buy with</span><span>Balance: 3.21</span></div><div class="v"><b>0.05</b><span class="tok"><i style="background:linear-gradient(135deg,#9945FF,#14F195)"></i>SOL ▾</span></div></div>
+      <div class="box"><div class="l"><span>You get (at least)</span><span>via Jupiter</span></div><div class="v"><b>1,893,700</b><span class="tok"><i style="background:var(--acc)"></i>GLORP</span></div></div>
+      <div class="info"><span class="ok">✓ simulated</span><span>fee 0 · slippage 3%</span><span>proof #42 ↗</span></div>
+      <div class="roll">Roll <kbd>SPACE</kbd></div>
+      <div class="buy">Buy $GLORP</div>
+      <div class="foot"><span><b>Non-custodial</b></span>·<span><b>Provably fair</b></span>·<span><b>0% fee</b></span>·<span>not advice</span></div>
+    </div>
+  </div>
+
+  <div class="live">
+    <h4><i></i>Live</h4>
+    <div class="lv"><span>4hQp…2mWz bought <b>$ZORT</b> · 12 SOL 🐋</span><span>12s</span></div>
+    <div class="lv"><span>0x31…9fe2 pulled <b>$MOOLA</b> · <span class="g">TOP</span> · <span class="up">+412%</span></span><span>2m</span></div>
+    <div class="lv"><span>0x9a…41c0 bought <b>$PUDDLE</b> · 0.01 ETH</span><span>41s</span></div>
+  </div>
+</section>
+
+<section class="phone">
+  <div class="mh"><div class="logo"><svg style="width:32px;height:32px"><use href="#locky"/></svg><b style="font-size:20px">lockabox<i>.</i></b></div><div class="pill" style="height:36px"><span class="av"></span><span class="mono" style="font-size:13px">7xKq…3fPa</span></div></div>
+  <div class="card">
+    <div class="sel"><div class="dd" style="height:46px"><div><small>Case</small>Trending</div><i>▾</i></div><div class="dd" style="height:46px"><div><small>Chain</small>Solana</div><i>▾</i></div></div>
+    <div class="win"><div class="mk"></div><div class="strip" id="s2" style="top:17px">
+      <div class="it"><div class="co">P</div>$PUDDLE</div><div class="it"><div class="co">N</div>$NUBBY</div><div class="it w"><div class="co">G</div>$GLORP</div><div class="it"><div class="co">Z</div>$ZORT</div><div class="it"><div class="co">W</div>$WEEBO</div>
+    </div></div>
+    <div class="res"><div class="co">G</div><div><b>$GLORP</b><small>mcap $4.8M · liq $412K</small></div><span class="tier">MID</span></div>
+    <div class="box"><div class="l"><span>Buy with</span><span>3.21</span></div><div class="v"><b style="font-size:24px">0.05</b><span class="tok"><i style="background:linear-gradient(135deg,#9945FF,#14F195)"></i>SOL</span></div></div>
+    <div class="info"><span class="ok">✓ simulated</span><span>fee 0</span><span>proof ↗</span></div>
+    <div class="roll" style="height:64px">Roll</div>
+    <div class="buy">Buy $GLORP</div>
+  </div>
+  <div class="live" style="width:auto">
+    <h4><i></i>Live</h4>
+    <div class="lv"><span>4hQp… bought <b>$ZORT</b> 🐋</span><span>12s</span></div>
+    <div class="lv"><span>0x31… pulled <b>$MOOLA</b> <span class="g">TOP</span></span><span>2m</span></div>
+  </div>
+</section>
+
+<script>
+document.fonts.ready.then(() => {
+  for (const id of ['s1', 's2']) {
+    const st = document.getElementById(id), r = st.parentElement, w = st.querySelector('.it.w');
+    st.style.transform = `translateX(${r.clientWidth / 2 - (w.offsetLeft + w.offsetWidth / 2)}px)`;
+  }
+});
+</script>
+</body>
+</html>

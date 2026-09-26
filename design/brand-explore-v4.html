@@ -1,0 +1,212 @@
+<!doctype html>
+<!-- Lockabox brand exploration, round 4: v3 (black/white + one colour, hand-drawn, Locky) pushed toward a modern web3 app:
+     dark-first, mono numbers/addresses, chain chips, wallet pill, glass panels, dot grid. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox brand v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Caveat:wght@600;700&display=block" rel="stylesheet">
+<style>
+:root{--acc:#FF5B1F}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2400px;background:#050506;padding:28px;font-family:'Inter Tight',sans-serif;display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:auto auto;gap:24px}
+.mono{font-family:'JetBrains Mono',monospace}
+.hand{font-family:Caveat,cursive;font-weight:700}
+/* ---------- dark app (primary) ---------- */
+.dark{--bg:#0A0A0B;--panel:rgba(22,22,25,.72);--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--ink:#F4F4F5;--mut:#8B8B94;--stroke:#F4F4F5;--fill:#161619}
+.light{--bg:#FFFFFF;--panel:#FFFFFF;--line:#E7E7EA;--line2:#D6D6DB;--ink:#0E0E10;--mut:#6B6B73;--stroke:#0E0E10;--fill:#FFFFFF}
+.app{grid-row:span 2;position:relative;border-radius:26px;overflow:hidden;background:var(--bg);color:var(--ink);border:1px solid rgba(255,255,255,.06)}
+.app::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(900px 520px at 72% 30%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 62%),
+  radial-gradient(rgba(255,255,255,.07) 1.2px,transparent 1.6px) 0 0/26px 26px;pointer-events:none}
+.app>*{position:relative}
+header{height:84px;display:flex;align-items:center;gap:34px;padding:0 36px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:46px;height:46px}
+.logo b{font-weight:800;font-size:30px;letter-spacing:-.045em}
+.logo b i{font-style:normal;color:var(--acc)}
+nav{display:flex;gap:26px;font-weight:600;font-size:17px;color:var(--mut)}
+nav .on{color:var(--ink)}
+.hr{margin-left:auto;display:flex;gap:12px;align-items:center}
+.pts{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid var(--line2);border-radius:999px;font:700 15px 'JetBrains Mono'}
+.pts i{width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.wal{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line2);font:700 15px 'JetBrains Mono'}
+.wal span{width:28px;height:28px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#9945FF)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:26px;padding:34px 36px 36px}
+.h1{font-weight:800;font-size:76px;line-height:.98;letter-spacing:-.05em}
+.h1 .u{position:relative;display:inline-block}
+.h1 .u svg{position:absolute;left:-2%;bottom:-14px;width:104%;height:26px}
+.sub{margin-top:18px;font-size:22px;color:var(--mut);font-weight:500}
+.chains{display:flex;gap:8px;margin-top:26px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;border:1px solid var(--line2);font-weight:600;font-size:15px;color:var(--mut);background:rgba(255,255,255,.02)}
+.chip i{width:14px;height:14px;border-radius:50%}
+.chip.on{color:var(--ink);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.roller{margin-top:26px;position:relative;border:1px solid var(--line);border-radius:20px;background:var(--panel);backdrop-filter:blur(12px);padding:22px 0;overflow:hidden}
+.roller::before,.roller::after{content:'';position:absolute;top:0;bottom:0;width:120px;z-index:2}
+.roller::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.roller::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+.strip{display:flex;gap:12px;padding:0 20px}
+.it{flex:none;width:150px;height:176px;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(255,255,255,.02)}
+.it .co{width:58px;height:58px;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;font-weight:800;font-size:20px}
+.it b{font-weight:700;font-size:16px}
+.it small{font:500 12px 'JetBrains Mono';color:var(--mut)}
+.it.win{border:1.5px solid var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent);box-shadow:0 0 40px color-mix(in srgb,var(--acc) 25%,transparent)}
+.it.win .co{background:var(--acc);border-color:var(--acc);color:#fff}
+.marker{position:absolute;left:50%;top:10px;bottom:10px;width:2px;background:var(--acc);box-shadow:0 0 12px var(--acc);z-index:3}
+.row{display:flex;gap:12px;margin-top:22px;align-items:center}
+.btn{height:62px;padding:0 34px;border-radius:14px;background:var(--ink);color:var(--bg);font-weight:700;font-size:20px;display:flex;align-items:center;gap:12px}
+.btn kbd{font:700 12px 'JetBrains Mono';padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.12)}
+.ghost{height:62px;padding:0 22px;border-radius:14px;border:1px solid var(--line2);display:flex;align-items:center;font-weight:600;color:var(--mut);font-size:16px}
+.fair{margin-left:auto;font:500 13px 'JetBrains Mono';color:var(--mut);text-align:right;line-height:1.6}
+.fair b{color:#4ADE80;font-weight:500}
+/* result + swap */
+.res{border:1px solid var(--line);border-radius:22px;background:var(--panel);backdrop-filter:blur(12px);padding:24px;display:flex;flex-direction:column;gap:16px}
+.rt{display:flex;align-items:center;gap:14px}
+.rt .co{width:60px;height:60px;border-radius:50%;background:var(--acc);display:grid;place-items:center;font-weight:800;font-size:22px;color:#fff}
+.rt small{font:700 12px 'JetBrains Mono';letter-spacing:.12em;color:var(--mut)}
+.rt h3{font-weight:800;font-size:32px;letter-spacing:-.03em}
+.addr{font:500 13px 'JetBrains Mono';color:var(--mut)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv div{border:1px solid var(--line);border-radius:12px;padding:12px}
+.kv span{display:block;font-size:13px;color:var(--mut);font-weight:600}
+.kv b{font:700 18px 'JetBrains Mono'}
+.kv b.up{color:#4ADE80}
+.swap{border:1px solid var(--line2);border-radius:16px;padding:14px}
+.swap .l{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);font-weight:600}
+.swap .v{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.swap .v b{font:700 28px 'JetBrains Mono'}
+.swap .v span{display:flex;align-items:center;gap:8px;font-weight:700;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06)}
+.swap .v span i{width:18px;height:18px;border-radius:50%;background:conic-gradient(from 90deg,#9945FF,#14F195,#9945FF)}
+.arrow{align-self:center;width:36px;height:36px;margin:-10px 0;border-radius:10px;border:1px solid var(--line2);background:var(--bg);display:grid;place-items:center;color:var(--mut);z-index:1}
+.go{height:60px;border-radius:14px;background:var(--acc);color:#fff;font-weight:800;font-size:20px;display:grid;place-items:center}
+.fine{display:flex;justify-content:space-between;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.disc{font-size:12px;color:var(--mut);text-align:center}
+.doodle{position:absolute;color:var(--acc);font-size:34px;line-height:1}
+.lockyhero{position:absolute;right:490px;top:112px;width:170px;height:170px;transform:rotate(8deg)}
+/* ---------- right column ---------- */
+.side{border-radius:26px;overflow:hidden;position:relative}
+.lightcard{background:#fff;color:#0E0E10;padding:30px;display:flex;flex-direction:column;gap:16px}
+.lbl{font:700 13px 'Inter Tight';letter-spacing:.16em;text-transform:uppercase;color:#6B6B73}
+.mini{display:flex;gap:10px}
+.mini .it{width:auto;flex:1;height:130px}
+.lk{display:flex;align-items:center;gap:10px}
+.lk svg{width:54px;height:54px}
+.lk b{font-weight:800;font-size:34px;letter-spacing:-.045em}
+.lk b i{font-style:normal;color:var(--acc)}
+.darkcard{background:#0A0A0B;color:#F4F4F5;padding:30px;border:1px solid rgba(255,255,255,.06);display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start}
+.darkcard .lbl{grid-column:1/-1;color:#8B8B94}
+.fc{display:flex;flex-direction:column;align-items:center;gap:4px}
+.fc svg{width:120px;height:120px}
+.fc span{font-size:24px;color:#8B8B94}
+.type{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+.type div{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px}
+.type b{display:block;font-size:30px}
+.type span{font-size:13px;color:#8B8B94;font-weight:600}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+    <symbol id="locky" viewBox="0 0 120 124">
+      <g filter="url(#rough)" stroke="var(--stroke)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="var(--fill)"/>
+        <path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/>
+        <path d="M44 108 v9 M76 108 v9" fill="none"/>
+      </g>
+      <g filter="url(#rough)" fill="var(--stroke)"><circle cx="46" cy="66" r="5"/><circle cx="74" cy="66" r="5"/>
+        <circle cx="60" cy="84" r="5"/><path d="M57 86 h6 l2 10 h-10 z"/></g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- DARK APP -->
+<section class="app dark">
+  <header>
+    <div class="logo"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div>
+    <nav><span class="on">Cases</span><span>Earn</span><span>Leaderboard</span><span>Verify</span></nav>
+    <div class="hr"><div class="pts"><i></i>1,240 pts</div><div class="wal"><span></span>7xKq…3fPa</div></div>
+  </header>
+  <main>
+    <section>
+      <div class="h1">Roll a box.<br><span class="u">Pull a coin.<svg viewBox="0 0 600 26" preserveAspectRatio="none"><path d="M6 16 C120 4 260 24 380 12 S560 8 594 16" fill="none" stroke="var(--acc)" stroke-width="8" stroke-linecap="round" filter="url(#rough)"/></svg></span></div>
+      <div class="sub">Free rolls on every chain. Swap what you pull, right here.</div>
+      <div class="chains">
+        <span class="chip on"><i style="background:conic-gradient(#9945FF,#14F195)"></i>Solana</span>
+        <span class="chip"><i style="background:#2151F5"></i>Base</span>
+        <span class="chip"><i style="background:#F3BA2F"></i>BSC</span>
+        <span class="chip"><i style="background:#CCFF00"></i>Robinhood</span>
+        <span class="chip"><i style="background:#fff"></i>Arc</span>
+        <span class="chip">All chains</span>
+      </div>
+      <div class="roller"><div class="marker"></div>
+        <div class="strip">
+          <div class="it"><div class="co">B</div><b>$BONKLE</b><small>mcap 84K</small></div>
+          <div class="it"><div class="co">P</div><b>$PUDDLE</b><small>mcap 1.2M</small></div>
+          <div class="it"><div class="co">N</div><b>$NUBBY</b><small>mcap 310K</small></div>
+          <div class="it win"><div class="co">G</div><b>$GLORP</b><small>mcap 4.8M</small></div>
+          <div class="it"><div class="co">Z</div><b>$ZORT</b><small>mcap 22M</small></div>
+          <div class="it"><div class="co">W</div><b>$WEEBO</b><small>mcap 640K</small></div>
+          <div class="it"><div class="co">T</div><b>$TOAD</b><small>mcap 95K</small></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="btn">Roll · free <kbd>SPACE</kbd></div>
+        <div class="ghost">Filters · 3</div>
+        <div class="fair">provably fair · <b>verified</b><br>seed 8f3a…c21e · nonce 42</div>
+      </div>
+    </section>
+    <aside class="res">
+      <div class="rt"><div class="co">G</div><div><small>YOU PULLED</small><h3>$GLORP</h3><div class="addr">So1…9xGl · Solana</div></div></div>
+      <div class="kv">
+        <div><span>Price</span><b>$0.00482</b></div><div><span>24h</span><b class="up">+38.2%</b></div>
+        <div><span>Liquidity</span><b>$412K</b></div><div><span>Age</span><b>2d 4h</b></div>
+      </div>
+      <div class="swap"><div class="l"><span>You pay</span><span>Balance 3.21 SOL</span></div><div class="v"><b>0.05</b><span><i></i>SOL</span></div></div>
+      <div class="arrow">↓</div>
+      <div class="swap"><div class="l"><span>You get</span><span>via Jupiter</span></div><div class="v"><b>1,952,300</b><span style="background:var(--acc);color:#fff">$GLORP</span></div></div>
+      <div class="fine"><span>Slippage 3%</span><span>No Lockabox fee</span></div>
+      <div class="go">Swap</div>
+      <div class="disc">Random pick, not advice. Memecoins can go to zero.</div>
+    </aside>
+  </main>
+  <svg class="lockyhero"><use href="#locky"/></svg>
+  <div class="doodle hand" style="right:470px;top:290px;transform:rotate(-5deg)">wen pull? ↙</div>
+  <div class="doodle hand" style="left:96px;bottom:26px;transform:rotate(-3deg)">↑ or just press space</div>
+</section>
+
+<!-- LIGHT VERSION -->
+<section class="side lightcard light">
+  <div class="lbl">Light mode · same system</div>
+  <div class="lk"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div>
+  <div class="mini">
+    <div class="it"><div class="co">P</div><b>$PUDDLE</b></div>
+    <div class="it win"><div class="co">G</div><b>$GLORP</b></div>
+    <div class="it"><div class="co">Z</div><b>$ZORT</b></div>
+  </div>
+  <div style="display:flex;gap:10px"><div class="btn" style="background:#0E0E10;color:#fff;flex:1;justify-content:center">Roll · free</div><div class="go" style="flex:1">Swap</div></div>
+</section>
+
+<!-- LOCKY ON DARK + TYPE -->
+<section class="side darkcard dark">
+  <div class="lbl">Locky on dark · hand-drawn, 4 strokes</div>
+  <div class="fc"><svg viewBox="0 0 120 124"><use href="#locky"/></svg><span class="hand">idle</span></div>
+  <div class="fc"><svg viewBox="0 0 120 124"><g filter="url(#rough)" stroke="#F4F4F5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#161619"/><path d="M8 38 Q10 16 30 10 L92 2 Q108 4 110 20 Z" fill="var(--acc)"/><path d="M40 68 q6 -8 12 0 M68 68 q6 -8 12 0 M50 84 q10 10 20 0" fill="none"/></g></svg><span class="hand">pulled Top</span></div>
+  <div class="fc"><svg viewBox="0 0 120 124"><g filter="url(#rough)" stroke="#F4F4F5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#161619"/><path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/><circle cx="46" cy="66" r="9" fill="#161619"/><circle cx="74" cy="66" r="9" fill="#161619"/><ellipse cx="60" cy="90" rx="6" ry="8" fill="#F4F4F5"/></g><g filter="url(#rough)" fill="#F4F4F5"><circle cx="46" cy="67" r="3.5"/><circle cx="74" cy="67" r="3.5"/></g></svg><span class="hand">rugged</span></div>
+  <div class="fc"><svg viewBox="0 0 120 124"><g filter="url(#rough)" stroke="#F4F4F5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#161619"/><path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/><path d="M36 60 H84 M38 60 q0 14 14 12 q8 -2 8 -12 M60 60 q0 12 10 12 q14 0 14 -12" fill="#F4F4F5"/><path d="M52 88 h16" fill="none"/></g></svg><span class="hand">degen mode</span></div>
+  <div class="type">
+    <div><b style="font-weight:800;letter-spacing:-.04em">Aa</b><span>Inter Tight · UI</span></div>
+    <div><b class="mono">0x42</b><span>JetBrains Mono · numbers</span></div>
+    <div><b class="hand" style="color:var(--acc)">gm ser</b><span>Caveat · doodles</span></div>
+  </div>
+</section>
+<script>
+document.fonts.ready.then(() => {
+  const r = document.querySelector('.roller'), st = r.querySelector('.strip'), w = st.querySelector('.it.win');
+  st.style.transform = `translateX(${r.clientWidth / 2 - (w.offsetLeft + w.offsetWidth / 2)}px)`;
+});
+</script>
+</body>
+</html>

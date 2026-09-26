@@ -1,0 +1,360 @@
+<!doctype html>
+<!-- Lockabox round 5: trust-first web3. No dot grid, no neon glow. The proof is part of the design:
+     every pull comes as a receipt with a tear-off proof stub; the swap shows a plain-language transaction preview;
+     a live feed of on-chain pulls; a quiet trust bar. Hand-drawn Locky stays as the only playful element. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox v7 (roll-first)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Caveat:wght@700&display=block" rel="stylesheet">
+<style>
+:root{--acc:#FF5B1F;--bg:#0B0B0D;--s1:#131316;--s2:#1A1A1E;--line:#26262B;--line2:#33333A;--ink:#F2F2F3;--mut:#8C8C95;--ok:#3DD68C}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2400px;background:#050506;padding:28px;font-family:'Inter Tight',sans-serif;color:var(--ink);display:grid;grid-template-columns:1fr 430px;gap:28px;align-items:start}
+.mono{font-family:'JetBrains Mono',monospace}
+.hand{font-family:Caveat,cursive;font-weight:700}
+.app{background:var(--bg);border:1px solid #1C1C20;border-radius:24px;overflow:hidden}
+header{height:78px;display:flex;align-items:center;gap:30px;padding:0 32px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:42px;height:42px}
+.logo b{font-weight:800;font-size:28px;letter-spacing:-.045em}
+.logo b i{font-style:normal;color:var(--acc)}
+nav{display:flex;gap:24px;font-weight:600;font-size:16px;color:var(--mut)}
+nav .on{color:var(--ink)}
+.hr{margin-left:auto;display:flex;gap:10px;align-items:center}
+.pill{display:flex;align-items:center;gap:8px;height:42px;padding:0 14px;border:1px solid var(--line);border-radius:12px;font-weight:600;font-size:14px;color:var(--mut)}
+.pill b{color:var(--ink);font:700 14px 'JetBrains Mono'}
+.wal{display:flex;align-items:center;gap:10px;height:42px;padding:0 14px 0 6px;border-radius:12px;background:var(--s2);font:700 14px 'JetBrains Mono'}
+.wal span{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#9945FF,#14F195)}
+.wal em{font-style:normal;font:600 12px 'Inter Tight';color:var(--mut)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:24px;padding:28px 32px}
+/* stage */
+.stage{background:var(--s1);border:1px solid var(--line);border-radius:22px;padding:26px;position:relative}
+.top{display:flex;align-items:flex-end;justify-content:space-between}
+.top h1{font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1}
+.top p{margin-top:8px;color:var(--mut);font-size:16px;font-weight:500}
+.seg{display:flex;background:var(--s2);border-radius:12px;padding:4px;gap:2px}
+.seg span{padding:9px 14px;border-radius:9px;font-weight:600;font-size:14px;color:var(--mut)}
+.seg .on{background:var(--ink);color:var(--bg)}
+.chains{display:flex;gap:8px;margin-top:20px}
+.chip{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--line);font-weight:600;font-size:14px;color:var(--mut)}
+.chip i{width:12px;height:12px;border-radius:4px}
+.chip.on{color:var(--ink);border-color:var(--ink)}
+.count{margin-left:auto;font:500 13px 'JetBrains Mono';color:var(--mut);align-self:center}
+.roller{margin-top:18px;position:relative;height:196px;border-radius:16px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.roller::before,.roller::after{content:'';position:absolute;top:0;bottom:0;width:140px;z-index:2}
+.roller::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.roller::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+.strip{position:absolute;top:18px;left:0;display:flex;gap:12px}
+.it{flex:none;width:140px;height:160px;border:1px solid var(--line);border-radius:14px;background:var(--s1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}
+.it .co{width:54px;height:54px;border-radius:50%;background:var(--s2);border:1px solid var(--line2);display:grid;place-items:center;font-weight:800;font-size:19px}
+.it b{font-weight:700;font-size:15px}
+.it small{font:500 11px 'JetBrains Mono';color:var(--mut)}
+.it.win{border-color:var(--acc);background:#1A120E}
+.it.win .co{background:var(--acc);border-color:var(--acc);color:#fff}
+.marker{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--acc);z-index:3}
+.marker::before{content:'';position:absolute;top:0;left:-6px;border:7px solid transparent;border-top-color:var(--acc)}
+.actions{display:flex;gap:10px;margin-top:18px;align-items:center}
+.btn{height:58px;padding:0 32px;border-radius:14px;background:var(--ink);color:var(--bg);font-weight:800;font-size:19px;display:flex;align-items:center;gap:12px}
+.btn kbd{font:700 11px 'JetBrains Mono';padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.1)}
+.sec{height:58px;padding:0 20px;border-radius:14px;border:1px solid var(--line);display:flex;align-items:center;font-weight:600;color:var(--mut);font-size:15px}
+.odds{margin-left:auto;display:flex;gap:14px;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.odds i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.locky{position:absolute;right:28px;top:-58px;width:118px;height:118px;transform:rotate(6deg)}
+.note{position:absolute;right:150px;top:-40px;color:var(--acc);font-size:30px;transform:rotate(-4deg)}
+/* receipt */
+.receipt{margin-top:22px;display:grid;grid-template-columns:1fr 330px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--s1)}
+.rmain{padding:22px;display:flex;flex-direction:column;gap:16px}
+.rhead{display:flex;align-items:center;gap:14px}
+.rhead .co{width:56px;height:56px;border-radius:50%;background:var(--acc);display:grid;place-items:center;font-weight:800;font-size:21px;color:#fff}
+.rhead small{font:700 11px 'JetBrains Mono';letter-spacing:.12em;color:var(--mut)}
+.rhead h3{font-weight:800;font-size:30px;letter-spacing:-.03em;line-height:1.05}
+.ca{margin-left:auto;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:10px;font:500 13px 'JetBrains Mono';color:var(--mut)}
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kv div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kv span{display:block;font-size:12px;color:var(--mut);font-weight:600}
+.kv b{font:700 17px 'JetBrains Mono'}
+.links{display:flex;gap:16px;font-weight:600;font-size:14px;color:var(--mut)}
+.links span::after{content:' ↗'}
+.stub{position:relative;padding:22px;border-left:2px dashed var(--line2);background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.stub::before,.stub::after{content:'';position:absolute;left:-12px;width:22px;height:22px;border-radius:50%;background:#050506}
+.stub::before{top:-12px}.stub::after{bottom:-12px}
+.stub h4{font:700 12px 'JetBrains Mono';letter-spacing:.14em;color:var(--mut)}
+.stub .r{display:flex;justify-content:space-between;font:500 13px 'JetBrains Mono'}
+.stub .r span{color:var(--mut)}
+.verify{margin-top:auto;height:44px;border-radius:10px;border:1px solid var(--ok);color:var(--ok);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px}
+/* swap */
+.swapcard{background:var(--s1);border:1px solid var(--line);border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.swapcard h2{font-weight:800;font-size:22px;letter-spacing:-.02em;display:flex;justify-content:space-between;align-items:center}
+.swapcard h2 span{font:500 12px 'JetBrains Mono';color:var(--mut)}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px}
+.box .l{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);font-weight:600}
+.box .v{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.box .v b{font:700 28px 'JetBrains Mono'}
+.tok{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;background:var(--s2);font-weight:700;font-size:15px}
+.tok i{width:24px;height:24px;border-radius:50%}
+.quick{display:flex;gap:6px}
+.quick span{flex:1;text-align:center;padding:7px 0;border-radius:8px;border:1px solid var(--line);font:600 13px 'JetBrains Mono';color:var(--mut)}
+.preview{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.preview h5{padding:12px 14px;font:700 12px 'JetBrains Mono';letter-spacing:.12em;color:var(--mut);background:var(--s2);display:flex;justify-content:space-between}
+.preview h5 b{color:var(--ok);font-weight:700}
+.pr{display:flex;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--line);font-size:14px}
+.pr span{color:var(--mut)}
+.pr b{font:600 14px 'JetBrains Mono'}
+.pr b.zero{color:var(--ok)}
+.go{height:58px;border-radius:14px;background:var(--acc);color:#fff;font-weight:800;font-size:19px;display:grid;place-items:center}
+.disc{font-size:12px;color:var(--mut);text-align:center;line-height:1.5}
+/* feed */
+.feed{margin-top:24px;background:var(--s1);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.feed h2{padding:16px 20px;font-weight:800;font-size:18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+.feed h2 span{display:flex;align-items:center;gap:8px;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.feed h2 span i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.fr{display:grid;grid-template-columns:1fr auto;padding:11px 20px;border-bottom:1px solid var(--line);font-size:14px}
+.fr:last-child{border-bottom:0}
+.fr .w{font:500 13px 'JetBrains Mono';color:var(--mut)}
+.fr .w b{color:var(--ink);font-family:'Inter Tight';font-weight:700;font-size:14px}
+.fr .t{font:500 12px 'JetBrains Mono';color:var(--mut);text-align:right}
+/* trust bar */
+.trust{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.trust>div{padding:18px 32px;border-right:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.trust>div:last-child{border-right:0}
+.trust svg{flex:none;width:22px;height:22px;margin-top:2px}
+.trust b{display:block;font-weight:700;font-size:15px}
+.trust span{font-size:13px;color:var(--mut);font-weight:500}
+/* mobile */
+.phone{background:var(--bg);border:1px solid #1C1C20;border-radius:40px;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+.phone .ph{display:flex;align-items:center;justify-content:space-between}
+.phone .ph .logo b{font-size:22px}
+.phone .ph .logo svg{width:34px;height:34px}
+.lbl{font:700 12px 'Inter Tight';letter-spacing:.16em;text-transform:uppercase;color:var(--mut);padding:0 4px}
+
+/* v6: FOMO layer, real events only */
+.ticker{height:46px;border-bottom:1px solid var(--line);overflow:hidden;position:relative;background:#0E0E11}
+.ticker::before,.ticker::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2}
+.ticker::before{left:0;background:linear-gradient(90deg,#0E0E11,transparent)}.ticker::after{right:0;background:linear-gradient(-90deg,#0E0E11,transparent)}
+.track{display:flex;gap:34px;align-items:center;height:100%;padding-left:24px;white-space:nowrap;animation:tick 40s linear infinite}
+@keyframes tick{to{transform:translateX(-50%)}}
+.tk{display:flex;align-items:center;gap:8px;font:500 13px 'JetBrains Mono';color:var(--mut)}
+.tk i{width:8px;height:8px;border-radius:2px}
+.tk b{font-family:'Inter Tight';font-weight:700;color:var(--ink);font-size:14px}
+.tk .up{color:var(--ok)}
+.tk .big{color:#FFB21A}
+.livebar{display:flex;align-items:center;gap:18px;margin-top:14px;font:500 13px 'JetBrains Mono';color:var(--mut)}
+.livebar .dot{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:700}
+.livebar .dot i{width:9px;height:9px;border-radius:50%;background:#FF3B3B;box-shadow:0 0 0 4px rgba(255,59,59,.18)}
+.livebar b{color:var(--ink)}
+.livebar .gold{color:#FFB21A}
+.social{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--acc) 9%,var(--bg));border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line))}
+.avs{display:flex}
+.avs span{width:26px;height:26px;border-radius:50%;border:2px solid var(--s1);margin-left:-8px}
+.avs span:first-child{margin-left:0}
+.social p{font-size:14px;color:var(--mut);line-height:1.35}
+.social p b{color:var(--ink);font-family:'JetBrains Mono'}
+.toasts{position:absolute;right:32px;bottom:104px;width:440px;display:flex;flex-direction:column;gap:10px;z-index:5}
+.toast{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:16px;background:#17171B;border:1px solid var(--line2);box-shadow:0 20px 40px rgba(0,0,0,.5)}
+.toast .e{font-size:26px}
+.toast b{display:block;font-size:15px}
+.toast span{font:500 12px 'JetBrains Mono';color:var(--mut)}
+.toast.top{border-color:#FFB21A;background:linear-gradient(90deg,rgba(255,178,26,.14),#17171B 60%)}
+.toast.top b{color:#FFB21A}
+.toast .x{margin-left:auto;font:700 16px 'JetBrains Mono';color:var(--ok)}
+.fr .tier{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:8px}
+.fr .usd{color:var(--ink);font-weight:700}
+.whale{font:700 10px 'JetBrains Mono';letter-spacing:.08em;color:#7CC4FF;border:1px solid rgba(124,196,255,.4);border-radius:6px;padding:2px 6px;margin-left:6px}
+.app{position:relative}
+.burst{position:absolute;pointer-events:none;z-index:4}
+
+/* v7: ROLL is the hero */
+.rollbar{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.bigroll{position:relative;height:104px;border-radius:20px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;gap:22px;
+  box-shadow:0 10px 0 #B8380C,0 24px 50px rgba(255,91,31,.28);overflow:hidden}
+.bigroll::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 55%)}
+.bigroll b{position:relative;font-weight:800;font-size:46px;letter-spacing:-.02em}
+.bigroll .meta{position:relative;display:flex;flex-direction:column;line-height:1.25;font-weight:700;font-size:15px;opacity:.92}
+.bigroll .meta small{font:700 12px 'JetBrains Mono';opacity:.85}
+.bigroll kbd{position:absolute;right:24px;font:700 13px 'JetBrains Mono';padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.18)}
+.bigroll .lk{position:absolute;left:22px;width:74px;height:74px;transform:rotate(-8deg)}
+.under{display:flex;align-items:center;gap:12px;font:500 13px 'JetBrains Mono';color:var(--mut)}
+.task{display:flex;align-items:center;gap:10px;flex:1}
+.task .bar{flex:1;max-width:260px;height:8px;border-radius:4px;background:var(--s2);overflow:hidden}
+.task .bar i{display:block;height:100%;width:70%;background:var(--acc)}
+.task b{color:var(--ink)}
+.streak{color:#FFB21A;font-weight:700}
+.iconbtn{height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:center;font-weight:600;font-size:13px;color:var(--mut);font-family:'Inter Tight'}
+.oddsline{margin-top:10px;display:flex;gap:14px;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.oddsline i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.go.secondary{background:var(--ink);color:var(--bg)}
+.mroll{height:78px;border-radius:18px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;font-weight:800;font-size:30px;box-shadow:0 8px 0 #B8380C}
+.mroll small{font:700 12px 'JetBrains Mono';opacity:.9}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <symbol id="locky" viewBox="0 0 120 124">
+    <g filter="url(#rough)" stroke="#F2F2F3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#131316"/>
+      <path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/>
+      <path d="M44 108 v9 M76 108 v9" fill="none"/>
+    </g>
+    <g filter="url(#rough)" fill="#F2F2F3"><circle cx="46" cy="66" r="5"/><circle cx="74" cy="66" r="5"/><circle cx="60" cy="84" r="5"/><path d="M57 86 h6 l2 10 h-10 z"/></g>
+  </symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.4" fill="var(--ink)"/><circle cx="15.5" cy="15.5" r="1.4" fill="var(--ink)"/><circle cx="12" cy="12" r="1.4" fill="var(--acc)"/></symbol>
+  <symbol id="ic-zero" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="var(--ink)" stroke-width="1.8"/><path d="M8 16L16 8" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="ic-chain" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<section class="app">
+  <header>
+    <div class="logo"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div>
+    <nav><span class="on">Cases</span><span>Earn</span><span>Leaderboard</span><span>Verify</span></nav>
+    <div class="hr">
+      <div class="pill">Points <b>1,240</b></div>
+      <div class="wal"><span></span><div>7xKq…3fPa<br><em>Phantom · Solana</em></div></div>
+    </div>
+  </header>
+  <div class="ticker"><div class="track"><span class="tk"><i style="background:#FFB21A"></i>0x31…9fe2 pulled <b>$MOOLA</b> <span class="big">TOP</span> · <span class="up">+412%</span></span>
+<span class="tk"><i style="background:#8B4DFF"></i>4hQp…2mWz bought <b>$ZORT</b> · 12 SOL <span class="whale">WHALE</span></span>
+<span class="tk"><i style="background:#3D7BFF"></i>8Bnd…Q1s7 bought <b>$PUDDLE</b> · 0.3 SOL</span>
+<span class="tk"><i style="background:#E23BD6"></i>0x9a…41c0 bought <b>$WEEBO</b> · 0.05 ETH · <span class="up">+38%</span></span>
+<span class="tk"><i style="background:#8A93A6"></i>Hh2x…L0pq bought <b>$KEBO</b> · 0.1 SOL</span>
+<span class="tk"><i style="background:#8B4DFF"></i>0x77…aa01 bought <b>$GLORP</b> · 40 USDC</span><span class="tk"><i style="background:#FFB21A"></i>0x31…9fe2 pulled <b>$MOOLA</b> <span class="big">TOP</span> · <span class="up">+412%</span></span>
+<span class="tk"><i style="background:#8B4DFF"></i>4hQp…2mWz bought <b>$ZORT</b> · 12 SOL <span class="whale">WHALE</span></span>
+<span class="tk"><i style="background:#3D7BFF"></i>8Bnd…Q1s7 bought <b>$PUDDLE</b> · 0.3 SOL</span>
+<span class="tk"><i style="background:#E23BD6"></i>0x9a…41c0 bought <b>$WEEBO</b> · 0.05 ETH · <span class="up">+38%</span></span>
+<span class="tk"><i style="background:#8A93A6"></i>Hh2x…L0pq bought <b>$KEBO</b> · 0.1 SOL</span>
+<span class="tk"><i style="background:#8B4DFF"></i>0x77…aa01 bought <b>$GLORP</b> · 40 USDC</span></div></div>
+  <main>
+    <section>
+      <div class="stage">
+        <svg class="locky"><use href="#locky"/></svg>
+        <div class="note hand">nice pull ser ↘</div>
+        <div class="top">
+          <div><h1>Solana trending</h1><p>A random memecoin from what's moving now. Free to roll. You decide if you buy.</p><div class="livebar"><span class="dot"><i></i>LIVE</span><span><b>1,284</b> rolls · last hour</span><span><b>$38.2K</b> bought via Lockabox today</span><span class="gold">last TOP pull 2m ago</span></div></div>
+          <div class="seg"><span class="on">Trending</span><span>New &lt; 24h</span><span>Metas</span><span>CTO</span></div>
+        </div>
+        <div class="chains">
+          <span class="chip on"><i style="background:linear-gradient(135deg,#9945FF,#14F195)"></i>Solana</span>
+          <span class="chip"><i style="background:#2151F5"></i>Base</span>
+          <span class="chip"><i style="background:#F3BA2F"></i>BSC</span>
+          <span class="chip"><i style="background:#CCFF00"></i>Robinhood</span>
+          <span class="chip"><i style="background:#D9D9DE"></i>Arc</span>
+          <span class="count">184 coins in this case · pool #a91c…04e2</span>
+        </div>
+        <div class="roller"><div class="marker"></div><div class="strip" id="strip">
+          <div class="it"><div class="co">K</div><b>$KEBO</b><small>mcap 51K</small></div><div class="it"><div class="co">M</div><b>$MOOLA</b><small>mcap 9.1M</small></div><div class="it"><div class="co">S</div><b>$SNOOZ</b><small>mcap 730K</small></div>
+          <div class="it"><div class="co">B</div><b>$BONKLE</b><small>mcap 84K</small></div>
+          <div class="it"><div class="co">P</div><b>$PUDDLE</b><small>mcap 1.2M</small></div>
+          <div class="it"><div class="co">N</div><b>$NUBBY</b><small>mcap 310K</small></div>
+          <div class="it win"><div class="co">G</div><b>$GLORP</b><small>mcap 4.8M</small></div>
+          <div class="it"><div class="co">Z</div><b>$ZORT</b><small>mcap 22M</small></div>
+          <div class="it"><div class="co">W</div><b>$WEEBO</b><small>mcap 640K</small></div>
+          <div class="it"><div class="co">T</div><b>$TOAD</b><small>mcap 95K</small></div>
+          <div class="it"><div class="co">C</div><b>$CRUMB</b><small>mcap 44K</small></div><div class="it"><div class="co">F</div><b>$FROGGO</b><small>mcap 2.2M</small></div><div class="it"><div class="co">Y</div><b>$YEET</b><small>mcap 150K</small></div>
+        </div></div>
+        <div class="oddsline"><span><i style="background:#8A93A6"></i>Micro 35%</span><span><i style="background:#3D7BFF"></i>Small 30%</span><span><i style="background:#8B4DFF"></i>Mid 20%</span><span><i style="background:#E23BD6"></i>Large 12%</span><span><i style="background:#FFB21A"></i>Top 3%</span></div>
+        <div class="rollbar">
+          <div class="bigroll"><svg class="lk"><use href="#locky"/></svg><b>ROLL AGAIN</b><div class="meta">Free<small>42 / 50 left today</small></div><kbd>SPACE</kbd></div>
+          <div class="under">
+            <div class="task">Daily: <b>7/10 rolls</b><span class="bar"><i></i></span><b>+50 pts</b></div>
+            <span class="streak">🔥 3-day streak</span>
+            <span class="iconbtn">Filters · 3</span>
+          </div>
+        </div>
+        <div class="receipt">
+          <div class="rmain">
+            <div class="rhead"><div class="co">G</div><div><small>PULL #18,402 · MID TIER</small><h3>$GLORP</h3></div>
+              <div class="ca">So1a…9xGl <span>⧉</span></div></div>
+            <div class="kv">
+              <div><span>Price</span><b>$0.00482</b></div><div><span>Market cap</span><b>$4.8M</b></div>
+              <div><span>Liquidity</span><b>$412K</b></div><div><span>Pair age</span><b>2d 4h</b></div>
+            </div>
+            <div class="links"><span>DEX Screener</span><span>Solscan</span><span>Website</span><span>X</span></div>
+          </div>
+          <div class="stub">
+            <h4>PROOF OF ROLL</h4>
+            <div class="r"><span>server seed</span>8f3a…c21e</div>
+            <div class="r"><span>client seed</span>glorp-hunter</div>
+            <div class="r"><span>nonce</span>42</div>
+            <div class="r"><span>pool</span>#a91c…04e2</div>
+            <div class="r"><span>result</span>0.61843 → Mid #7</div>
+            <div class="verify">✓ Verify this roll yourself</div>
+          </div>
+        </div>
+      </div>
+      <div class="feed" style="margin-top:24px">
+        <h2>Live buys <span><i></i>on-chain · updates every block</span></h2>
+        <div class="fr"><div class="w"><span class="tier" style="background:#8B4DFF"></span><b>$ZORT</b> · 4hQp…2mWz bought <span class="usd">12 SOL</span><span class="whale">WHALE</span></div><div class="t">12s · 5Kx9…tx ↗</div></div>
+        <div class="fr"><div class="w"><span class="tier" style="background:#3D7BFF"></span><b>$PUDDLE</b> · 0x9a…41c0 bought <span class="usd">0.01 ETH</span></div><div class="t">41s · 0x7e…tx ↗</div></div>
+        <div class="fr"><div class="w"><span class="tier" style="background:#FFB21A"></span><b>$MOOLA</b> · 0x31…9fe2 pulled <span style="color:#FFB21A;font-weight:700">TOP</span> · <span style="color:var(--ok)">+412% since pull</span></div><div class="t">1m · proof ↗</div></div>
+        <div class="fr"><div class="w"><span class="tier" style="background:#8A93A6"></span><b>$TOAD</b> · 0x31…9fe2 bought <span class="usd">25 USDC</span></div><div class="t">2m · 0x44…tx ↗</div></div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="swapcard">
+        <h2>Buy $GLORP <span>via Jupiter</span></h2>
+        <div class="box"><div class="l"><span>You pay</span><span>Balance 3.21 SOL</span></div><div class="v"><b>0.05</b><span class="tok"><i style="background:linear-gradient(135deg,#9945FF,#14F195)"></i>SOL</span></div></div>
+        <div class="quick"><span>0.01</span><span>0.05</span><span>0.1</span><span>0.5</span><span>MAX</span></div>
+        <div class="box"><div class="l"><span>You receive (estimated)</span><span></span></div><div class="v"><b>1,952,300</b><span class="tok"><i style="background:var(--acc)"></i>GLORP</span></div></div>
+        <div class="preview">
+          <h5>TRANSACTION PREVIEW <b>✓ SIMULATED</b></h5>
+          <div class="pr"><span>You send</span><b>0.05 SOL</b></div>
+          <div class="pr"><span>You receive at least</span><b>1,893,700 GLORP</b></div>
+          <div class="pr"><span>Route</span><b>SOL → Raydium → GLORP</b></div>
+          <div class="pr"><span>Network fee</span><b>~0.00005 SOL</b></div>
+          <div class="pr"><span>Lockabox fee</span><b class="zero">0</b></div>
+          <div class="pr"><span>Approvals requested</span><b class="zero">none</b></div>
+        </div>
+        <div class="social"><div class="avs"><span style="background:#F2A65A"></span><span style="background:#7CC6FE"></span><span style="background:#9EE493"></span><span style="background:#C39BD3"></span></div><p><b>37</b> wallets bought $GLORP here today · last buy <b>8s</b> ago</p></div>
+        <div class="go secondary">Buy $GLORP · review in wallet</div>
+        <div class="disc">You sign in your own wallet. Lockabox never holds your funds.<br>Random pick, not advice. Memecoins can go to zero.</div>
+      </div>
+    </aside>
+  </main>
+  <div class="toasts">
+    <div class="toast top"><div class="e">🎉</div><div><b>TOP PULL · $MOOLA</b><span>0x31…9fe2 · 2m ago · proof ↗</span></div><div class="x">+412%</div></div>
+    <div class="toast"><div class="e">🐋</div><div><b>Whale bought $ZORT</b><span>4hQp…2mWz · 12 SOL · 12s ago · tx ↗</span></div></div>
+    <div class="toast"><div class="e">⚡</div><div><b>3 buys of $GLORP in the last minute</b><span>you pulled it too</span></div></div>
+  </div>
+  <div class="trust">
+    <div><svg><use href="#ic-shield"/></svg><div><b>Non-custodial</b><span>You sign every trade in your own wallet.</span></div></div>
+    <div><svg><use href="#ic-dice"/></svg><div><b>Provably fair</b><span>Seeds are committed before you roll. Check any pull.</span></div></div>
+    <div><svg><use href="#ic-zero"/></svg><div><b>0% Lockabox fee</b><span>The quote you see is the quote from the DEX.</span></div></div>
+    <div><svg><use href="#ic-chain"/></svg><div><b>Links to the chain</b><span>Every swap has a tx hash. Every coin has its address.</span></div></div>
+  </div>
+</section>
+
+<section class="phone">
+  <div class="ph"><div class="logo"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div><div class="wal" style="height:36px"><span style="width:24px;height:24px"></span>7xKq…3fPa</div></div>
+  <div class="lbl">Mobile · same flow</div>
+  <div class="roller" style="height:170px;margin-top:0"><div class="marker"></div><div class="strip" id="strip2" style="top:10px">
+    <div class="it"><div class="co">N</div><b>$NUBBY</b></div>
+    <div class="it win"><div class="co">G</div><b>$GLORP</b></div>
+    <div class="it"><div class="co">Z</div><b>$ZORT</b></div>
+  </div></div>
+  <div class="receipt" style="grid-template-columns:1fr;margin-top:0">
+    <div class="rmain" style="padding:16px;gap:12px">
+      <div class="rhead"><div class="co" style="width:44px;height:44px;font-size:17px">G</div><div><small>PULL #18,402</small><h3 style="font-size:24px">$GLORP</h3></div></div>
+      <div class="kv" style="grid-template-columns:1fr 1fr"><div><span>Price</span><b>$0.00482</b></div><div><span>Liquidity</span><b>$412K</b></div></div>
+    </div>
+    <div class="stub" style="border-left:0;border-top:2px dashed var(--line2);padding:14px 16px"><div class="r"><span>proof</span>8f3a…c21e · #42</div><div class="verify" style="height:38px;margin-top:6px">✓ Verify</div></div>
+  </div>
+  <div class="preview"><h5>PREVIEW <b>✓ SIMULATED</b></h5><div class="pr"><span>You send</span><b>0.05 SOL</b></div><div class="pr"><span>Receive ≥</span><b>1,893,700 GLORP</b></div><div class="pr"><span>Lockabox fee</span><b class="zero">0</b></div></div>
+  <div class="go secondary">Buy · review in wallet</div>
+  <div class="mroll">ROLL AGAIN <small>42 left</small></div>
+</section>
+
+<script>
+document.fonts.ready.then(() => {
+  for (const id of ['strip', 'strip2']) {
+    const st = document.getElementById(id), r = st.parentElement, w = st.querySelector('.it.win');
+    st.style.transform = `translateX(${r.clientWidth / 2 - (w.offsetLeft + w.offsetWidth / 2)}px)`;
+  }
+});
+</script>
+</body>
+</html>

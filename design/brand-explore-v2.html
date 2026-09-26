@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- Lockabox brand exploration, round 2: modern gamer (esports / case-opening) directions. Mascot = armored chest emblem with a glowing visor. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox brand directions v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Oxanium:wght@500;700;800&family=Chakra+Petch:wght@500;600;700&family=Inter:wght@500;600;700&display=block" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:2400px;background:#050506;display:flex;gap:24px;padding:24px;font-family:Inter,sans-serif}
+.dir{position:relative;flex:1;height:1180px;overflow:hidden;background:var(--bg);color:#EDEFF5;padding:44px;display:flex;flex-direction:column;
+  clip-path:polygon(0 0,calc(100% - 36px) 0,100% 36px,100% 100%,36px 100%,0 calc(100% - 36px))}
+.dir::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(700px 500px at 70% 18%,var(--glow),transparent 60%),
+  linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/40px 40px,
+  linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/40px 40px}
+.dir>*{position:relative}
+.tag{font:700 15px Inter;letter-spacing:.24em;text-transform:uppercase;color:var(--a1)}
+.name{font-family:var(--display);font-weight:700;font-size:40px;text-transform:uppercase;letter-spacing:.04em;margin-top:6px;line-height:1}
+.lockup{display:flex;align-items:center;gap:22px;margin-top:40px}
+.lockup svg{width:170px;height:170px;flex:none;filter:drop-shadow(0 0 24px var(--glow2))}
+.word{font-family:var(--display);font-weight:700;font-size:var(--wsize,92px);line-height:.85;text-transform:uppercase;letter-spacing:var(--ls,.01em);font-style:var(--italic,normal)}
+.word em{font-style:inherit;color:var(--a1);text-shadow:0 0 30px var(--glow2)}
+.sub{font:600 14px Inter;letter-spacing:.3em;text-transform:uppercase;color:#8A90A2;margin-top:10px}
+.tagline{margin-top:34px;font-family:var(--display);font-weight:600;font-size:34px;text-transform:uppercase;letter-spacing:.04em;line-height:1.05}
+.tagline b{color:var(--a1)}
+/* mini roll strip */
+.strip{margin-top:30px;display:flex;gap:10px;position:relative;padding:14px 0}
+.strip::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;background:var(--a1);box-shadow:0 0 16px var(--a1)}
+.it{flex:1;height:150px;background:linear-gradient(180deg,#15171F,#0E1016);border:1px solid rgba(255,255,255,.08);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+.it::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--r);box-shadow:0 -6px 20px var(--r)}
+.it .co{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff5,transparent 45%),var(--r);display:grid;place-items:center;font:800 20px Inter;color:#0b0b0e}
+.it b{font:700 14px Inter;letter-spacing:.04em}
+.it.win{background:linear-gradient(180deg,color-mix(in srgb,var(--r) 22%,#15171F),#0E1016);border-color:var(--r);box-shadow:inset 0 0 30px color-mix(in srgb,var(--r) 35%,transparent)}
+.row{display:flex;gap:16px;margin-top:26px}
+.btn{flex:1;height:84px;background:var(--btn);color:#07080B;font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:14px;
+  clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);box-shadow:0 0 40px var(--glow2)}
+.btn i{font-style:normal;font-size:22px;opacity:.7}
+.btn2{flex:.8;height:84px;border:2px solid rgba(255,255,255,.18);color:#EDEFF5;font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%);background:rgba(255,255,255,.03)}
+.rar{margin-top:26px;display:flex;gap:8px;font:700 12px Inter;letter-spacing:.14em;text-transform:uppercase;color:#8A90A2}
+.rar span{flex:1;padding-top:10px;border-top:4px solid var(--c)}
+.sw{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.sw div{height:84px;display:flex;align-items:flex-end;padding:8px;font:700 12px Inter;letter-spacing:.06em;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.fonts{margin-top:16px;display:flex;justify-content:space-between;font:600 15px Inter;color:#8A90A2;letter-spacing:.06em}
+.fonts span:first-child{font-family:var(--display);font-weight:700;font-size:20px;color:#EDEFF5;text-transform:uppercase}
+/* rarity palette shared */
+:root{--r1:#8A93A6;--r2:#3D7BFF;--r3:#8B4DFF;--r4:#E23BD6;--r5:#FFB21A}
+/* A: Ember */
+.a{--bg:#0A0B0F;--a1:#FF5A1F;--a2:#FFB21A;--glow:rgba(255,90,31,.20);--glow2:rgba(255,90,31,.55);--btn:linear-gradient(90deg,#FF5A1F,#FFB21A);--display:'Teko',sans-serif;--wsize:118px;--ls:.02em}
+/* B: Voltage */
+.b{--bg:#08091A;--a1:#22E4FF;--a2:#7B5CFF;--glow:rgba(123,92,255,.25);--glow2:rgba(34,228,255,.5);--btn:linear-gradient(90deg,#22E4FF,#7B5CFF);--display:'Oxanium',sans-serif;--wsize:76px;--ls:.02em}
+/* C: Crimson */
+.c{--bg:#0B0709;--a1:#FF2E4D;--a2:#F4F1EA;--glow:rgba(255,46,77,.18);--glow2:rgba(255,46,77,.5);--btn:#FF2E4D;--display:'Chakra Petch',sans-serif;--wsize:80px;--italic:italic;--ls:-.01em}
+</style>
+</head>
+<body>
+
+<template id="emblem">
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2E3B"/><stop offset="1" stop-color="#11131A"/></linearGradient>
+  </defs>
+  <!-- lid: angular armored top -->
+  <path d="M30 70 L52 40 H148 L170 70 Z" fill="url(#plate)" stroke="var(--a1)" stroke-width="3"/>
+  <path d="M70 40 L64 70 M136 40 L130 70" stroke="rgba(255,255,255,.18)" stroke-width="3"/>
+  <!-- visor slit (the "eyes") -->
+  <path d="M28 76 H172 L166 92 H34 Z" fill="#07080B" stroke="var(--a1)" stroke-width="3"/>
+  <path d="M52 84 H86 M114 84 H148" stroke="var(--a1)" stroke-width="7" stroke-linecap="square" style="filter:drop-shadow(0 0 6px var(--a1))"/>
+  <!-- body -->
+  <path d="M34 98 H166 L160 160 L140 176 H60 L40 160 Z" fill="url(#plate)" stroke="var(--a1)" stroke-width="3"/>
+  <path d="M60 98 V170 M140 98 V170" stroke="rgba(255,255,255,.14)" stroke-width="3"/>
+  <!-- keyhole core -->
+  <path d="M100 112 l16 12 v18 l-16 12 l-16 -12 v-18 z" fill="#07080B" stroke="var(--a2)" stroke-width="3"/>
+  <circle cx="100" cy="128" r="5" fill="var(--a2)" style="filter:drop-shadow(0 0 6px var(--a2))"/>
+  <path d="M97 132 h6 l2 10 h-10 z" fill="var(--a2)"/>
+</svg>
+</template>
+
+<section class="dir a">
+  <div class="tag">Direction A</div><div class="name">Ember</div>
+  <div class="lockup"><span class="m"></span><div><div class="word">Lock<em>a</em>box</div><div class="sub">Memecoin case opening</div></div></div>
+  <div class="tagline">Roll the case. <b>Pull the coin.</b></div>
+  <div class="strip">
+    <div class="it" style="--r:var(--r2)"><div class="co">P</div><b>$PUDDLE</b></div>
+    <div class="it" style="--r:var(--r1)"><div class="co">N</div><b>$NUBBY</b></div>
+    <div class="it win" style="--r:var(--r5)"><div class="co">G</div><b>$GLORP</b></div>
+    <div class="it" style="--r:var(--r3)"><div class="co">Z</div><b>$ZORT</b></div>
+    <div class="it" style="--r:var(--r4)"><div class="co">W</div><b>$WEEBO</b></div>
+  </div>
+  <div class="row"><div class="btn">Roll <i>// free</i></div><div class="btn2">Swap</div></div>
+  <div class="rar"><span style="--c:var(--r1)">Micro</span><span style="--c:var(--r2)">Small</span><span style="--c:var(--r3)">Mid</span><span style="--c:var(--r4)">Large</span><span style="--c:var(--r5)">Top</span></div>
+  <div class="sw"><div style="background:#0A0B0F;color:#8A90A2;border:1px solid #222">#0A0B0F</div><div style="background:#FF5A1F">#FF5A1F</div><div style="background:#FFB21A">#FFB21A</div><div style="background:#15171F;color:#8A90A2">#15171F</div><div style="background:#EDEFF5">#EDEFF5</div></div>
+  <div class="fonts"><span>Teko</span><span>Inter 500–700</span></div>
+</section>
+
+<section class="dir b">
+  <div class="tag">Direction B</div><div class="name">Voltage</div>
+  <div class="lockup"><span class="m"></span><div><div class="word">Lock<em>a</em>box</div><div class="sub">Memecoin case opening</div></div></div>
+  <div class="tagline">Roll the case. <b>Pull the coin.</b></div>
+  <div class="strip">
+    <div class="it" style="--r:var(--r2)"><div class="co">P</div><b>$PUDDLE</b></div>
+    <div class="it" style="--r:var(--r1)"><div class="co">N</div><b>$NUBBY</b></div>
+    <div class="it win" style="--r:var(--r5)"><div class="co">G</div><b>$GLORP</b></div>
+    <div class="it" style="--r:var(--r3)"><div class="co">Z</div><b>$ZORT</b></div>
+    <div class="it" style="--r:var(--r4)"><div class="co">W</div><b>$WEEBO</b></div>
+  </div>
+  <div class="row"><div class="btn">Roll <i>// free</i></div><div class="btn2">Swap</div></div>
+  <div class="rar"><span style="--c:var(--r1)">Micro</span><span style="--c:var(--r2)">Small</span><span style="--c:var(--r3)">Mid</span><span style="--c:var(--r4)">Large</span><span style="--c:var(--r5)">Top</span></div>
+  <div class="sw"><div style="background:#08091A;color:#8A90A2;border:1px solid #222">#08091A</div><div style="background:#22E4FF">#22E4FF</div><div style="background:#7B5CFF;color:#fff">#7B5CFF</div><div style="background:#141633;color:#8A90A2">#141633</div><div style="background:#EDEFF5">#EDEFF5</div></div>
+  <div class="fonts"><span>Oxanium</span><span>Inter 500–700</span></div>
+</section>
+
+<section class="dir c">
+  <div class="tag">Direction C</div><div class="name">Crimson</div>
+  <div class="lockup"><span class="m"></span><div><div class="word">Lock<em>a</em>box</div><div class="sub">Memecoin case opening</div></div></div>
+  <div class="tagline">Roll the case. <b>Pull the coin.</b></div>
+  <div class="strip">
+    <div class="it" style="--r:var(--r2)"><div class="co">P</div><b>$PUDDLE</b></div>
+    <div class="it" style="--r:var(--r1)"><div class="co">N</div><b>$NUBBY</b></div>
+    <div class="it win" style="--r:var(--r5)"><div class="co">G</div><b>$GLORP</b></div>
+    <div class="it" style="--r:var(--r3)"><div class="co">Z</div><b>$ZORT</b></div>
+    <div class="it" style="--r:var(--r4)"><div class="co">W</div><b>$WEEBO</b></div>
+  </div>
+  <div class="row"><div class="btn">Roll <i>// free</i></div><div class="btn2">Swap</div></div>
+  <div class="rar"><span style="--c:var(--r1)">Micro</span><span style="--c:var(--r2)">Small</span><span style="--c:var(--r3)">Mid</span><span style="--c:var(--r4)">Large</span><span style="--c:var(--r5)">Top</span></div>
+  <div class="sw"><div style="background:#0B0709;color:#8A90A2;border:1px solid #222">#0B0709</div><div style="background:#FF2E4D">#FF2E4D</div><div style="background:#F4F1EA">#F4F1EA</div><div style="background:#1A1216;color:#8A90A2">#1A1216</div><div style="background:#8A90A2">#8A90A2</div></div>
+  <div class="fonts"><span>Chakra Petch</span><span>Inter 500–700</span></div>
+</section>
+
+<script>
+const tpl = document.getElementById('emblem').innerHTML;
+document.querySelectorAll('.m').forEach((m) => { m.outerHTML = tpl; });
+</script>
+</body>
+</html>

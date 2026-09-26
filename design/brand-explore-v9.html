@@ -1,0 +1,275 @@
+<!doctype html>
+<!-- Lockabox round 9: long one-page, nostalgic 2021 memecoin-site layout (marquee, giant mascot, CA-style copy box,
+     tokenomics-style pie = case odds, roadmap phases, how-to steps, FAQ, socials) in the black/white/orange system.
+     No Lockabox token is implied anywhere. Demo data only. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox v9 (nostalgic long page)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Caveat:wght@700&display=block" rel="stylesheet">
+<style>
+:root{--acc:#FF5B1F;--ink:#111113;--paper:#FFF8EE;--mut:#6E6A64;--ok:#1FA968}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;background:var(--paper);color:var(--ink);font-family:Inter,sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+.hand{font-family:Caveat,cursive;font-weight:700}
+.disp{font-family:'Titan One',sans-serif;font-weight:400;letter-spacing:.01em}
+.b{border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ink);background:#fff}
+section{padding:90px 80px;position:relative}
+h2{font-family:'Titan One';font-weight:400;font-size:64px;line-height:1;text-transform:uppercase}
+h2 em{font-style:normal;color:var(--acc)}
+.kick{font:700 14px 'JetBrains Mono';letter-spacing:.2em;text-transform:uppercase;color:var(--acc);margin-bottom:14px}
+/* marquee */
+.mq{background:var(--ink);color:#fff;height:48px;overflow:hidden;display:flex;align-items:center;white-space:nowrap;border-bottom:3px solid var(--ink)}
+.mq div{display:flex;gap:44px;padding-left:20px;font:600 15px 'JetBrains Mono'}
+.mq b{color:var(--acc)}
+.mq .t{color:#FFB21A}
+/* nav */
+nav{display:flex;align-items:center;padding:22px 80px;gap:36px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{width:48px;height:48px}
+.logo b{font-family:'Titan One';font-weight:400;font-size:30px}
+.logo b i{font-style:normal;color:var(--acc)}
+nav a{font-weight:700;font-size:16px}
+nav .sp{margin-left:auto;display:flex;gap:10px}
+.sb{height:48px;padding:0 20px;display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;border:3px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink);background:#fff}
+.sb.o{background:var(--acc);color:#fff}
+/* hero */
+.hero{display:grid;grid-template-columns:1fr 560px;gap:50px;padding-top:40px;align-items:start}
+.hero h1{font-family:'Titan One';font-weight:400;font-size:118px;line-height:.92;text-transform:uppercase}
+.hero h1 em{font-style:normal;color:var(--acc);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill}
+.hero p{margin-top:24px;font-size:22px;line-height:1.45;color:var(--mut);font-weight:500;max-width:600px}
+.bigl{width:430px;height:430px;margin:10px 0 0 60px;transform:rotate(-6deg)}
+.sticker{position:absolute;padding:10px 16px;font:800 16px Inter;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:4px 4px 0 var(--ink)}
+.ca{margin-top:30px;display:flex;align-items:center;gap:12px;padding:14px 16px;max-width:620px}
+.ca span{font:700 13px 'JetBrains Mono';letter-spacing:.1em;padding:6px 10px;border-radius:8px;background:var(--ink);color:#fff}
+.ca code{font:600 16px 'JetBrains Mono';flex:1}
+.ca i{font-style:normal;font-weight:800;padding:8px 14px;border-radius:10px;border:2px solid var(--ink)}
+/* app card */
+.app{padding:18px}
+.ah{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 12px}
+.ah b{font-family:'Titan One';font-weight:400;font-size:24px}
+.live{display:flex;align-items:center;gap:6px;font:700 12px 'JetBrains Mono';color:var(--mut)}
+.live i{width:8px;height:8px;border-radius:50%;background:#FF3B3B}
+.sel{display:flex;gap:8px}
+.dd{flex:1;height:52px;padding:0 14px;border:2px solid var(--ink);border-radius:14px;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.dd small{display:block;font:600 11px Inter;color:var(--mut)}
+.win{margin-top:10px;height:160px;border:2px solid var(--ink);border-radius:16px;background:var(--paper);position:relative;overflow:hidden}
+.strip{position:absolute;top:16px;left:0;display:flex;gap:10px}
+.it{flex:none;width:112px;height:124px;border:2px solid var(--ink);border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14px}
+.it .co{width:46px;height:46px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-weight:800}
+.it.w{background:var(--acc);color:#fff;box-shadow:4px 4px 0 var(--ink)}
+.it.w .co{background:#fff;color:var(--ink)}
+.mk{position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;background:var(--ink);z-index:3}
+.res{margin-top:10px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid var(--ink);border-radius:14px}
+.res b{font-weight:800;font-size:19px}
+.res small{display:block;font:500 12px 'JetBrains Mono';color:var(--mut)}
+.tier{margin-left:auto;font:800 11px 'JetBrains Mono';padding:5px 9px;border-radius:8px;background:#8B4DFF;color:#fff;border:2px solid var(--ink)}
+.bx{margin-top:8px;border:2px solid var(--ink);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.bx small{display:block;font:600 12px Inter;color:var(--mut)}
+.bx b{font:700 26px 'JetBrains Mono'}
+.bx .tk{font-weight:800;padding:6px 12px;border-radius:10px;border:2px solid var(--ink)}
+.inf{display:flex;justify-content:space-between;padding:10px 4px 2px;font:600 12px 'JetBrains Mono';color:var(--mut)}
+.inf .ok{color:var(--ok)}
+.roll{margin-top:10px;height:78px;border:3px solid var(--ink);border-radius:16px;background:var(--acc);color:#fff;box-shadow:6px 6px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:'Titan One';font-size:34px;position:relative}
+.roll kbd{position:absolute;right:16px;font:700 11px 'JetBrains Mono';padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.2)}
+.buy{margin-top:12px;height:54px;border:3px solid var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+/* trust strip */
+.strip2{display:grid;grid-template-columns:repeat(4,1fr);border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);background:#fff}
+.strip2 div{padding:26px 30px;border-right:3px solid var(--ink)}
+.strip2 div:last-child{border-right:0}
+.strip2 b{display:block;font-family:'Titan One';font-weight:400;font-size:26px;text-transform:uppercase}
+.strip2 span{font-size:15px;color:var(--mut);font-weight:500}
+/* how to */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:40px}
+.step{padding:24px;position:relative}
+.step .n{position:absolute;top:-22px;left:20px;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-family:'Titan One';font-size:22px}
+.step b{display:block;font-family:'Titan One';font-weight:400;font-size:24px;margin-top:14px;text-transform:uppercase}
+.step p{margin-top:8px;color:var(--mut);font-size:16px;line-height:1.45}
+/* odds pie */
+.odds{display:grid;grid-template-columns:480px 1fr;gap:60px;align-items:center;margin-top:40px}
+.pie{width:440px;height:440px;border-radius:50%;border:3px solid var(--ink);box-shadow:8px 8px 0 var(--ink);background:conic-gradient(#9AA0A6 0 35%,#3D7BFF 0 65%,#8B4DFF 0 85%,#E23BD6 0 97%,#FFB21A 0);position:relative}
+.pie::after{content:'';position:absolute;inset:110px;border-radius:50%;background:var(--paper);border:3px solid var(--ink)}
+.leg{display:flex;flex-direction:column;gap:12px}
+.lg{display:grid;grid-template-columns:28px 1fr auto;gap:14px;align-items:center;padding:14px 18px}
+.lg i{width:26px;height:26px;border-radius:8px;border:2px solid var(--ink)}
+.lg b{font-family:'Titan One';font-weight:400;font-size:24px;text-transform:uppercase}
+.lg span{font:500 14px Inter;color:var(--mut);display:block}
+.lg em{font-style:normal;font:700 28px 'JetBrains Mono'}
+/* roadmap */
+.road{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:40px}
+.ph{padding:24px}
+.ph .t{display:flex;justify-content:space-between;align-items:center}
+.ph .t b{font-family:'Titan One';font-weight:400;font-size:28px}
+.ph .t span{font:800 11px 'JetBrains Mono';padding:5px 9px;border-radius:8px;border:2px solid var(--ink)}
+.ph ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:9px;font-size:16px;font-weight:600}
+.ph li::before{content:'☐ ';color:var(--mut)}
+.ph li.d::before{content:'☑ ';color:var(--ok)}
+.ph.now{background:#FFF1E8}
+/* live & board */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:40px}
+.tbl{overflow:hidden}
+.tbl h3{padding:16px 20px;border-bottom:3px solid var(--ink);font-family:'Titan One';font-weight:400;font-size:24px;display:flex;justify-content:space-between;align-items:center}
+.tbl h3 small{font:700 12px 'JetBrains Mono';color:var(--mut)}
+.tr{display:flex;justify-content:space-between;padding:12px 20px;border-bottom:2px solid #EEE7DC;font:500 14px 'JetBrains Mono'}
+.tr:last-child{border-bottom:0}
+.tr b{font-family:Inter;font-weight:800}
+.tr .up{color:var(--ok);font-weight:700}
+.tr .g{color:#C48600;font-weight:800}
+/* faq */
+.faq{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.q{padding:22px}
+.q b{display:block;font-weight:800;font-size:19px}
+.q p{margin-top:8px;color:var(--mut);font-size:16px;line-height:1.45}
+footer{background:var(--ink);color:#fff;padding:60px 80px;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center}
+footer .logo b{color:#fff}
+footer p{margin-top:14px;color:#A8A39B;font-size:14px;max-width:760px;line-height:1.5}
+.soc{display:flex;gap:10px}
+.soc span{height:52px;padding:0 20px;display:flex;align-items:center;font-weight:800;border:3px solid #fff;border-radius:14px;box-shadow:4px 4px 0 var(--acc)}
+.doodle{position:absolute;color:var(--acc);font-size:34px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <symbol id="locky" viewBox="0 0 120 124">
+    <g filter="url(#rough)" stroke="#111113" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#fff"/>
+      <path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/>
+      <path d="M44 108 v9 M76 108 v9" fill="none"/>
+    </g>
+    <g filter="url(#rough)" fill="#111113"><circle cx="46" cy="66" r="5"/><circle cx="74" cy="66" r="5"/><circle cx="60" cy="84" r="5"/><path d="M57 86 h6 l2 10 h-10 z"/></g>
+  </symbol>
+  <symbol id="lockyTop" viewBox="0 0 120 124">
+    <g filter="url(#rough)" stroke="#111113" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#fff"/>
+      <path d="M8 38 Q10 16 30 10 L92 2 Q108 4 110 20 Z" fill="var(--acc)"/>
+      <path d="M40 68 q6 -8 12 0 M68 68 q6 -8 12 0 M48 82 q12 14 24 0" fill="none"/>
+      <path d="M44 108 v9 M76 108 v9" fill="none"/>
+    </g>
+    <g filter="url(#rough)" stroke="#111113" stroke-width="4" fill="#FFB21A"><circle cx="30" cy="-6" r="9"/><circle cx="66" cy="-14" r="11"/><circle cx="96" cy="-8" r="8"/></g>
+  </symbol>
+</defs></svg>
+
+<div class="mq"><div>
+  <span>🔥 0x31…9fe2 pulled <b>$MOOLA</b> <span class="t">TOP</span> +412%</span><span>🐋 4hQp…2mWz bought <b>$ZORT</b> 12 SOL</span><span>8Bnd…Q1s7 bought <b>$PUDDLE</b> 0.3 SOL</span><span>0x9a…41c0 bought <b>$WEEBO</b> 0.05 ETH</span><span>Hh2x…L0pq pulled <b>$KEBO</b></span><span>🔥 0x31…9fe2 pulled <b>$MOOLA</b> <span class="t">TOP</span> +412%</span><span>🐋 4hQp…2mWz bought <b>$ZORT</b> 12 SOL</span>
+</div></div>
+
+<nav>
+  <div class="logo"><svg><use href="#locky"/></svg><b>LOCKABOX<i>.</i></b></div>
+  <a>Roll</a><a>How it works</a><a>Odds</a><a>Roadmap</a><a>FAQ</a>
+  <div class="sp"><span class="sb">𝕏</span><span class="sb">Telegram</span><span class="sb o">Connect wallet</span></div>
+</nav>
+
+<section class="hero">
+  <div>
+    <h1>Roll a box.<br><em>Pull a coin.</em></h1>
+    <p>Lockabox picks a random memecoin from what's moving on-chain right now. Rolling is free and unlimited. If you like what you pull, buy it right here from your own wallet.</p>
+    <div class="ca b"><span>PROOF</span><code>server seed hash 8f3a91…c21e04</code><i>Copy</i></div>
+    <svg class="bigl"><use href="#lockyTop"/></svg>
+    <div class="sticker" style="left:560px;top:930px;transform:rotate(8deg)">FREE ROLLS ∞</div>
+    <div class="sticker" style="left:600px;top:1030px;transform:rotate(-7deg);background:var(--acc);color:#fff">0% FEE</div>
+    <div class="doodle hand" style="left:540px;top:820px;transform:rotate(-4deg)">↙ that's Locky. he pulled Top</div>
+  </div>
+
+  <div class="app b">
+    <div class="ah"><b>ROLL</b><span class="live"><i></i>1,284 rolls · last hour</span></div>
+    <div class="sel"><div class="dd"><div><small>Case</small>Trending</div>▾</div><div class="dd"><div><small>Chain</small>Solana</div>▾</div></div>
+    <div class="win"><div class="mk"></div><div class="strip" id="s1">
+      <div class="it"><div class="co">B</div>$BONKLE</div><div class="it"><div class="co">P</div>$PUDDLE</div><div class="it"><div class="co">N</div>$NUBBY</div>
+      <div class="it w"><div class="co">G</div>$GLORP</div><div class="it"><div class="co">Z</div>$ZORT</div><div class="it"><div class="co">W</div>$WEEBO</div>
+    </div></div>
+    <div class="res"><div><b>$GLORP</b><small>mcap $4.8M · liq $412K · So1a…9xGl ⧉</small></div><span class="tier">MID</span></div>
+    <div class="bx"><div><small>Buy with</small><b>0.05</b></div><span class="tk">SOL ▾</span></div>
+    <div class="bx"><div><small>You get (at least)</small><b>1,893,700</b></div><span class="tk">GLORP</span></div>
+    <div class="inf"><span class="ok">✓ simulated</span><span>fee 0 · via Jupiter</span><span>proof #42 ↗</span></div>
+    <div class="roll">ROLL AGAIN <kbd>SPACE</kbd></div>
+    <div class="buy">Buy $GLORP from my wallet</div>
+  </div>
+</section>
+
+<div class="strip2">
+  <div><b>Non-custodial</b><span>You sign every trade in your own wallet.</span></div>
+  <div><b>Provably fair</b><span>Seed is committed before you roll. Check any pull.</span></div>
+  <div><b>0% fee</b><span>The quote you see is the DEX quote.</span></div>
+  <div><b>On-chain</b><span>Every buy has a tx hash you can open.</span></div>
+</div>
+
+<section>
+  <div class="kick">How to roll</div><h2>Four steps. <em>No sign-up.</em></h2>
+  <div class="steps">
+    <div class="step b"><div class="n">1</div><b>Connect</b><p>Phantom, MetaMask, Rabby or WalletConnect. Nothing to deposit.</p></div>
+    <div class="step b"><div class="n">2</div><b>Pick a case</b><p>Trending, New &lt; 24h, Metas or CTO. Choose one chain or all.</p></div>
+    <div class="step b"><div class="n">3</div><b>Roll</b><p>Free, as many times as you want. Every roll has a proof.</p></div>
+    <div class="step b"><div class="n">4</div><b>Buy (or not)</b><p>Like the pull? Swap from your wallet. Don't? Roll again.</p></div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="kick">Case odds</div><h2>What's <em>inside</em> the box</h2>
+  <div class="odds">
+    <div class="pie"></div>
+    <div class="leg">
+      <div class="lg b"><i style="background:#9AA0A6"></i><div><b>Micro</b><span>market cap under $100K</span></div><em>35%</em></div>
+      <div class="lg b"><i style="background:#3D7BFF"></i><div><b>Small</b><span>$100K – $1M</span></div><em>30%</em></div>
+      <div class="lg b"><i style="background:#8B4DFF"></i><div><b>Mid</b><span>$1M – $10M</span></div><em>20%</em></div>
+      <div class="lg b"><i style="background:#E23BD6"></i><div><b>Large</b><span>$10M – $100M</span></div><em>12%</em></div>
+      <div class="lg b"><i style="background:#FFB21A"></i><div><b>Top</b><span>over $100M</span></div><em>3%</em></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="kick">Roadmap</div><h2>Where Locky <em>goes next</em></h2>
+  <div class="road">
+    <div class="ph b now"><div class="t"><b>PHASE 1</b><span>NOW</span></div><ul><li class="d">Free rolls on Solana</li><li class="d">Proof for every roll</li><li>Swap in app, 0% fee</li><li>Base &amp; BSC</li></ul></div>
+    <div class="ph b"><div class="t"><b>PHASE 2</b><span>NEXT</span></div><ul><li>Points &amp; daily tasks</li><li>Leaderboard: best pulls</li><li>Share your pull</li></ul></div>
+    <div class="ph b"><div class="t"><b>PHASE 3</b><span>LATER</span></div><ul><li>Sponsored cases</li><li>Project dashboard</li><li>Metas &amp; CTO cases</li></ul></div>
+    <div class="ph b"><div class="t"><b>PHASE 4</b><span>LATER</span></div><ul><li>Robinhood Chain</li><li>Arc</li><li>Mobile app</li></ul></div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="kick">Live</div><h2>Pulls <em>right now</em></h2>
+  <div class="two">
+    <div class="tbl b"><h3>Live buys <small>updates every block</small></h3>
+      <div class="tr"><span>4hQp…2mWz · <b>$ZORT</b> · 12 SOL 🐋</span><span>12s · tx ↗</span></div>
+      <div class="tr"><span>0x9a…41c0 · <b>$PUDDLE</b> · 0.01 ETH</span><span>41s · tx ↗</span></div>
+      <div class="tr"><span>8Bnd…Q1s7 · <b>$NUBBY</b> · 0.3 SOL</span><span>1m · tx ↗</span></div>
+      <div class="tr"><span>0x31…9fe2 · <b>$TOAD</b> · 25 USDC</span><span>2m · tx ↗</span></div>
+    </div>
+    <div class="tbl b"><h3>Best pulls this week <small>since pull</small></h3>
+      <div class="tr"><span>01 · 0x31…9fe2 · <b>$MOOLA</b> · <span class="g">TOP</span></span><span class="up">+412%</span></div>
+      <div class="tr"><span>02 · 4hQp…2mWz · <b>$GLORP</b> · MID</span><span class="up">+188%</span></div>
+      <div class="tr"><span>03 · Hh2x…L0pq · <b>$WEEBO</b> · LARGE</span><span class="up">+96%</span></div>
+      <div class="tr"><span>04 · 8Bnd…Q1s7 · <b>$KEBO</b> · MICRO</span><span class="up">+71%</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="kick">FAQ</div><h2>Questions <em>ser?</em></h2>
+  <div class="faq">
+    <div class="q b"><b>Is rolling really free?</b><p>Yes. Rolling never asks for a signature or a payment. Only buying does, and you sign that in your own wallet.</p></div>
+    <div class="q b"><b>Do you hold my money?</b><p>No. Lockabox never holds funds or keys. Swaps go through Jupiter or a DEX router, straight from your wallet.</p></div>
+    <div class="q b"><b>How do I know the roll isn't rigged?</b><p>The seed hash is published before you roll. After the seed rotates, open Verify and recompute any pull yourself.</p></div>
+    <div class="q b"><b>Is this financial advice?</b><p>No. It's a random pick. Memecoins can go to zero. Only buy what you can afford to lose.</p></div>
+  </div>
+</section>
+
+<footer>
+  <div><div class="logo"><svg><use href="#locky"/></svg><b>LOCKABOX<i>.</i></b></div>
+    <p>Random pick, not financial advice. Memecoins are highly volatile and can go to zero. Lockabox is non-custodial and charges no fee. Sponsored cases are always labelled. 18+.</p></div>
+  <div class="soc"><span>𝕏</span><span>Telegram</span><span>Verify</span></div>
+</footer>
+
+<script>
+document.fonts.ready.then(() => {
+  const st = document.getElementById('s1'), r = st.parentElement, w = st.querySelector('.it.w');
+  st.style.transform = `translateX(${r.clientWidth / 2 - (w.offsetLeft + w.offsetWidth / 2)}px)`;
+});
+</script>
+</body>
+</html>

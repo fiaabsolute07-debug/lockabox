@@ -1,0 +1,360 @@
+<!doctype html>
+<!-- Lockabox round 10: case-opening app that reads like a trading tool (DEX Screener / Poocoin density):
+     sidebar, roll bar with a giant ROLL button, token header, candle chart, buys table, token-info rail with swap + proof.
+     Demo data only; coin names are made up. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lockabox v11 (CS:GO case)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@700&display=block" rel="stylesheet">
+<style>
+:root{--acc:#FF5B1F;--bg:#0D0E12;--p:#14161C;--p2:#1A1D25;--ln:#23262F;--tx:#E6E7EA;--mu:#8B8F9A;--up:#22C55E;--dn:#EF4444}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1680px;background:var(--bg);color:var(--tx);font:500 13px/1.35 Inter,sans-serif}
+.m{font-family:'JetBrains Mono',monospace}
+.up{color:var(--up)}.dn{color:var(--dn)}
+/* top bar */
+.top{height:56px;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--ln);background:#0B0C10}
+.logo{display:flex;align-items:center;gap:8px;width:224px}
+.logo svg{width:30px;height:30px}
+.logo b{font-weight:800;font-size:19px;letter-spacing:-.04em}
+.logo b i{font-style:normal;color:var(--acc)}
+.search{flex:1;max-width:560px;height:36px;border-radius:8px;background:var(--p);border:1px solid var(--ln);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mu)}
+.search kbd{margin-left:auto;font:500 11px 'JetBrains Mono';padding:2px 6px;border:1px solid var(--ln);border-radius:4px}
+.tr{margin-left:auto;display:flex;gap:8px;align-items:center}
+.chipb{height:34px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:8px;border:1px solid var(--ln);background:var(--p);font-weight:600}
+.chipb.o{background:var(--acc);border-color:var(--acc);color:#fff}
+.ci{width:16px;height:16px;border-radius:50%;display:inline-block}
+.sol{background:linear-gradient(135deg,#9945FF,#14F195)}
+/* layout */
+.wrap{display:grid;grid-template-columns:224px minmax(0,1fr) 360px}
+aside.nav{border-right:1px solid var(--ln);padding:12px 10px;min-height:1460px}
+.ni{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:8px;color:var(--mu);font-weight:600}
+.ni.on{background:var(--p2);color:var(--tx)}
+.ni i{font-style:normal;width:18px;text-align:center}
+.sec{margin:16px 10px 6px;font:700 11px 'JetBrains Mono';letter-spacing:.12em;color:#5E6270}
+.cl{display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border-radius:8px;color:var(--mu);font-weight:600}
+.cl.on{color:var(--tx);background:var(--p)}
+.cl .n{margin-left:auto;font:500 11px 'JetBrains Mono';color:#5E6270}
+.cl .ci{width:14px;height:14px}
+.hot{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;font-weight:600}
+.hot .rk{font:500 11px 'JetBrains Mono';color:#5E6270;width:16px}
+.hot .ch{margin-left:auto;font:600 12px 'JetBrains Mono'}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:11px;color:#111}
+main{padding:12px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--p);border:1px solid var(--ln);border-radius:10px}
+/* roll bar */
+.rb{padding:12px}
+.rbh{display:flex;align-items:center;gap:8px}
+.tab{height:30px;padding:0 12px;display:flex;align-items:center;border-radius:6px;color:var(--mu);font-weight:600}
+.tab.on{background:var(--p2);color:var(--tx)}
+.live{margin-left:auto;display:flex;gap:14px;font:500 12px 'JetBrains Mono';color:var(--mu)}
+.live b{color:var(--tx)}
+.live .r{display:flex;align-items:center;gap:6px;color:var(--tx);font-weight:700}
+.live .r i{width:7px;height:7px;border-radius:50%;background:var(--dn)}
+.roller{margin-top:10px;position:relative;height:118px;border-radius:8px;background:var(--bg);border:1px solid var(--ln);overflow:hidden}
+.roller::before,.roller::after{content:'';position:absolute;top:0;bottom:0;width:120px;z-index:2}
+.roller::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.roller::after{right:0;background:linear-gradient(-90deg,var(--bg),transparent)}
+.strip{position:absolute;top:10px;left:0;display:flex;gap:8px}
+.it{flex:none;width:118px;height:96px;border-radius:8px;background:var(--p);border:1px solid var(--ln);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;overflow:hidden}
+.it::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--t)}
+.it .av{width:34px;height:34px;font-size:13px}
+.it b{font-weight:700;font-size:13px}
+.it small{font:500 10px 'JetBrains Mono';color:var(--mu)}
+.it.w{border-color:var(--acc);background:#1D1510}
+.mk{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--acc);z-index:3}
+.mk::before{content:'';position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:var(--acc)}
+.roll{margin-top:10px;height:64px;border-radius:10px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;gap:14px;font-weight:800;font-size:24px;letter-spacing:.02em;position:relative}
+.roll svg{position:absolute;left:14px;width:48px;height:48px;transform:rotate(-8deg)}
+.roll kbd{position:absolute;right:14px;font:700 11px 'JetBrains Mono';padding:4px 8px;border-radius:6px;background:rgba(0,0,0,.2)}
+.roll span{font:600 13px 'JetBrains Mono';opacity:.85}
+.odds{margin-top:8px;display:flex;gap:14px;font:500 11px 'JetBrains Mono';color:var(--mu)}
+.odds i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.odds .v{margin-left:auto}
+/* token header */
+.th{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.th .av{width:38px;height:38px;font-size:15px;background:var(--acc);color:#fff}
+.th .nm b{font-weight:800;font-size:18px}
+.th .nm span{color:var(--mu);font-weight:600}
+.th .nm small{display:block;font:500 11px 'JetBrains Mono';color:var(--mu)}
+.badge{height:22px;display:flex;align-items:center;padding:0 8px;border-radius:5px;background:var(--p2);font:600 11px 'JetBrains Mono';color:var(--mu)}
+.badge.pull{background:#1D1510;color:var(--acc)}
+.th .px{margin-left:auto;text-align:right}
+.th .px b{font:700 22px 'JetBrains Mono'}
+.th .px span{display:block;font:500 12px 'JetBrains Mono'}
+/* chart */
+.chart{padding:0}
+.ctb{display:flex;align-items:center;gap:4px;padding:8px 10px;border-bottom:1px solid var(--ln)}
+.ctb .tab{height:26px;font-size:12px}
+.ctb .src{margin-left:auto;font:500 11px 'JetBrains Mono';color:#5E6270}
+#c{display:block;width:100%;height:420px}
+/* table */
+.tbh{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--ln)}
+table{width:100%;border-collapse:collapse;font:500 12px 'JetBrains Mono'}
+th{text-align:left;font:600 11px Inter;color:var(--mu);padding:8px 12px;border-bottom:1px solid var(--ln)}
+td{padding:7px 12px;border-bottom:1px solid #1B1E26}
+tr.b td.t{color:var(--up)}tr.s td.t{color:var(--dn)}
+tr.b td.usd{color:var(--up)}tr.s td.usd{color:var(--dn)}
+td.mk2{color:var(--mu)}
+td a{color:var(--mu)}
+.lb{display:inline-block;font:700 9px 'JetBrains Mono';padding:2px 5px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.lb.l{background:#1D1510;color:var(--acc)}
+.lb.wh{background:#0F1C2A;color:#7CC4FF}
+/* right rail */
+.rail{border-left:1px solid var(--ln);padding:12px;display:flex;flex-direction:column;gap:12px}
+.ic{padding:12px}
+.ic .pp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px;text-align:center}
+.cell span{display:block;font:600 10px Inter;letter-spacing:.06em;color:var(--mu);text-transform:uppercase}
+.cell b{font:700 14px 'JetBrains Mono'}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:8px;border:1px solid var(--ln);border-radius:8px;overflow:hidden}
+.g4 div{padding:8px 4px;text-align:center;border-right:1px solid var(--ln)}
+.g4 div:last-child{border-right:0}
+.g4 div.on{background:var(--p2)}
+.g4 span{display:block;font:600 10px Inter;color:var(--mu)}
+.g4 b{font:700 13px 'JetBrains Mono'}
+.bs{margin-top:10px}
+.bs .row{display:flex;justify-content:space-between;font:500 11px 'JetBrains Mono';color:var(--mu)}
+.bs .row b{color:var(--tx)}
+.bar{height:6px;border-radius:3px;background:var(--dn);overflow:hidden;margin:5px 0 9px}
+.bar i{display:block;height:100%;background:var(--up)}
+.ca{margin-top:8px;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--ln);border-radius:8px;font:500 12px 'JetBrains Mono';color:var(--mu)}
+.ca b{color:var(--tx);font-weight:500}
+.ca i{margin-left:auto;font-style:normal}
+.lnk{display:flex;gap:6px;margin-top:8px}
+.lnk span{flex:1;text-align:center;padding:7px 0;border-radius:6px;background:var(--p2);font-weight:600;font-size:11px;color:var(--mu);white-space:nowrap}
+.sw{padding:12px;display:flex;flex-direction:column;gap:8px}
+.sw h4{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+.sw h4 span{font:500 11px 'JetBrains Mono';color:var(--mu)}
+.in{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:10px}
+.in .l{display:flex;justify-content:space-between;font-size:11px;color:var(--mu)}
+.in .v{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.in .v b{font:700 20px 'JetBrains Mono'}
+.tk{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:var(--p2);font-weight:700}
+.q{display:flex;gap:6px}
+.q span{flex:1;text-align:center;padding:6px 0;border-radius:6px;border:1px solid var(--ln);font:600 11px 'JetBrains Mono';color:var(--mu)}
+.pv div{display:flex;justify-content:space-between;padding:5px 2px;font:500 11px 'JetBrains Mono';color:var(--mu);border-bottom:1px dashed var(--ln)}
+.pv div:last-child{border:0}
+.pv b{color:var(--tx);font-weight:500}.pv b.z{color:var(--up)}
+.buy{height:44px;border-radius:8px;background:var(--up);color:#06110A;display:grid;place-items:center;font-weight:800;font-size:15px}
+.disc{font-size:10px;color:#5E6270;text-align:center}
+.pf{padding:12px}
+.pf h4{display:flex;justify-content:space-between;font-weight:700;font-size:13px}
+.pf h4 span{color:var(--up);font:600 11px 'JetBrains Mono'}
+.pf div.r{display:flex;justify-content:space-between;font:500 11px 'JetBrains Mono';color:var(--mu);padding:4px 0}
+.pf div.r b{color:var(--tx);font-weight:500}
+.vf{margin-top:6px;height:34px;border:1px solid var(--up);border-radius:8px;display:grid;place-items:center;color:var(--up);font-weight:700;font-size:12px}
+.note{position:absolute;font-family:Caveat,cursive;font-weight:700;color:var(--acc);font-size:24px;white-space:nowrap}
+
+/* v11: CS:GO-style case opening */
+:root{--r1:#B0B7C3;--r2:#4B69FF;--r3:#8847FF;--r4:#D32CE6;--r5:#FFB21A}
+.case{padding:0;overflow:hidden}
+.caseh{display:grid;grid-template-columns:260px 1fr 300px;gap:18px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--ln);background:linear-gradient(90deg,rgba(255,91,31,.10),transparent 40%)}
+.caseart{height:150px;display:grid;place-items:center;position:relative}
+.caseart::before{content:'';position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(255,91,31,.35),transparent 65%)}
+.caseart svg{position:relative;width:150px;height:150px}
+.cn small{font:700 11px 'JetBrains Mono';letter-spacing:.16em;color:var(--acc)}
+.cn h2{font-weight:800;font-size:30px;letter-spacing:-.02em;text-transform:uppercase;line-height:1.05;margin-top:4px}
+.cn p{margin-top:6px;color:var(--mu);font-size:13px}
+.cn .tabs{display:flex;gap:6px;margin-top:10px}
+.cn .tabs span{height:28px;padding:0 10px;display:flex;align-items:center;border-radius:6px;background:var(--p2);color:var(--mu);font-weight:600;font-size:12px}
+.cn .tabs span.on{background:var(--tx);color:var(--bg)}
+.open{display:flex;flex-direction:column;gap:8px}
+.openb{height:74px;border-radius:10px;background:linear-gradient(180deg,#FF7A45,#FF5B1F);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:26px;letter-spacing:.06em;box-shadow:0 4px 0 #A8360B,0 0 30px rgba(255,91,31,.35);text-transform:uppercase}
+.openb small{font:600 12px 'JetBrains Mono';letter-spacing:.04em;opacity:.9;text-transform:none}
+.opens{display:flex;justify-content:space-between;font:500 11px 'JetBrains Mono';color:var(--mu)}
+.spin{position:relative;height:214px;background:repeating-linear-gradient(90deg,#0F1116 0 2px,transparent 2px 6px),#0B0C10;overflow:hidden;border-bottom:1px solid var(--ln)}
+.spin::before,.spin::after{content:'';position:absolute;top:0;bottom:0;width:200px;z-index:3;pointer-events:none}
+.spin::before{left:0;background:linear-gradient(90deg,#0B0C10 10%,transparent)}
+.spin::after{right:0;background:linear-gradient(-90deg,#0B0C10 10%,transparent)}
+.reel{position:absolute;top:22px;left:0;display:flex;gap:6px}
+.card{flex:none;width:150px;height:170px;border-radius:4px;position:relative;overflow:hidden;background:linear-gradient(0deg,color-mix(in srgb,var(--r) 55%,#15171D) 0%,#1A1D25 62%);border-bottom:5px solid var(--r);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14px}
+.card .img{position:absolute;top:22px;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:26px;color:#111;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.card b{font-weight:700;font-size:14px}
+.card span{font:600 10px 'JetBrains Mono';letter-spacing:.08em;color:var(--r);text-transform:uppercase}
+.card.win{transform:scale(1.08);z-index:2;box-shadow:0 0 0 2px var(--r),0 0 40px color-mix(in srgb,var(--r) 70%,transparent)}
+.line{position:absolute;left:50%;top:6px;bottom:6px;width:3px;margin-left:-1.5px;background:#FFC53D;box-shadow:0 0 14px #FFC53D;z-index:4}
+.line::before,.line::after{content:'';position:absolute;left:-7px;border:8.5px solid transparent}
+.line::before{top:-6px;border-top-color:#FFC53D}
+.line::after{bottom:-6px;border-bottom-color:#FFC53D}
+.unbox{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--ln);background:linear-gradient(90deg,color-mix(in srgb,var(--r3) 22%,transparent),transparent 60%)}
+.unbox .img{width:46px;height:46px;border-radius:50%;background:var(--acc);display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 0 0 3px var(--r3)}
+.unbox small{font:700 11px 'JetBrains Mono';letter-spacing:.14em;color:var(--r3)}
+.unbox b{display:block;font-weight:800;font-size:20px}
+.unbox .acts{margin-left:auto;display:flex;gap:8px}
+.unbox .acts span{height:36px;padding:0 14px;display:flex;align-items:center;border-radius:8px;font-weight:700}
+.unbox .acts .g{background:var(--up);color:#06110A}
+.unbox .acts .o{border:1px solid var(--ln);color:var(--mu)}
+.contents{padding:14px 18px 18px}
+.ch2{display:flex;align-items:center;gap:14px}
+.ch2 b{font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.04em}
+.ch2 .od{display:flex;gap:12px;font:600 11px 'JetBrains Mono'}
+.ch2 .od span{display:flex;align-items:center;gap:5px}
+.ch2 .od i{width:10px;height:10px;border-radius:2px}
+.ch2 .more{margin-left:auto;font:500 11px 'JetBrains Mono';color:var(--mu)}
+.grid{margin-top:12px;display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.gi{height:104px;border-radius:4px;background:linear-gradient(0deg,color-mix(in srgb,var(--r) 40%,#15171D),#1A1D25 70%);border-bottom:3px solid var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.gi .img{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;color:#111}
+.gi b{font-size:12px;font-weight:700}
+.gi span{font:500 10px 'JetBrains Mono';color:var(--mu)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <symbol id="locky" viewBox="0 0 120 124">
+    <g filter="url(#rough)" stroke="#E6E7EA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 46 H98 V100 Q98 108 90 108 H30 Q22 108 22 100 Z" fill="#14161C"/>
+      <path d="M16 46 Q16 28 34 26 H86 Q104 28 104 46 Z" fill="var(--acc)"/>
+      <path d="M44 108 v9 M76 108 v9" fill="none"/>
+    </g>
+    <g filter="url(#rough)" fill="#E6E7EA"><circle cx="46" cy="66" r="5"/><circle cx="74" cy="66" r="5"/><circle cx="60" cy="84" r="5"/><path d="M57 86 h6 l2 10 h-10 z"/></g>
+  </symbol>
+</defs></svg>
+
+<div class="top">
+  <div class="logo"><svg><use href="#locky"/></svg><b>lockabox<i>.</i></b></div>
+  <div class="search">⌕ Search pulled coin, wallet or tx <kbd>/</kbd></div>
+  <div class="tr">
+    <div class="chipb"><span class="ci sol"></span>Solana ▾</div>
+    <div class="chipb m">1,240 pts</div>
+    <div class="chipb"><span class="ci sol"></span><span class="m">7xKq…3fPa</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <aside class="nav">
+    <div class="ni on"><i>▣</i>Roll</div><div class="ni"><i>↑</i>Best pulls</div><div class="ni"><i>◎</i>Earn points</div><div class="ni"><i>✓</i>Verify rolls</div><div class="ni"><i>☰</i>My pulls</div>
+    <div class="sec">CHAINS</div>
+    <div class="cl on"><span class="ci sol"></span>Solana<span class="n">184</span></div>
+    <div class="cl"><span class="ci" style="background:#2151F5"></span>Base<span class="n">96</span></div>
+    <div class="cl"><span class="ci" style="background:#F3BA2F"></span>BSC<span class="n">71</span></div>
+    <div class="cl"><span class="ci" style="background:#627EEA"></span>Ethereum<span class="n">42</span></div>
+    <div class="cl"><span class="ci" style="background:#CCFF00"></span>Robinhood<span class="n">18</span></div>
+    <div class="cl"><span class="ci" style="background:#D9D9DE"></span>Arc<span class="n">6</span></div>
+    <div class="sec">HOT PULLS · 24H</div>
+    <div class="hot"><span class="rk">1</span><span class="av" style="background:#FFD166">M</span>$MOOLA<span class="ch up">+412%</span></div>
+    <div class="hot"><span class="rk">2</span><span class="av" style="background:#9EE493">G</span>$GLORP<span class="ch up">+188%</span></div>
+    <div class="hot"><span class="rk">3</span><span class="av" style="background:#FFB5E8">W</span>$WEEBO<span class="ch up">+96%</span></div>
+    <div class="hot"><span class="rk">4</span><span class="av" style="background:#F7D06B">K</span>$KEBO<span class="ch up">+71%</span></div>
+    <div class="hot"><span class="rk">5</span><span class="av" style="background:#C39BD3">Z</span>$ZORT<span class="ch dn">−12%</span></div>
+  </aside>
+
+  <main>
+    <div class="panel case">
+      <div class="caseh">
+        <div class="caseart"><svg><use href="#locky"/></svg></div>
+        <div class="cn"><small>CASE · SOLANA</small><h2>Trending Case</h2><p>184 memecoins moving right now · pool #a91c…04e2 · refreshed 4 min ago</p>
+          <div class="tabs"><span class="on">Trending</span><span>New &lt; 24h</span><span>Metas</span><span>CTO</span><span>Filters ▾</span></div></div>
+        <div class="open"><div class="openb">Open case<small>free · unlimited · SPACE</small></div>
+          <div class="opens"><span>● 1,284 opened / 1h</span><span>last ★ 2m ago</span></div></div>
+      </div>
+      <div class="spin"><div class="line"></div><div class="reel" id="s1"></div></div>
+      <div class="unbox"><div class="img">G</div><div><small>YOU UNBOXED · MID</small><b>$GLORP</b></div>
+        <span class="badge" style="margin-left:12px">seed 8f3a…c21e · nonce 42 · ✓ verifiable</span>
+        <div class="acts"><span class="o">Open again</span><span class="g">Buy $GLORP</span></div></div>
+      <div class="contents">
+        <div class="ch2"><b>Items in this case</b><div class="od">
+          <span style="color:var(--r1)"><i style="background:var(--r1)"></i>Micro 35%</span><span style="color:var(--r2)"><i style="background:var(--r2)"></i>Small 30%</span><span style="color:var(--r3)"><i style="background:var(--r3)"></i>Mid 20%</span><span style="color:var(--r4)"><i style="background:var(--r4)"></i>Large 12%</span><span style="color:var(--r5)"><i style="background:var(--r5)"></i>★ Top 3%</span></div>
+          <span class="more">showing 16 of 184 ▾</span></div>
+        <div class="grid" id="g1"></div>
+      </div>
+    </div>
+
+    <div class="panel th">
+      <div class="av">G</div>
+      <div class="nm"><b>GLORP</b> <span>/ SOL</span><small>Raydium · pair 5Kx9…Qp2A · created 2d 4h ago</small></div>
+      <span class="badge pull">YOUR PULL #18,402 · MID</span><span class="badge">🔥 37 buys via Lockabox today</span>
+      <div class="px"><b>$0.004821</b><span class="up">+38.21% · 24h</span></div>
+    </div>
+
+    <div class="panel chart">
+      <div class="ctb"><span class="tab">1m</span><span class="tab on">5m</span><span class="tab">15m</span><span class="tab">1h</span><span class="tab">4h</span><span class="tab">D</span><span class="src">chart: GeckoTerminal embed (demo)</span></div>
+      <svg id="c" viewBox="0 0 1060 420" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="panel">
+      <div class="tbh"><span class="tab on">Buys via Lockabox</span><span class="tab">All trades</span><span class="tab">Top pullers</span><span class="tab">Holders</span></div>
+      <table>
+        <thead><tr><th>Time</th><th>Type</th><th>USD</th><th>GLORP</th><th>SOL</th><th>Price</th><th>Maker</th><th>Txn</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div class="rail">
+    <div class="panel ic">
+      <div class="pp"><div class="cell"><span>Price USD</span><b>$0.004821</b></div><div class="cell"><span>Price SOL</span><b>0.00003112</b></div></div>
+      <div class="g3"><div class="cell"><span>Liquidity</span><b>$412K</b></div><div class="cell"><span>FDV</span><b>$4.82M</b></div><div class="cell"><span>Mkt cap</span><b>$4.82M</b></div></div>
+      <div class="g4"><div><span>5M</span><b class="up">+2.1%</b></div><div><span>1H</span><b class="up">+9.4%</b></div><div><span>6H</span><b class="dn">−3.2%</b></div><div class="on"><span>24H</span><b class="up">+38.2%</b></div></div>
+      <div class="bs">
+        <div class="row"><span>TXNS <b>8,412</b></span><span>BUYS <b class="up">4,977</b> · SELLS <b class="dn">3,435</b></span></div><div class="bar"><i style="width:59%"></i></div>
+        <div class="row"><span>VOLUME <b>$1.91M</b></span><span>BUY <b class="up">$1.08M</b> · SELL <b class="dn">$0.83M</b></span></div><div class="bar"><i style="width:57%"></i></div>
+        <div class="row"><span>MAKERS <b>2,318</b></span><span>BUYERS <b class="up">1,602</b> · SELLERS <b class="dn">1,044</b></span></div><div class="bar"><i style="width:61%"></i></div>
+      </div>
+      <div class="ca">CA <b>So1aG7…Kp9xGl</b><i>⧉</i></div>
+      <div class="lnk"><span>DexScreener ↗</span><span>Solscan ↗</span><span>Web ↗</span><span>𝕏 ↗</span></div>
+    </div>
+
+    <div class="panel sw">
+      <h4>Buy GLORP <span>via Jupiter · 0% Lockabox fee</span></h4>
+      <div class="in"><div class="l"><span>You pay</span><span>Bal 3.21 SOL</span></div><div class="v"><b>0.05</b><span class="tk"><span class="ci sol"></span>SOL</span></div></div>
+      <div class="q"><span>0.01</span><span>0.05</span><span>0.1</span><span>0.5</span><span>1</span></div>
+      <div class="in"><div class="l"><span>You get (min)</span><span>slippage 3%</span></div><div class="v"><b>1,893,700</b><span class="tk" style="background:#1D1510;color:var(--acc)">GLORP</span></div></div>
+      <div class="pv"><div><span>Route</span><b>SOL → Raydium → GLORP</b></div><div><span>Network fee</span><b>~0.00005 SOL</b></div><div><span>Lockabox fee</span><b class="z">0</b></div><div><span>Simulation</span><b class="z">✓ passed</b></div></div>
+      <div class="buy">Buy GLORP</div>
+      <div class="disc">Non-custodial: you sign in your wallet. Random pick, not advice.</div>
+    </div>
+
+    <div class="panel pf">
+      <h4>Proof of this roll <span>✓ verifiable</span></h4>
+      <div class="r"><span>server seed hash</span><b>8f3a91…c21e04</b></div>
+      <div class="r"><span>client seed</span><b>glorp-hunter</b></div>
+      <div class="r"><span>nonce</span><b>42</b></div>
+      <div class="r"><span>pool</span><b>#a91c…04e2 (184)</b></div>
+      <div class="r"><span>result</span><b>0.61843 → Mid #7</b></div>
+      <div class="vf">Verify this roll yourself ↗</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// CS:GO-style spinner + contents grid
+const R = { r1: 'Micro', r2: 'Small', r3: 'Mid', r4: 'Large', r5: '★ Top' };
+const C = [['BONKLE','#F7D06B','r1'],['PUDDLE','#7CC6FE','r2'],['NUBBY','#F4978E','r1'],['SNOOZ','#A3B1FF','r2'],['ZORT','#C39BD3','r4'],['WEEBO','#FFB5E8','r2'],['TOAD','#B8E0D2','r1'],['KEBO','#E3C08D','r1'],['MOOLA','#FFD166','r5'],['YEET','#9AD1D4','r3'],['CRUMB','#E3C08D','r1'],['FROGGO','#9EE493','r3'],['BLIP','#CDB4DB','r2'],['DUCKO','#FFE29A','r4'],['PEBL','#D7CEC7','r1'],['ZAPP','#8EECF5','r2']];
+const seq = []; for (let i = 0; i < 14; i++) seq.push(C[(i * 7 + 3) % C.length]);
+const WIN = 7; seq[WIN] = ['GLORP', '#FF5B1F', 'r3'];
+const st = document.getElementById('s1');
+st.innerHTML = seq.map(([n, c, t], i) => `<div class="card${i === WIN ? ' win' : ''}" style="--r:var(--${t})"><div class="img" style="background:${c};${i === WIN ? 'color:#fff' : ''}">${n[0]}</div><b>$${n}</b><span>${R[t]}</span></div>`).join('');
+document.getElementById('g1').innerHTML = C.map(([n, c, t]) => `<div class="gi" style="--r:var(--${t})"><div class="img" style="background:${c}">${n[0]}</div><b>$${n}</b><span>${R[t]}</span></div>`).join('');
+// candles (seeded random walk)
+let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+const N = 88, W = 1060, H = 420, T0 = 20, ch = 300, vb = 80;
+let p = 0.0033; const cs = [];
+for (let i = 0; i < N; i++) { const o = p; const dr = (rnd() - 0.44) * 0.00022 + (i > 60 ? 0.00005 : 0); const c = Math.max(0.002, o + dr); const hi = Math.max(o, c) + rnd() * 0.00009; const lo = Math.min(o, c) - rnd() * 0.00009; cs.push({ o, c, hi, lo, v: 0.3 + rnd() * (i > 60 ? 1.6 : 0.9) }); p = c; }
+const mx = Math.max(...cs.map(x => x.hi)), mn = Math.min(...cs.map(x => x.lo)), vmx = Math.max(...cs.map(x => x.v));
+const y = v => T0 + (mx - v) / (mx - mn) * ch; const cw = (W - 70) / N;
+let h = '';
+for (let g = 0; g <= 5; g++) { const yy = T0 + g * ch / 5; h += `<line x1="0" x2="${W - 70}" y1="${yy}" y2="${yy}" stroke="#1B1E26"/><text x="${W - 64}" y="${yy + 4}" fill="#5E6270" font-family="JetBrains Mono" font-size="11">${(mx - g * (mx - mn) / 5).toFixed(5)}</text>`; }
+cs.forEach((k, i) => { const x = i * cw + cw / 2, up = k.c >= k.o, col = up ? '#22C55E' : '#EF4444';
+  h += `<line x1="${x}" x2="${x}" y1="${y(k.hi)}" y2="${y(k.lo)}" stroke="${col}"/><rect x="${x - cw * 0.35}" y="${y(Math.max(k.o, k.c))}" width="${cw * 0.7}" height="${Math.max(1, Math.abs(y(k.o) - y(k.c)))}" fill="${col}"/>`;
+  h += `<rect x="${x - cw * 0.35}" y="${H - 8 - k.v / vmx * vb}" width="${cw * 0.7}" height="${k.v / vmx * vb}" fill="${col}" opacity=".35"/>`; });
+const pi = 71, px = pi * cw + cw / 2;
+h += `<line x1="${px}" x2="${px}" y1="${T0}" y2="${T0 + ch}" stroke="#FF5B1F" stroke-dasharray="4 4"/><rect x="${px - 44}" y="${T0 - 2}" width="88" height="20" rx="4" fill="#FF5B1F"/><text x="${px}" y="${T0 + 12}" fill="#fff" font-family="JetBrains Mono" font-size="11" font-weight="700" text-anchor="middle">YOU PULLED</text>`;
+const last = cs[N - 1].c; h += `<rect x="${W - 70}" y="${y(last) - 10}" width="70" height="20" fill="#22C55E"/><text x="${W - 66}" y="${y(last) + 4}" fill="#06110A" font-family="JetBrains Mono" font-size="11" font-weight="700">${last.toFixed(5)}</text>`;
+document.getElementById('c').innerHTML = h;
+// table
+const mk = ['4hQp…2mWz','0x9a…41c0','8Bnd…Q1s7','Hh2x…L0pq','0x31…9fe2','3Fvd…9Kqa','Gm4t…u2Lp','9sQe…Aa0v'];
+let rows = '';
+for (let i = 0; i < 16; i++) { const sell = i % 5 === 3; const sol = [0.05,0.2,12,0.5,0.1,1.5,0.03,0.8][i % 8]; const usd = (sol * 154.9).toFixed(2); const amt = Math.round(sol * 154.9 / 0.004821).toLocaleString();
+  const whale = sol >= 10 ? '<span class="lb wh">WHALE</span>' : ''; const lab = !sell && i % 3 !== 2 ? '<span class="lb l">LOCKABOX</span>' : '';
+  rows += `<tr class="${sell ? 's' : 'b'}"><td class="mk2">${i * 7 + 3}s ago</td><td class="t">${sell ? 'Sell' : 'Buy'}${lab}</td><td class="usd">$${usd}</td><td>${amt}</td><td>${sol}${whale}</td><td>$0.00${(4800 + (i * 37) % 60)}</td><td class="mk2">${mk[i % 8]}</td><td><a>↗</a></td></tr>`; }
+document.getElementById('tb').innerHTML = rows;
+document.fonts.ready.then(() => { const r = st.parentElement, w = st.querySelector('.card.win'); st.style.transform = `translateX(${r.clientWidth / 2 - (w.offsetLeft + w.offsetWidth / 2)}px)`; });
+</script>
+</body>
+</html>
