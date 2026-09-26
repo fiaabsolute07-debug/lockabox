@@ -79,6 +79,24 @@ run('rolls (LAB-AC-028/030/031/032)', () => {
     await expect(roll({ deviceId: 'device-bbbbbbbbbbbb', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL })).rejects.toMatchObject({ code: 'rate_limited' });
   });
 
+  it('concurrent rolls from one device: exactly one wins the 1 s pacing window', async () => {
+    const res = await Promise.allSettled(Array.from({ length: 8 }, () => roll({ deviceId: 'device-eeeeeeeeeeee', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL })));
+    expect(res.filter((r) => r.status === 'fulfilled').length).toBe(1);
+  });
+
+  it('kill switch removes an asset from rolls immediately, before any pool rebuild (AC-069)', async () => {
+    const pool = await latestPool('trending', CHAIN_SCOPE_ALL);
+    const victim = pool!.items[0].a;
+    await sql`insert into moderation (asset_id, reason, actor) values (${victim}, 'test kill', 'test')`;
+    for (let i = 0; i < 15; i++) {
+      const r = await roll({ deviceId: `device-kill-${String(i).padStart(4, '0')}`, caseId: 'trending', chainScope: CHAIN_SCOPE_ALL, filters: { tiers: [pool!.items[0].t, 'small', 'mid'] } }).catch((e) => e);
+      if (!(r instanceof RollError)) {
+        const [{ items }] = await sql<{ items: { a: number }[] }[]>`select items from rolls where id = ${r.rollId}`;
+        expect(items.some((x) => x.a === victim)).toBe(false);
+      }
+    }
+  });
+
   it('filters that leave fewer than MIN_POOL items are refused', async () => {
     const e = await roll({ deviceId: 'device-cccccccccccc', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL, filters: { tiers: ['top'] } }).catch((x) => x);
     expect(e).toBeInstanceOf(RollError);

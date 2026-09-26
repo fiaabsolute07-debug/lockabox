@@ -28,9 +28,9 @@ second engineer. Claude assigns tasks on this board, integrates, runs DB/E2E sui
 | Id | Owner | Task | Depends on | Status |
 |---|---|---|---|---|
 | C0 | Claude | Repo, toolchain, embedded Postgres, migrations runner, fixtures | — | DONE |
-| A1 | Astra | `src/modules/sources`: DEX Screener + DexPaprika clients (rate limit, retry, typed errors), normalisation to asset snapshots, market-cap tiering, unit tests on fixtures | C0 | IN PROGRESS |
-| C1 | Claude | DB schema (assets, snapshots, gates, cases, pools, seeds, rolls, users, wallets, points, trades, sponsors), provably-fair roll engine, pool builder | C0 | IN PROGRESS |
-| C2 | Claude | Hidden gates (Solana sell route via Jupiter quote, liquidity floor), worker (discover → enrich → gate → pools), API routes + `docs/UI_CONTRACT.md` | A1, C1 | TODO |
-| A2 | Astra | UI per `design/brand-explore-v11.html`: case page, spinner, contents grid, token header, DEX Screener embed chart (fallback GeckoTerminal), buys table, token rail, swap box, proof box, verify page, mobile | C2 contract | TODO |
-| C3 | Claude | Wallet auth (SIWS), Jupiter swap build endpoint, trade recording, points + tasks, FOMO feed from real events | C2 | TODO |
+| A1 | Astra | `src/modules/sources`: DEX Screener + DexPaprika clients (rate limit, retry, typed errors), normalisation to asset snapshots, market-cap tiering, unit tests on fixtures | C0 | DONE (reviewed: claude-review-A1.md; F1 fixed by Claude) |
+| C1 | Claude | DB schema (assets, snapshots, gates, cases, pools, seeds, rolls, users, wallets, points, trades, sponsors), provably-fair roll engine, pool builder | C0 | DONE |
+| C2 | Claude | Hidden gates (Solana sell route via Jupiter quote, liquidity floor), worker (discover → enrich → gate → pools), API routes + `docs/UI_CONTRACT.md` | A1, C1 | DONE |
+| A2 | Astra | UI per `design/brand-explore-v11.html`: case page, spinner, contents grid, token header, DEX Screener embed chart (fallback GeckoTerminal), buys table, token rail, swap box, proof box, verify page, mobile | C2 contract | IN PROGRESS (re-dispatched: first prompt wrongly read as 'edit only COLLABORATION.md') |
+| C3 | Claude | Wallet auth (SIWS), Jupiter swap build endpoint, trade recording, points + tasks, FOMO feed from real events | C2 | DONE (backend); UI in A2 |
 | R* | both | Cross-review each other's tasks; findings in evidence files | — | ongoing |

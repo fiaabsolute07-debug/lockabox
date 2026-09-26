@@ -44,6 +44,11 @@ export function sanitizeFilters(input: unknown): RollFilters {
 /** Applies user filters to a frozen pool using the current snapshots; the result is stored on the roll for verification. */
 export async function filterPool(items: PoolItem[], filters: RollFilters, sql: postgres.Sql = defaultSql): Promise<PoolItem[]> {
   let pool = filters.tiers ? items.filter((i) => filters.tiers!.includes(i.t)) : items;
+  // Kill switch applies at roll time, not at the next pool rebuild (LAB-AC-069).
+  if (pool.length) {
+    const killed = await sql<{ asset_id: number }[]>`select asset_id from moderation where asset_id = any(${pool.map((i) => i.a)}::bigint[])`;
+    if (killed.length) { const k = new Set(killed.map((r) => Number(r.asset_id))); pool = pool.filter((i) => !k.has(i.a)); }
+  }
   const needsSnapshots = filters.minLiquidityUsd || filters.minVolume24h || filters.maxAgeHours || filters.minAgeHours || filters.change24h;
   if (!needsSnapshots || !pool.length) return canonicalPool(pool);
   const ids = pool.map((i) => i.a);
@@ -111,6 +116,9 @@ export async function roll(input: Actor & { caseId: string; chainScope: string; 
   const seed = await activeSeed(sql);
 
   return sql.begin(async (tx) => {
+    // Lock the actor row first so concurrent rolls from one device/user serialise before the pacing check.
+    if (input.userId) await tx`select 1 from users where id = ${input.userId} for update`;
+    else await tx`select 1 from devices where id = ${input.deviceId!} for update`;
     // Anti-bot pacing (not a limit on the number of rolls).
     const [last] = input.userId
       ? await tx<{ created_at: Date }[]>`select created_at from rolls where user_id = ${input.userId} order by created_at desc limit 1`
