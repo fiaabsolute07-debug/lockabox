@@ -2,7 +2,7 @@
 
 Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 4 · VERIFIED_LOCAL 58 (of 89)
+Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 15 · SPEC 3 · VERIFIED_LOCAL 58 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
@@ -42,7 +42,7 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 4 · VERIFIED_LOCAL 58 (o
 | LAB-AC-035 | VERIFIED_LOCAL | swap box with real Jupiter quotes live-local, fee 0, sell check shown (claude-review-A2.md) |
 | LAB-AC-036 | BUILT | Solana wallet adapter in A2; EVM not built |
 | LAB-AC-037 | BUILT | quote/build with fee guard (unit); real signing needs the owner |
-| LAB-AC-038 | SPEC | EVM swap not built |
+| LAB-AC-038 | PARTIAL | EVM buy via LI.FI built + guarded, off by default (DECISIONS #10); live quotes + sell checks OK on Base/BSC/Robinhood/Arc; tests unit swap-evm + integration swap-evm.db; UI + owner decision pending |
 | LAB-AC-039 | VERIFIED_LOCAL | sell check before quote/build quarantines (code) + gate tests |
 | LAB-AC-040 | BUILT | swap only on explicit build + wallet send (A2) |
 | LAB-AC-041 | VERIFIED_LOCAL | server never receives keys; build returns unsigned tx |
@@ -75,8 +75,8 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 4 · VERIFIED_LOCAL 58 (o
 | LAB-AC-068 | BUILT | stats endpoint; UI not built |
 | LAB-AC-069 | VERIFIED_LOCAL | kill switch at roll time test |
 | LAB-AC-070 | VERIFIED_LOCAL | policy test |
-| LAB-AC-071 | PARTIAL | chain flags; EVM gates missing |
-| LAB-AC-072 | PARTIAL | data yes, swap no (spike R0) |
+| LAB-AC-071 | PARTIAL | chain flags; EVM sell check exists (honeypot.is / LI.FI round trip); a chain is only swap-enabled by the owner |
+| LAB-AC-072 | PARTIAL | Robinhood + Arc: data yes; swap route via LI.FI verified live (quotes only), off until the owner enables it |
 | LAB-AC-073 | VERIFIED_LOCAL | meta cases live |
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |

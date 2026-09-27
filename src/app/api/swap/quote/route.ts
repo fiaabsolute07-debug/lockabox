@@ -13,9 +13,10 @@ export async function POST(req: Request) {
     if (tooMany) return tooMany;
     const blocked = swapBlockedFor(req);
     if (blocked) return problem(451, 'swap_unavailable_region', `in-app swap is not available in ${blocked}; View on DEX instead`);
-    const b = await readJson<{ assetId?: number; amountSol?: string; slippageBps?: number }>(req);
-    if (!Number.isSafeInteger(b.assetId) || typeof b.amountSol !== 'string') return problem(400, 'missing_fields', 'assetId and amountSol are required');
-    return json(await quote({ assetId: b.assetId!, amountSol: b.amountSol, slippageBps: b.slippageBps }));
+    const b = await readJson<{ assetId?: number; amount?: string; amountSol?: string; slippageBps?: number }>(req);
+    const amount = b.amount ?? b.amountSol;
+    if (!Number.isSafeInteger(b.assetId) || typeof amount !== 'string') return problem(400, 'missing_fields', 'assetId and amount are required');
+    return json(await quote({ assetId: b.assetId!, amount, slippageBps: b.slippageBps }));
   } catch (e) {
     if (e instanceof SwapError) return problem(STATUS[e.code], e.code, e.message);
     return handleError(e);

@@ -67,4 +67,16 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
 | `GET /api/sponsor/campaigns/:id` | — | `{ campaign: {id, project_name, status, total_opens, opens_used, starts_at, ends_at, amount_per_open}, stats: {opens, wallets, sent, buys} }`; 404 for someone else's campaign. CSV export is built client-side from this. |
 | `POST /api/sponsor/campaigns` | `{ projectName (2–60), description (≤ 280), tokenAddress (Solana mint), amountPerOpen (raw integer string), totalOpens, startsAt, endsAt, feeTxHash?, depositTxHash? }` | 201 `{ id, status: 'pending_review' }`; 422 `policy` when the text promises returns/price moves; 400 `bad_input`. Copy on the form: "Reviewed before it goes live. Your token always shows as Sponsored and at its real market-cap tier." |
 
+### EVM buys (DECISIONS #10; off until `chains.swap_enabled`, so `/api/meta` shows `swapEnabled: false` for EVM today)
+
+- `POST /api/swap/quote` takes `amount` (in the chain's input coin: SOL, ETH, BNB, or USDC on Arc); `amountSol` still works for Solana.
+- `QuoteView` now also has `provider: 'jupiter' | 'lifi'`, `inputSymbol` (any coin), `priceImpactPct: number | null` and
+  `routeFees: [{name, percentage, amountUsd}]`. Show every route fee on its own line (e.g. "LI.FI fee 0.25 %") next to "Lockabox fee 0";
+  never fold it into the price. Solana has `routeFees: []`.
+- `POST /api/swap/build` for EVM: body `{ assetId, amount, slippageBps?, userAddress, rollId? }` →
+  201 `{ tradeId, evm: { chainId, approval: EvmTx | null, transaction: EvmTx }, quote }` with `EvmTx = { to, data, value (hex), gasLimit (hex) | null, chainId }`.
+  The wallet must be on `chainId` (ask it to switch). If `approval` is present, send it first (it approves exactly the amount), wait for it,
+  then send `transaction`; then `PATCH /api/trades/:id { txHash, wallet }` as on Solana (hash `0x…64 hex`).
+- Copy under the EVM swap box: "Routed by LI.FI, an independent non-custodial service; Lockabox adds no fee."
+
 Invites: the invite link is `https://lockabox.fun/?ref=<code>`. The UI stores `ref` (localStorage `lab_ref`) and calls `POST /api/invites/accept` once right after the user signs in, then forgets it. **Share links for pulls never carry `?ref=`** (AC-046): sharing is not rewarded.

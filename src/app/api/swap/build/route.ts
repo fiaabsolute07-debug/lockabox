@@ -1,7 +1,7 @@
 import { handleError, json, problem, readJson } from '@/lib/api';
 import { limited } from '@/lib/ratelimit';
 import { swapBlockedFor } from '@/modules/admin/guard';
-import { currentUserId, isSolanaAddress } from '@/modules/auth/session';
+import { currentUserId } from '@/modules/auth/session';
 import { build, SwapError } from '@/modules/swap/service';
 
 export const dynamic = 'force-dynamic';
@@ -15,11 +15,14 @@ export async function POST(req: Request) {
     if (tooMany) return tooMany;
     const blocked = swapBlockedFor(req);
     if (blocked) return problem(451, 'swap_unavailable_region', `in-app swap is not available in ${blocked}; View on DEX instead`);
-    const b = await readJson<{ assetId?: number; amountSol?: string; slippageBps?: number; userPublicKey?: string; rollId?: number }>(req);
-    if (!Number.isSafeInteger(b.assetId) || typeof b.amountSol !== 'string' || !b.userPublicKey || !isSolanaAddress(b.userPublicKey)) {
-      return problem(400, 'missing_fields', 'assetId, amountSol and a Solana userPublicKey are required');
+    // Solana sends `userPublicKey`, EVM sends `userAddress`; the service checks the format against the coin's chain.
+    const b = await readJson<{ assetId?: number; amount?: string; amountSol?: string; slippageBps?: number; userPublicKey?: string; userAddress?: string; rollId?: number }>(req);
+    const amount = b.amount ?? b.amountSol;
+    const wallet = b.userAddress ?? b.userPublicKey;
+    if (!Number.isSafeInteger(b.assetId) || typeof amount !== 'string' || !wallet) {
+      return problem(400, 'missing_fields', 'assetId, amount and the wallet address are required');
     }
-    return json(await build({ assetId: b.assetId!, amountSol: b.amountSol, slippageBps: b.slippageBps, userPublicKey: b.userPublicKey, rollId: b.rollId ?? null, userId: await currentUserId() }), 201);
+    return json(await build({ assetId: b.assetId!, amount, slippageBps: b.slippageBps, wallet, rollId: b.rollId ?? null, userId: await currentUserId() }), 201);
   } catch (e) {
     if (e instanceof SwapError) return problem(STATUS[e.code], e.code, e.message);
     return handleError(e);
