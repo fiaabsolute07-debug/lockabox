@@ -3,7 +3,7 @@ import { limited } from '@/lib/ratelimit';
 import { currentUserId } from '@/modules/auth/session';
 import { claim, TaskError } from '@/modules/points/service';
 
-const STATUS: Record<TaskError['code'], number> = { unknown_task: 404, not_done: 409, already_claimed: 409, needs_wallet: 401, daily_cap: 429 };
+const STATUS: Record<TaskError['code'], number> = { unknown_task: 404, not_done: 409, already_claimed: 409, needs_wallet: 401, daily_cap: 429, locked: 403 };
 
 export async function POST(_req: Request, ctx: RouteContext<'/api/tasks/[id]/claim'>) {
   try {

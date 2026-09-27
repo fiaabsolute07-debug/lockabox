@@ -21,7 +21,8 @@ export async function acceptInvite(inviteeUserId: string, code: string, sql: pos
   const [inviter] = await sql<{ id: string }[]>`select id from users where invite_code = ${code}`;
   if (!inviter) throw new InviteError('bad_code', 'unknown invite code');
   if (inviter.id === inviteeUserId) throw new InviteError('self', 'you cannot invite yourself');
-  const [me] = await sql<{ young: boolean }[]>`select created_at > now() - interval '24 hours' as young from users where id = ${inviteeUserId}`;
+  const [me] = await sql<{ young: boolean; locked: boolean }[]>`select created_at > now() - interval '24 hours' as young, locked_at is not null as locked from users where id = ${inviteeUserId}`;
+  if (me?.locked) throw new InviteError('too_old', 'this account is locked');
   if (!me?.young) throw new InviteError('too_old', 'invites can only be accepted by new accounts');
   const [row] = await sql`insert into invites (invitee_user_id, inviter_user_id) values (${inviteeUserId}, ${inviter.id}) on conflict do nothing returning invitee_user_id`;
   if (!row) throw new InviteError('already_invited', 'this account already has an inviter');

@@ -1,5 +1,6 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
+import { audit } from '@/modules/admin/service';
 import { isSolanaAddress } from '@/modules/auth/session';
 import { recordGate, solanaHoneypotGate, type GateOutcome } from '@/modules/gates';
 import { evmSellGate } from '@/modules/gates/evm';
@@ -99,7 +100,10 @@ async function sellCheck(a: AssetRow, sql: postgres.Sql, fetchImpl: typeof fetch
     : await evmSellGate(a.evm_chain_id!, a.address, evmProbe(a.native_decimals), fetchImpl);
   await recordGate(a.id, 'honeypot', out, sql);
   if (!out.passed) {
-    await sql`insert into moderation (asset_id, reason, actor) values (${a.id}, ${`pre-trade sell check: ${out.reason}`}, 'system') on conflict do nothing`;
+    await sql.begin(async (tx) => {
+      const [m] = await tx`insert into moderation (asset_id, reason, actor) values (${a.id}, ${`pre-trade sell check: ${out.reason}`}, 'system') on conflict do nothing returning asset_id`;
+      if (m) await audit(tx, 'system', 'kill', a.id, { reason: `pre-trade sell check: ${out.reason}` });
+    });
     throw new SwapError('sell_check_failed', 'this coin failed the pre-trade sell check and was removed from all cases');
   }
 }

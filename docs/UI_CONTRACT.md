@@ -82,4 +82,15 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
   Smart wallets (ERC-1271/6492) work. Same wallet on any EVM chain = same account; `/api/auth/me` lists `{ family: 'evm', address (lowercase) }`.
 - Copy under the EVM swap box: "Routed by LI.FI, an independent non-custodial service; Lockabox adds no fee."
 
+### Admin (owner only; header `Authorization: Bearer <ADMIN_TOKEN>` + `x-admin-actor: <name>`)
+
+| Method & path | Body | Result |
+|---|---|---|
+| `GET /api/admin/overview` | — | `{ pendingCampaigns: [...], killed: [{asset_id, chain_id, symbol, reason, actor, created_at}], audit: [{at, actor, action, target, detail}] }` |
+| `POST /api/admin/campaigns/:id/review` | `{ decision: 'approve'|'reject', note }` | `{ id, status }`; approval needs fee + deposit tx and passed gates (`gates` error otherwise) |
+| `POST /api/admin/kill` / `POST /api/admin/unkill` | `{ assetId, reason }` | `{ ok, assetId }` |
+| `POST /api/admin/blocklist` | `{ symbol, op: 'add'|'remove', reason }` | `{ ok, symbol }` |
+| `POST /api/admin/users/:id/lock` | `{ lock: boolean, reason }` | `{ ok, userId, locked }` |
+401 `unauthorized` without the token. The admin page keeps the token only in memory (never localStorage, never a URL).
+
 Invites: the invite link is `https://lockabox.fun/?ref=<code>`. The UI stores `ref` (localStorage `lab_ref`) and calls `POST /api/invites/accept` once right after the user signs in, then forgets it. **Share links for pulls never carry `?ref=`** (AC-046): sharing is not rewarded.

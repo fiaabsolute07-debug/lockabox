@@ -1,11 +1,12 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
+import { isLocked } from '@/modules/admin/service';
 import { claimableInvitees, INVITE_DAILY_CAP, rewardedToday } from '@/modules/invites/service';
 
 /** Points (LAB §7.4): only tasks add points, the ledger is append-only, points can't be bought or transferred (LAB-AC-049/050). */
 
 export class TaskError extends Error {
-  constructor(public code: 'unknown_task' | 'not_done' | 'already_claimed' | 'needs_wallet' | 'daily_cap', message: string) { super(message); }
+  constructor(public code: 'unknown_task' | 'not_done' | 'already_claimed' | 'needs_wallet' | 'daily_cap' | 'locked', message: string) { super(message); }
 }
 
 type TaskRow = { id: string; title: string; points: number; kind: string; goal: number; daily: boolean };
@@ -68,6 +69,7 @@ export async function tasksFor(userId: string, sql: postgres.Sql = defaultSql) {
 export async function claim(userId: string, taskId: string, sql: postgres.Sql = defaultSql) {
   const [t] = await sql<TaskRow[]>`select id, title, points, kind, goal, daily from tasks where id = ${taskId} and active`;
   if (!t) throw new TaskError('unknown_task', 'unknown task');
+  if (await isLocked(userId, sql)) throw new TaskError('locked', 'this account is locked; contact support');
   let period = t.daily ? today() : 'once';
   if (t.kind === 'invite') {
     // One completion per qualified invitee (AC-054), at most INVITE_DAILY_CAP a day.

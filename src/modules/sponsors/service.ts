@@ -1,6 +1,7 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
 import { canonicalPool, DEFAULT_ODDS, poolHash, resolveRoll, type PoolItem, type Tier } from '@/modules/rolls/fair';
+import { audit, isLocked } from '@/modules/admin/service';
 import { activeSeed, lockedActiveSeed } from '@/modules/rolls/service';
 import { marketCapTier } from '@/modules/sources/tier';
 
@@ -54,7 +55,10 @@ export async function reviewCampaign(id: number, decision: 'approve' | 'reject',
     const ok = (g: string) => gates.some((x) => x.gate === g && x.passed);
     if (!ok('liquidity') || !ok('honeypot')) throw new SponsorError('gates', 'the token has not passed the hidden gates yet (wait for the next worker cycle)');
   }
-  await sql`update sponsor_campaigns set status = ${decision === 'approve' ? 'approved' : 'rejected'}, review_note = ${note}, reviewed_by = ${reviewer}, reviewed_at = now() where id = ${id}`;
+  await sql.begin(async (tx) => {
+    await tx`update sponsor_campaigns set status = ${decision === 'approve' ? 'approved' : 'rejected'}, review_note = ${note}, reviewed_by = ${reviewer}, reviewed_at = now() where id = ${id}`;
+    await audit(tx, reviewer, `campaign.${decision}`, id, { note });
+  });
   return { id, status: decision === 'approve' ? 'approved' : 'rejected' };
 }
 
@@ -79,6 +83,7 @@ export async function liveSponsoredItems(sql: postgres.Sql = defaultSql): Promis
 export async function openSponsored(userId: string, sql: postgres.Sql = defaultSql) {
   const [wallet] = await sql<{ address: string }[]>`select address from wallets where user_id = ${userId} and chain_family = 'solana' limit 1`;
   if (!wallet) throw new SponsorError('needs_wallet', 'sign in with a Solana wallet first');
+  if (await isLocked(userId, sql)) throw new SponsorError('insufficient_points', 'this account is locked; contact support');
   await activeSeed(sql); // makes sure one exists
   return sql.begin(async (tx) => {
     const seed = await lockedActiveSeed(tx);

@@ -16,3 +16,9 @@ export function swapBlockedFor(req: Request): string | null {
   const country = (req.headers.get('x-vercel-ip-country') ?? req.headers.get('cf-ipcountry') ?? '').toUpperCase();
   return country && list.includes(country) ? country : null;
 }
+
+/** Who is acting, for the audit log: `x-admin-actor` header (free text, 1–40 chars), else "admin". */
+export function adminActor(req: Request): string {
+  const a = (req.headers.get('x-admin-actor') ?? '').trim().slice(0, 40);
+  return /^[\p{L}\p{N} ._@-]+$/u.test(a) ? a : 'admin';
+}

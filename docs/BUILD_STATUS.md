@@ -73,7 +73,7 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-066 | SPEC | refund needs the vault job (off) |
 | LAB-AC-067 | PARTIAL | fee tx recorded, verified manually by admin |
 | LAB-AC-068 | BUILT | stats endpoint; UI not built |
-| LAB-AC-069 | VERIFIED_LOCAL | kill switch at roll time test |
+| LAB-AC-069 | VERIFIED_LOCAL | kill switch at roll time + audit_log (append-only), unkill, system quarantines audited (core.db.test, admin.db.test) |
 | LAB-AC-070 | VERIFIED_LOCAL | policy test |
 | LAB-AC-071 | PARTIAL | chain flags; EVM sell check exists (honeypot.is / LI.FI round trip); a chain is only swap-enabled by the owner |
 | LAB-AC-072 | PARTIAL | Robinhood + Arc: data yes; swap route via LI.FI verified live (quotes only), off until the owner enables it |
