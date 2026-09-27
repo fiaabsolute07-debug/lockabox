@@ -214,7 +214,7 @@ body:has(.roll-stage.roll-fullscreen) { overflow: hidden; }
 .roll-revealed .reveal-burst { animation: reveal-glow 900ms ease-out both; }
 /* Pull presented in the middle of the screen, with a tier-specific effect (fx-micro … fx-top). */
 .roll-presenting { cursor: default; }
-.roll-presenting .reel-strip { transition: filter 400ms ease; }
+.roll-presenting .reel-strip { z-index: 2; transition: filter 400ms ease; }
 .roll-presenting .reel-card:not(.winner) { opacity: .25; }
 .roll-presenting .reel-strip.settled .reel-card.winner { --win-scale: 1.22; transform: scale(1.22); }
 .reveal-title { position: absolute; top: max(28px, 8vh); left: 50%; z-index: 7; display: grid; gap: 8px; width: min(720px, calc(100% - 32px)); text-align: center; transform: translateX(-50%); pointer-events: none; animation: title-drop 520ms cubic-bezier(.16,1,.3,1) both; }
