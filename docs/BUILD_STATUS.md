@@ -2,14 +2,14 @@
 
 Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (of 89)
+Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 2 · VERIFIED_LOCAL 62 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
 | LAB-AC-002 | VERIFIED_LOCAL | scripts/test-db.ts recreates and migrates; no down-migrations (forward-only by design) |
 | LAB-AC-003 | BUILT | SIWS verify route; UI flow in A2 |
 | LAB-AC-004 | PARTIAL | SIWE (EIP-4361) nonce/verify, EOA + ERC-1271/6492 via RPC, one account per wallet (tests/integration/auth.db.test.ts); EVM wallet UI pending |
-| LAB-AC-005 | BUILT | nonce single-use + 5 min expiry in SQL; needs dedicated test |
+| LAB-AC-005 | VERIFIED_LOCAL | nonce once, 5 min expiry, old nonce refused, issuedAt bound (tests/integration/auth.db.test.ts, Solana + EVM) |
 | LAB-AC-006 | VERIFIED_LOCAL | chains table flags; integration uses them |
 | LAB-AC-007 | VERIFIED_LOCAL | Astra A1 limiter/backoff tests; worker is the only caller |
 | LAB-AC-008 | VERIFIED_LOCAL | A1 tests: 402 no retry |
@@ -22,7 +22,7 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-015 | VERIFIED_LOCAL | live worker, ≤5 min refresh |
 | LAB-AC-016 | VERIFIED_LOCAL | tests/unit/gates.test.ts + live 60 checks |
 | LAB-AC-017 | VERIFIED_LOCAL | gates.test.ts |
-| LAB-AC-018 | PARTIAL | gates are data-driven; per-gate config flag not yet exposed |
+| LAB-AC-018 | VERIFIED_LOCAL | LAB_DISABLED_GATES=liquidity,honeypot brings those assets back into pools; pre-trade sell check still runs (core.db.test) |
 | LAB-AC-019 | VERIFIED_LOCAL | no risk fields in read models; e2e "no prohibited risk-label language" (tests/e2e/case.spec.ts) |
 | LAB-AC-020 | VERIFIED_LOCAL | marketCapTier tests |
 | LAB-AC-021 | VERIFIED_LOCAL | core.db.test: immutable trigger |
@@ -41,10 +41,10 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-034 | VERIFIED_LOCAL | chart/buys/rail live-local + e2e (claude-review-A2.md) |
 | LAB-AC-035 | VERIFIED_LOCAL | swap box with real Jupiter quotes live-local, fee 0, sell check shown (claude-review-A2.md) |
 | LAB-AC-036 | BUILT | Solana wallet adapter in A2; EVM not built |
-| LAB-AC-037 | BUILT | quote/build with fee guard (unit); real signing needs the owner |
+| LAB-AC-037 | BUILT | no platformFee in quote/build (unit fee guard), live Jupiter quotes; M: owner signs one small real swap |
 | LAB-AC-038 | PARTIAL | EVM buy via LI.FI built + guarded, off by default (DECISIONS #10); live quotes + sell checks OK on Base/BSC/Robinhood/Arc; tests unit swap-evm + integration swap-evm.db; UI + owner decision pending |
 | LAB-AC-039 | VERIFIED_LOCAL | sell check before quote/build quarantines (code) + gate tests |
-| LAB-AC-040 | BUILT | swap only on explicit build + wallet send (A2) |
+| LAB-AC-040 | BUILT | build only on the Buy click, never after a roll (UI code); M/E: owner signs a real swap |
 | LAB-AC-041 | VERIFIED_LOCAL | server never receives keys; build returns unsigned tx |
 | LAB-AC-042 | BUILT | confirmSubmitted via RPC; needs a real tx |
 | LAB-AC-043 | VERIFIED_LOCAL | no fee param + fee guard tests |
@@ -57,7 +57,7 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-050 | VERIFIED_LOCAL | no buy/transfer route; append-only trigger |
 | LAB-AC-051 | VERIFIED_LOCAL | no points on swap (no code path) |
 | LAB-AC-052 | VERIFIED_LOCAL | check constraint test |
-| LAB-AC-053 | BUILT | getTokenAccountsByOwner on claim; needs a real wallet |
+| LAB-AC-053 | VERIFIED_LOCAL | hold task reads getTokenAccountsByOwner server-side; positive balance of a pulled mint only (tests/unit/points-hold.test.ts, real RPC response) |
 | LAB-AC-054 | VERIFIED_LOCAL | invites + repeatable invite task, wallet + 3 distinct days, cap 10/day (r3.db.test) + ref capture/accept/invite card (e2e a3.spec.ts) |
 | LAB-AC-055 | VERIFIED_LOCAL | unique wallet; accounts < 24 h cannot spend points (sponsors.db.test); invites accepted only by accounts < 24 h (r3.db.test) |
 | LAB-AC-056 | VERIFIED_LOCAL | concurrent claim test |
@@ -67,11 +67,11 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-060 | VERIFIED_LOCAL | review requires txs + gates |
 | LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts); vi label in A4 |
 | LAB-AC-062 | VERIFIED_LOCAL | sponsored only with points |
-| LAB-AC-063 | PARTIAL | tx hash recorded; on-chain deposit verification by admin |
+| LAB-AC-063 | PARTIAL | approval checks the deposit tx on-chain: campaign token into SPONSOR_VAULT ≥ amount × opens; one tx per campaign (unit sponsor-verify with a real mainnet tx, sponsors.db.test); M: first real deposit by the owner |
 | LAB-AC-064 | VERIFIED_LOCAL | one open per roll, unique redemption |
 | LAB-AC-065 | VERIFIED_LOCAL | stops when used |
 | LAB-AC-066 | SPEC | refund needs the vault job (off) |
-| LAB-AC-067 | PARTIAL | fee tx recorded, verified manually by admin |
+| LAB-AC-067 | VERIFIED_LOCAL | approval checks the fee tx on-chain: USDC into SPONSOR_TREASURY ≥ SPONSOR_FEE_USDC; unset config = no approvals (unit sponsor-verify, sponsors.db.test) |
 | LAB-AC-068 | BUILT | stats endpoint; UI not built |
 | LAB-AC-069 | VERIFIED_LOCAL | kill switch at roll time + audit_log (append-only), unkill, system quarantines audited (core.db.test, admin.db.test) |
 | LAB-AC-070 | VERIFIED_LOCAL | policy test |
@@ -94,3 +94,20 @@ Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (o
 | LAB-AC-087 | NEEDS_OWNER | owner approval of staging |
 | LAB-AC-088 | VERIFIED_LOCAL | feed only real rows; empty test |
 | LAB-AC-089 | VERIFIED_LOCAL | DEX Screener embed + GeckoTerminal fallback; live candles from localhost (docs/evidence/img/chart-embeds-localhost.png); e2e fallback tests |
+
+## Prohibitions → cases (AC-086, generated from the rows above)
+
+| LAB §0.4 | Rule | Cases | Status |
+|---|---|---|---|
+| 0.4.1 | Roll is always free, no signature | AC-028, AC-029 | VERIFIED_LOCAL · VERIFIED_LOCAL |
+| 0.4.2 | Points not sold, transferred or cashed out; only from tasks | AC-049, AC-050 | VERIFIED_LOCAL · VERIFIED_LOCAL |
+| 0.4.3 | No reward for posting on X, no X API | AC-052 | VERIFIED_LOCAL |
+| 0.4.4 | No HTML crawling, official APIs only | AC-009, AC-089 | VERIFIED_LOCAL · VERIFIED_LOCAL |
+| 0.4.5 | No custody, user signs every swap | AC-040, AC-041 | BUILT · VERIFIED_LOCAL |
+| 0.4.6 | No swap fee, quote shown as returned | AC-037, AC-043 | BUILT · VERIFIED_LOCAL |
+| 0.4.7 | No pay-then-see-value case | AC-028, AC-040 | VERIFIED_LOCAL · BUILT |
+| 0.4.8 | No promised returns anywhere | AC-070 | VERIFIED_LOCAL |
+| 0.4.9 | No API proxy of raw provider data | AC-023 | VERIFIED_LOCAL |
+| 0.4.10 | No fake FOMO | AC-088 | VERIFIED_LOCAL |
+
+All ten rules have a case at VERIFIED_LOCAL; the two BUILT ones (AC-037 real Jupiter swap without platform fee, AC-040 swap only on the user's click and signature) need a real wallet signature by the owner to close.

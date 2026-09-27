@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from '@/lib/db';
-import { buildPool, CHAIN_SCOPE_ALL, eligibleItems, getCase, latestPool } from '@/modules/cases/pools';
+import { buildPool, CHAIN_SCOPE_ALL, disabledGates, eligibleItems, getCase, latestPool } from '@/modules/cases/pools';
 import { feed } from '@/modules/cases/read';
 import { claim, balance, TaskError } from '@/modules/points/service';
 import { activeSeed, roll, RollError, rotateSeed, verifyRoll, MIN_POOL } from '@/modules/rolls/service';
@@ -53,6 +53,18 @@ run('pools (LAB-AC-020/021)', () => {
     const got = new Set(items.map((i) => i.a));
     for (const bad of ids.slice(0, 4)) expect(got.has(bad)).toBe(false);
     expect(items.length).toBe(21);
+  });
+
+  it('a hidden gate switched off by config lets its assets back in (AC-018)', async () => {
+    const ids = await seedAssets(22);
+    await sql`update gate_results set passed = false where asset_id = ${ids[0]} and gate = 'honeypot'`;
+    await sql`update gate_results set passed = false where asset_id = ${ids[1]} and gate = 'liquidity'`;
+    const c = (await getCase('trending'))!;
+    const has = async (off: string[], id: number) => (await eligibleItems(c, CHAIN_SCOPE_ALL, undefined, off)).some((i) => i.a === id);
+    expect([await has([], ids[0]), await has([], ids[1])]).toEqual([false, false]);
+    expect([await has(['honeypot'], ids[0]), await has(['honeypot'], ids[1])]).toEqual([true, false]);
+    expect([await has(['liquidity'], ids[0]), await has(['liquidity'], ids[1])]).toEqual([false, true]);
+    expect(disabledGates('honeypot, liquidity ,bogus')).toEqual(['honeypot', 'liquidity']);
   });
 });
 

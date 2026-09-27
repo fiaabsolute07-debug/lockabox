@@ -22,6 +22,9 @@ const campaign = {
   feeTxHash: 'fee-tx', depositTxHash: 'deposit-tx',
 };
 
+// Stand-in for the on-chain check (covered in tests/unit/sponsor-verify.test.ts with a real mainnet transaction).
+const verified = { config: { treasury: 'Treasury111', vault: 'Vault111', feeUsdcRaw: 500_000_000n, rpcUrl: 'http://rpc.invalid' }, check: async () => ({ feeOk: true, depositOk: true, reasons: [] }) };
+
 async function passGates() {
   const [a] = await sql<{ id: number }[]>`select id from assets where address = ${campaign.tokenAddress}`;
   await sql`insert into gate_results (asset_id, gate, passed, reason) values (${a.id}, 'liquidity', true, 'ok'), (${a.id}, 'honeypot', true, 'ok')`;
@@ -43,8 +46,13 @@ run('sponsored cases (LAB R4)', () => {
     const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', campaign);
     await expect(reviewCampaign(c.id, 'approve', 'admin', '')).rejects.toMatchObject({ code: 'gates' });
     await passGates();
-    expect((await reviewCampaign(c.id, 'approve', 'admin', 'ok')).status).toBe('approved');
-    await expect(reviewCampaign(c.id, 'approve', 'admin', '')).rejects.toMatchObject({ code: 'not_reviewable' });
+    await expect(reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, { ...verified, config: null })).rejects.toThrow(/SPONSOR_TREASURY/);
+    const unpaid = { ...verified, check: async () => ({ feeOk: false, depositOk: true, reasons: ['fee: transaction not found or not confirmed yet'] }) };
+    await expect(reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, unpaid)).rejects.toThrow(/on-chain check failed: fee/);
+    expect((await reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, verified)).status).toBe('approved');
+    await expect(reviewCampaign(c.id, 'approve', 'admin', '', sql, verified)).rejects.toMatchObject({ code: 'not_reviewable' });
+    // One fee payment backs one campaign.
+    await expect(createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', { ...campaign, depositTxHash: 'other-deposit' })).rejects.toThrow(/sponsor_campaigns_fee_tx|unique/);
     // The dashboard lists only the sponsor's own campaigns.
     expect((await listCampaigns(sponsor)).map((x) => [x.id, x.status])).toEqual([[c.id, 'approved']]);
     const other = await userWithWallet('Other11111111111111111111111111111111111111');
@@ -55,7 +63,7 @@ run('sponsored cases (LAB R4)', () => {
     const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
     const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', campaign);
     await passGates();
-    await reviewCampaign(c.id, 'approve', 'admin', 'ok');
+    await reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, verified);
     const player = await userWithWallet('Player11111111111111111111111111111111111111');
     await expect(openSponsored(player)).rejects.toMatchObject({ code: 'insufficient_points' });
     // Earn points only through tasks (checkin 50/day) — seed ledger rows as if claimed on earlier days.
@@ -78,7 +86,7 @@ run('sponsored cases (LAB R4)', () => {
     const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
     const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', campaign);
     await passGates();
-    await reviewCampaign(c.id, 'approve', 'admin', 'ok');
+    await reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, verified);
     const [u] = await sql<{ id: string }[]>`insert into users default values returning id`;
     await sql`insert into wallets (user_id, chain_family, address) values (${u.id}, 'solana', 'Young1111111111111111111111111111111111111111')`;
     for (let d = 0; d < 12; d++) await sql`insert into points_ledger (user_id, delta, reason, ref) values (${u.id}, 50, 'task:daily-checkin', ${`d${d}`})`;

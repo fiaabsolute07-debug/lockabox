@@ -7,7 +7,7 @@ second engineer. Claude assigns tasks on this board, integrates, runs DB/E2E sui
 
 | Owner | Paths |
 |---|---|
-| **Claude** | `db/**`, `src/lib/**`, `src/modules/{rolls,cases,points,auth,swap,sponsors,admin,gates,board,health,invites}/**`, `src/content/**`, `src/assets/**`, `src/app/api/**`, `worker/**`, `scripts/**`, `tests/integration/**`, `tests/unit/{rolls,cases,points,gates,auth,swap}*.test.ts`, `docs/COLLABORATION.md`, `docs/DECISIONS.md`, `docs/UI_CONTRACT.md`, `docs/BUILD_STATUS.md`, `docs/HANDOFF.md`, `docs/evidence/claude-*.md` |
+| **Claude** | `db/**`, `src/lib/**`, `src/modules/{rolls,cases,points,auth,swap,sponsors,admin,gates,board,health,invites}/**`, `src/content/**`, `src/assets/**`, `src/app/api/**`, `worker/**`, `scripts/**`, `tests/integration/**`, `tests/unit/{rolls,cases,points,gates,auth,swap,sponsor}*.test.ts`, `docs/COLLABORATION.md`, `docs/DECISIONS.md`, `docs/UI_CONTRACT.md`, `docs/BUILD_STATUS.md`, `docs/HANDOFF.md`, `docs/evidence/claude-*.md` |
 | **Astra** | `src/modules/sources/**`, `src/app/**` except `src/app/api/**`, `src/components/**`, `src/styles/**`, `tests/unit/sources*.test.ts`, `tests/unit/ui*.test.ts`, `tests/e2e/**`, `playwright.config.ts`, `docs/evidence/astra-*.md` |
 | Shared, change by request | `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `vitest.config.ts`, `next.config.ts`. Write the request in your evidence file; Claude applies it. |
 

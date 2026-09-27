@@ -2,6 +2,7 @@ import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
 import { canonicalPool, DEFAULT_ODDS, poolHash, resolveRoll, type PoolItem, type Tier } from '@/modules/rolls/fair';
 import { audit, isLocked } from '@/modules/admin/service';
+import { checkCampaignTxs, sponsorConfig, type SponsorConfig } from './verify';
 import { activeSeed, lockedActiveSeed } from '@/modules/rolls/service';
 import { marketCapTier } from '@/modules/sources/tier';
 
@@ -43,10 +44,18 @@ export async function createCampaign(userId: string, wallet: string, input: Camp
   return { id: Number(row.id), status: row.status };
 }
 
-/** Admin review (LAB-AC-060): approval requires both transactions recorded and the hidden gates passed. */
-export async function reviewCampaign(id: number, decision: 'approve' | 'reject', reviewer: string, note: string, sql: postgres.Sql = defaultSql) {
-  const [c] = await sql<{ status: string; asset_id: number; fee_tx_hash: string | null; deposit_tx_hash: string | null }[]>`
-    select status, asset_id, fee_tx_hash, deposit_tx_hash from sponsor_campaigns where id = ${id}`;
+export type ReviewDeps = { config: SponsorConfig | null; check: typeof checkCampaignTxs };
+const defaultReviewDeps = (): ReviewDeps => ({ config: sponsorConfig(), check: checkCampaignTxs });
+
+/**
+ * Admin review (LAB-AC-060/063/067): approval requires the hidden gates passed and both transactions verified on-chain:
+ * the fee paid to the treasury in USDC and the full token budget deposited to the vault. Without a treasury/vault configured,
+ * nothing can be approved.
+ */
+export async function reviewCampaign(id: number, decision: 'approve' | 'reject', reviewer: string, note: string, sql: postgres.Sql = defaultSql, deps: ReviewDeps = defaultReviewDeps()) {
+  const [c] = await sql<{ status: string; asset_id: number; fee_tx_hash: string | null; deposit_tx_hash: string | null; token_mint: string; amount_per_open: string; total_opens: number }[]>`
+    select c.status, c.asset_id, c.fee_tx_hash, c.deposit_tx_hash, a.address as token_mint, c.amount_per_open, c.total_opens
+    from sponsor_campaigns c join assets a on a.id = c.asset_id where c.id = ${id}`;
   if (!c) throw new SponsorError('not_found', 'unknown campaign');
   if (c.status !== 'pending_review') throw new SponsorError('not_reviewable', `campaign is ${c.status}`);
   if (decision === 'approve') {
@@ -54,6 +63,9 @@ export async function reviewCampaign(id: number, decision: 'approve' | 'reject',
     const gates = await sql<{ gate: string; passed: boolean }[]>`select gate, passed from gate_results where asset_id = ${c.asset_id}`;
     const ok = (g: string) => gates.some((x) => x.gate === g && x.passed);
     if (!ok('liquidity') || !ok('honeypot')) throw new SponsorError('gates', 'the token has not passed the hidden gates yet (wait for the next worker cycle)');
+    if (!deps.config) throw new SponsorError('bad_input', 'set SPONSOR_TREASURY, SPONSOR_VAULT and SPONSOR_FEE_USDC before approving campaigns');
+    const txs = await deps.check({ ...c, fee_tx_hash: c.fee_tx_hash, deposit_tx_hash: c.deposit_tx_hash }, deps.config);
+    if (!txs.feeOk || !txs.depositOk) throw new SponsorError('bad_input', `on-chain check failed: ${txs.reasons.join('; ')}`);
   }
   await sql.begin(async (tx) => {
     await tx`update sponsor_campaigns set status = ${decision === 'approve' ? 'approved' : 'rejected'}, review_note = ${note}, reviewed_by = ${reviewer}, reviewed_at = now() where id = ${id}`;

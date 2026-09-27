@@ -25,10 +25,20 @@ export async function getCase(id: string, sql: postgres.Sql = defaultSql): Promi
 }
 
 /**
+ * AC-018: a hidden gate can be switched off by config (`LAB_DISABLED_GATES=liquidity,honeypot`); its assets come back at the
+ * next pool build. Pool membership only: the pre-trade sell check before any swap always runs.
+ */
+export function disabledGates(env: string | undefined = process.env.LAB_DISABLED_GATES): string[] {
+  return (env ?? '').split(',').map((g) => g.trim()).filter((g) => g === 'liquidity' || g === 'honeypot');
+}
+
+/**
  * Assets eligible for a case right now: fresh snapshot, not killed, liquidity gate passed, and — on chains where
  * swapping is enabled — the honeypot gate passed too (LAB §2.3). Tier = market-cap bucket (LAB option A).
  */
-export async function eligibleItems(c: CaseRow, chainScope: string, sql: postgres.Sql = defaultSql): Promise<PoolItem[]> {
+export async function eligibleItems(c: CaseRow, chainScope: string, sql: postgres.Sql = defaultSql, off: string[] = disabledGates()): Promise<PoolItem[]> {
+  const liquidityOn = !off.includes('liquidity');
+  const honeypotOn = !off.includes('honeypot');
   const rows = await sql<{ id: number; market_cap: number | null }[]>`
     select a.id, s.market_cap
     from assets a
@@ -38,9 +48,9 @@ export async function eligibleItems(c: CaseRow, chainScope: string, sql: postgre
       and (${chainScope} = ${CHAIN_SCOPE_ALL} or a.chain_id = ${chainScope})
       and not exists (select 1 from moderation m where m.asset_id = a.id)
       and not exists (select 1 from symbol_blocklist b where b.symbol = upper(coalesce(a.symbol, '')))
-      and exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'liquidity' and g.passed)
-      and not exists (select 1 from gate_results g where g.asset_id = a.id and not g.passed)
-      and (not ch.swap_enabled or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'honeypot' and g.passed))
+      and (not ${liquidityOn} or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'liquidity' and g.passed))
+      and not exists (select 1 from gate_results g where g.asset_id = a.id and not g.passed and g.gate <> all(${off}::text[]))
+      and (not ${honeypotOn} or not ch.swap_enabled or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'honeypot' and g.passed))
       and case ${c.kind}
             when 'trending' then a.sources && ${TRENDING_SOURCES}::text[]
             when 'new' then s.pair_created_at > now() - interval '24 hours'
