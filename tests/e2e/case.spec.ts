@@ -93,7 +93,7 @@ test('the reel occupies the viewport while the case is opening', async ({ page }
   // The pull is then presented in the middle of the screen until the user closes it.
   await expect(stage).toHaveCSS('position', 'fixed');
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'See the coin' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(stage).toHaveCSS('position', 'relative');
 });
 
@@ -147,7 +147,7 @@ test('starting another roll clears the old winning card while the API is pending
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
   await expect(page.locator('.unboxed-bar')).toBeVisible();
-  await page.getByRole('button', { name: 'See the coin' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   let pendingRoll: Route | undefined;
   await page.route('**/api/rolls', route => { pendingRoll = route; });
   await page.getByRole('button', { name: /OPEN CASE/i }).click();
@@ -231,8 +231,9 @@ test('a Micro pull gets the "womp" reveal without confetti, and Open again rolls
   await expect(dialog).toContainText('35% chance');
   await expect(dialog.locator('.confetti')).toHaveCount(0);
   await expect(dialog.locator('.reveal-rays')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Open again' }).first()).toBeFocused();
-  await page.getByRole('button', { name: 'Open again' }).first().click();
+  const card = page.locator('.pull-card');
+  await expect(card.getByRole('button', { name: 'Open again' })).toBeFocused();
+  await card.getByRole('button', { name: 'Open again' }).click();
   await expect.poll(state.rollPosts).toBe(2);
   await expect(page.locator('.roll-spinning, .roll-charging').first()).toBeVisible();
 });
@@ -244,4 +245,23 @@ test('licensed sound files in /public/sounds replace the synthesised sounds when
   await page.route('**/sounds/*.mp3', (route) => { requested.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' }); });
   await openCase(page);
   await expect.poll(() => requested.sort()).toEqual(['/sounds/gold.mp3', '/sounds/tick.mp3']);
+});
+
+test('after the reveal a coin card shows real market data and puts the buy box first', async ({ page }) => {
+  const state = await fixtures(page, { assetBody: { ...asset, swapEnabled: false, lockaboxBuys24h: 4 } });
+  await openCase(page);
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  const card = page.locator('.pull-card');
+  await expect(card).toBeVisible();
+  await expect(card.locator('h2')).toHaveText('$GLORP');
+  await expect(card).toContainText('$0.004821');
+  await expect(card).toContainText('4 bought it through Lockabox in the last 24 h');
+  // Swap off on this chain: the primary action is the DEX Screener link, green and first in the buy column.
+  await expect(card.locator('.pull-buy').getByRole('link', { name: 'Buy on DEX Screener ↗' })).toHaveAttribute('href', 'https://dexscreener.com/solana/FixturePair3');
+  await expect(card.locator('.pull-buy .button-buy')).toBeVisible();
+  await expect(card).not.toContainText(/guarantee|moon|100x|last chance|only \d+ left/i);
+  expect(state.rollPosts()).toBe(1);
+  await card.getByRole('button', { name: 'Continue' }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.locator('.unboxed-bar')).toBeVisible();
 });

@@ -15,8 +15,12 @@ const CONFETTI: Record<Tier, number> = { micro: 0, small: 0, mid: 18, large: 60,
  * stops with a short beat, then presents the pull in the middle of the screen with a tier-specific sound and effect until
  * the user closes it or opens again. Reduced motion skips all of it and reveals in place.
  */
-export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }: {
+export type RevealActions = { close: () => void; again: () => void; againRef: React.Ref<HTMLButtonElement> };
+
+export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain, reveal }: {
   cards: AssetCard[]; winIndex: number; tier: Tier; odds?: Partial<Record<Tier, number>>; onSettled?: () => void; onRollAgain?: () => void;
+  /** The coin card shown after the tier effect (PullCard); without it, the reveal keeps simple Open again / See the coin buttons. */
+  reveal?: (actions: RevealActions) => React.ReactNode;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -26,6 +30,7 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }
   const againRef = useRef<HTMLButtonElement>(null);
   const [settled, setSettled] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [panel, setPanel] = useState(false);
   const [phase, setPhase] = useState<'charging' | 'spinning' | 'suspense' | 'revealed'>('charging');
   const { t, number } = useT();
   useLayoutEffect(() => { onSettledRef.current = onSettled; });
@@ -109,13 +114,20 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }
   }, [cards, winIndex, tier]);
 
   // While the pull is presented: Escape closes, the "Open again" button has focus (Space/Enter re-rolls, like the case screen).
+  // The tier effect plays first; then the coin card slides in over it.
+  useEffect(() => {
+    if (!presenting) { setPanel(false); return; }
+    const timer = window.setTimeout(() => setPanel(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [presenting]);
+
   useEffect(() => {
     if (!presenting) return;
-    againRef.current?.focus();
+    againRef.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setPresenting(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [presenting]);
+  }, [presenting, panel]);
 
   const skipToEnd = () => { finishRef.current(); };
   const fullscreen = !settled || presenting;
@@ -124,7 +136,7 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }
 
   return (
     <div ref={viewportRef}
-      className={`spinner roll-stage roll-${phase} ${fullscreen ? 'roll-fullscreen' : ''} ${presenting ? `roll-presenting fx-${tier}` : ''}`}
+      className={`spinner roll-stage roll-${phase} ${fullscreen ? 'roll-fullscreen' : ''} ${presenting ? `roll-presenting fx-${tier}` : ''} ${presenting && panel && reveal ? 'roll-panel' : ''}`}
       style={{ '--reveal-color': settled ? tierColor(tier) : '#FFC53D' } as React.CSSProperties}
       role={presenting ? 'dialog' : undefined} aria-modal={presenting || undefined} aria-label={presenting ? t(HEADLINE[tier]) : undefined}
       onClick={(event) => { if (!settled) skipToEnd(); else if (presenting && event.target === event.currentTarget) setPresenting(false); }}>
@@ -140,7 +152,10 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }
       <div ref={stripRef} className={`reel-strip ${settled ? 'settled' : ''}`}>
         {cards.map((card, index) => <ReelCard key={`${card.id}-${index}`} card={card} winner={settled && index === winIndex} />)}
       </div>
-      {presenting && winner && <div className="reveal-actions">
+      {presenting && panel && reveal && <div className="reveal-panel" onClick={(event) => event.stopPropagation()}>
+        {reveal({ close: () => setPresenting(false), again: () => { setPresenting(false); onRollAgain?.(); }, againRef })}
+      </div>}
+      {presenting && winner && !reveal && <div className="reveal-actions">
         <strong className="reveal-symbol">${displaySymbol(winner)}</strong>
         <div>
           <button ref={againRef} type="button" className="button button-primary" onClick={(event) => { event.stopPropagation(); setPresenting(false); onRollAgain?.(); }}>{t('openAgain')}</button>

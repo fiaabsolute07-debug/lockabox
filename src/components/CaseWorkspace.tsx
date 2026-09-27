@@ -25,6 +25,7 @@ import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
 import { rollSoundEnabled, setRollSoundEnabled, unlockRollAudio } from './rollAudio';
 import SwapBox from './SwapBox';
+import PullCard from './PullCard';
 import ProofBox from './ProofBox';
 import SharePullButton from './SharePullButton';
 
@@ -160,7 +161,7 @@ export default function CaseWorkspace() {
         </div>
         {sponsoredSelected ? <SponsoredDrops items={sponsoredLive} user={!!user} cost={liveCost} busy={sponsoredBusy} error={sponsoredError} result={sponsoredResult} onOpen={() => void handleSponsoredOpen()} /> : <>
           {rollError && <div className="roll-error" role="alert">{rollError}</div>}
-          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
+          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} />} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
           {result && reelSettled && !rolling && <UnboxedBar result={result} onRollAgain={() => void handleRoll()} onBuy={() => document.getElementById('swap-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
         </>}
       </section>

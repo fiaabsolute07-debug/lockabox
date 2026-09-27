@@ -383,6 +383,13 @@ const EN = {
   revealTop: '★ TOP PULL!',
   revealOdds: '{percent}% chance',
   revealDetails: 'See the coin',
+  pullUnboxed: 'Unboxed',
+  pullAge: 'Age',
+  pullBuysToday: '{count} bought it through Lockabox in the last 24 h',
+  pullChart: 'Chart ↗',
+  pullContinue: 'Continue',
+  buyOnDex: 'Buy on DEX Screener ↗',
+  buyOnDexNote: 'In-app buying is not on for this chain yet; DEX Screener lists the pools where you can buy it.',
 } as const;
 
 export type TranslationKey = keyof typeof EN;

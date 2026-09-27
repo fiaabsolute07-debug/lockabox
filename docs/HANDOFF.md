@@ -23,6 +23,10 @@ Later the same day (owner requests, commits after 0f07bf1):
 7. **All DEX Screener chains** (58, with self-hosted logos; auto-registration of new ids; DECISIONS #15). Chains with coins are listed first.
    Hero layout fixed for 901–1500 px screens.
 
+8. Sound re-done to follow CS:GO's structure (ticks only, rarity bells; DECISIONS #16). Licensed sound files can replace any event:
+   put them in `public/sounds/` with a `manifest.json` (see the header of `src/components/rollAudio.ts`).
+9. Coin card after every pull with the buy box in front (DECISIONS #17).
+
 ## Run locally
 `pnpm install` · `pnpm db:start` (embedded Postgres 127.0.0.1:55442) · `pnpm db:migrate` · `pnpm db:test:prepare` · `pnpm worker` · `pnpm dev` → http://127.0.0.1:4310.
 Checks: `pnpm lint` · `pnpm typecheck` (run `pnpm exec next typegen` once on a fresh clone) · `pnpm test` · `pnpm test:integration` · `pnpm build` · `pnpm exec playwright test`.

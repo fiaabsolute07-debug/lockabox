@@ -217,7 +217,7 @@ test('an EVM coin on a chain with swap off keeps View on DEX only', async ({ pag
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.getByRole('button', { name: /OPEN CASE/ }).click();
-  await expect(page.getByRole('link', { name: 'View on DEX Screener ↗' }).last()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buy on DEX Screener ↗' }).last()).toBeVisible();
   await expect(page.locator('.evm-swap')).toHaveCount(0);
 });
 

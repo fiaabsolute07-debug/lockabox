@@ -60,7 +60,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
   }, [amount, asset.id, slippage, swapAvailable, t]);
 
   const symbol = displaySymbol(asset);
-  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('inAppSwapUnavailable')}</p>{asset.links.dexscreener ? <a className="button button-outline full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('viewOnDex')}</a> : <button className="button button-outline full-width" disabled>{t('viewOnDex')}</button>}</section>;
+  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('buyOnDexNote')}</p>{asset.links.dexscreener ? <a className="button button-buy full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : <button className="button button-outline full-width" disabled>{t('viewOnDex')}</button>}<p className="disclaimer">{t('ownWalletDisclaimer')}</p></section>;
 
   const highSlippage = Number(slippage) > 10;
   const buy = async () => {

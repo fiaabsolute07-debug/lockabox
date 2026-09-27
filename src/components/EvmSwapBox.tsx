@@ -58,7 +58,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   }, [amount, asset.id, slippage, swapAvailable, t]);
 
   const symbol = displaySymbol(asset);
-  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('inAppSwapUnavailable')}</p>{asset.links.dexscreener ? <a className="button button-outline full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('viewOnDex')}</a> : null}</section>;
+  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('buyOnDexNote')}</p>{asset.links.dexscreener ? <a className="button button-buy full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : null}</section>;
 
   const highSlippage = Number(slippage) > 10;
   const connection = evm.connection;
