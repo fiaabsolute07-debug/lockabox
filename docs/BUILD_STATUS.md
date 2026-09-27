@@ -2,7 +2,7 @@
 
 Updated 2026-09-27 by Claude (cloud session). Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 6 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 64 (of 89)
+Totals: BUILT 6 · NEEDS_OWNER 4 · PARTIAL 13 · SPEC 1 · VERIFIED_LOCAL 65 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
@@ -39,7 +39,7 @@ Totals: BUILT 6 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 64 (o
 | LAB-AC-032 | VERIFIED_LOCAL | pacing + concurrency tests |
 | LAB-AC-033 | VERIFIED_LOCAL | token header/rail live-local on real data + e2e (claude-review-A2.md) |
 | LAB-AC-034 | VERIFIED_LOCAL | chart/buys/rail live-local + e2e (claude-review-A2.md) |
-| LAB-AC-035 | VERIFIED_LOCAL | swap box with real Jupiter quotes live-local, fee 0, sell check shown (claude-review-A2.md) |
+| LAB-AC-035 | VERIFIED_LOCAL | 18+ gate on first visit, rendered by the server until the lab_age cookie is set; confirmation remembered (e2e a4.spec.ts; claude-review-A2.md) |
 | LAB-AC-036 | PARTIAL | Solana wallet adapter (A2); injected EVM wallets via EIP-6963 + viem, connect/sign-in/sign-out e2e (a5.spec.ts); WalletConnect needs a project id from the owner |
 | LAB-AC-037 | BUILT | no platformFee in quote/build (unit fee guard), live Jupiter quotes; M: owner signs one small real swap |
 | LAB-AC-038 | PARTIAL | EVM buy via LI.FI built + guarded, off by default (DECISIONS #10); approve exactly the amount, swap only after the approval is mined (server: unit swap-evm + integration swap-evm.db; UI: e2e call order in a5.spec.ts); M: owner decision + one real swap |
@@ -81,7 +81,7 @@ Totals: BUILT 6 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 64 (o
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |
 | LAB-AC-076 | VERIFIED_LOCAL | en/vi dictionary for every UI string incl. legal pages, case/task titles and API error codes; server picks the language from cookie/Accept-Language (e2e a4.spec.ts, 6 tests; claude-review-A4.md) |
-| LAB-AC-077 | PARTIAL | server-side roll ~24 ms sequential on next start (claude-ops-drills.md); LCP on 4G not measured yet |
+| LAB-AC-077 | VERIFIED_LOCAL | production build, emulated Slow 4G + 4× CPU, mobile: LCP median 1.76 s returning / 1.77 s first visit (was 4.76 s before the 18+ gate moved server-side); Fast 4G 0.74–0.78 s; roll service p95 4.3 ms sequential, 18 ms at 10 concurrent (claude-lcp-4g.md, scripts/lcp.ts, core.db.test); re-run on staging with live data |
 | LAB-AC-078 | PARTIAL | 4 pages at /legal/[slug] from src/content/legal.ts, draft notice, footer links (e2e); en only until A4; lawyer review NEEDS_OWNER |
 | LAB-AC-079 | NEEDS_OWNER | lawyer sign-off |
 | LAB-AC-080 | PARTIAL | /api/health: worker late >10 min, DS/DexPaprika budget >80 %, swap failures >5 % (r3.db.test); owner must point an uptime checker at it |

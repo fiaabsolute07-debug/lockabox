@@ -1,0 +1,135 @@
+{
+  "at": "2026-09-27T07:12:56.581Z",
+  "url": "http://127.0.0.1:4310",
+  "profiles": {
+    "slow4g": {
+      "download": 180000,
+      "upload": 84375,
+      "latency": 562.5,
+      "cpu": 4
+    },
+    "fast4g": {
+      "download": 1012500,
+      "upload": 168750,
+      "latency": 165,
+      "cpu": 4
+    }
+  },
+  "report": [
+    {
+      "profile": "slow4g",
+      "scenario": "returning",
+      "mobile": true,
+      "runs": 5,
+      "lcpMedianMs": 1764,
+      "lcpP75Ms": 1764,
+      "lcpMaxMs": 1768,
+      "fcpMedianMs": 1764,
+      "htmlMedianMs": 598,
+      "kbTransferred": 532,
+      "requests": 24,
+      "lcpElements": [
+        "h2 \"Roll first, then inspect the market view\""
+      ],
+      "allLcpMs": [
+        1768,
+        1764,
+        1744,
+        1724,
+        1764
+      ]
+    },
+    {
+      "profile": "slow4g",
+      "scenario": "first",
+      "mobile": true,
+      "runs": 5,
+      "lcpMedianMs": 1772,
+      "lcpP75Ms": 1780,
+      "lcpMaxMs": 1792,
+      "fcpMedianMs": 1772,
+      "htmlMedianMs": 598,
+      "kbTransferred": 533,
+      "requests": 25,
+      "lcpElements": [
+        "h2 \"Roll first, then inspect the market view\""
+      ],
+      "allLcpMs": [
+        1780,
+        1764,
+        1768,
+        1772,
+        1792
+      ]
+    },
+    {
+      "profile": "fast4g",
+      "scenario": "returning",
+      "mobile": true,
+      "runs": 5,
+      "lcpMedianMs": 740,
+      "lcpP75Ms": 764,
+      "lcpMaxMs": 764,
+      "fcpMedianMs": 740,
+      "htmlMedianMs": 177,
+      "kbTransferred": 533,
+      "requests": 25,
+      "lcpElements": [
+        "h2 \"Roll first, then inspect the market view\""
+      ],
+      "allLcpMs": [
+        764,
+        728,
+        740,
+        764,
+        740
+      ]
+    },
+    {
+      "profile": "fast4g",
+      "scenario": "first",
+      "mobile": true,
+      "runs": 5,
+      "lcpMedianMs": 760,
+      "lcpP75Ms": 780,
+      "lcpMaxMs": 784,
+      "fcpMedianMs": 760,
+      "htmlMedianMs": 174,
+      "kbTransferred": 533,
+      "requests": 25,
+      "lcpElements": [
+        "h2 \"Roll first, then inspect the market view\""
+      ],
+      "allLcpMs": [
+        748,
+        784,
+        752,
+        780,
+        760
+      ]
+    },
+    {
+      "profile": "fast4g",
+      "scenario": "returning",
+      "mobile": false,
+      "runs": 5,
+      "lcpMedianMs": 784,
+      "lcpP75Ms": 792,
+      "lcpMaxMs": 804,
+      "fcpMedianMs": 784,
+      "htmlMedianMs": 176,
+      "kbTransferred": 543,
+      "requests": 34,
+      "lcpElements": [
+        "h1 \"Trending Case\""
+      ],
+      "allLcpMs": [
+        772,
+        784,
+        804,
+        780,
+        792
+      ]
+    }
+  ]
+}

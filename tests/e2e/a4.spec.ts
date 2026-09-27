@@ -161,3 +161,27 @@ test('switching language keeps the current pull on screen', async ({ page }) => 
   await expect(page.locator('.unboxed-bar')).toContainText('BẠN ĐÃ MỞ');
   await expect(page.locator('.unboxed-bar')).toContainText('$GLORP');
 });
+
+test('the 18+ gate is in the server HTML on a first visit, and a confirmation is remembered by cookie', async ({ page, request }) => {
+  const html = await (await request.get('/')).text();
+  expect(html).toContain('id="age-title"');
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const body: Record<string, unknown> = { '/api/meta': meta, '/api/feed': feed, '/api/cases/trending': caseSummary, '/api/auth/me': { user: null }, '/api/sponsored/live': { label: 'Sponsored', items: [] } };
+    return json(route, body[path] ?? {});
+  });
+  await page.goto('/');
+  await expect(page.getByRole('dialog', { name: 'Are you 18 or older?' })).toBeVisible();
+  await page.getByRole('button', { name: 'I am 18 or older' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect((await page.context().cookies()).find((cookie) => cookie.name === 'lab_age')?.value).toBe('1');
+  const again = await page.request.get('/');
+  expect(await again.text()).not.toContain('id="age-title"');
+});
+
+test('a confirmation stored before the cookie existed closes the gate and sets the cookie', async ({ page }) => {
+  await setup(page);
+  await page.goto('/');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(async () => (await page.context().cookies()).find((cookie) => cookie.name === 'lab_age')?.value).toBe('1');
+});

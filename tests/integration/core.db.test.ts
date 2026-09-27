@@ -146,6 +146,28 @@ run('rolls (LAB-AC-028/030/031/032)', () => {
   });
 });
 
+run('roll latency (LAB-AC-077, server side)', () => {
+  it('p95 of a roll stays under 300 ms on a 100-coin pool, sequential and 10 at a time', async () => {
+    await reset();
+    await seedAssets(100);
+    await buildPool((await getCase('trending'))!, CHAIN_SCOPE_ALL);
+    const one = async (i: number) => {
+      const t0 = performance.now();
+      await roll({ deviceId: `device-latency-${String(i).padStart(6, '0')}`, caseId: 'trending', chainScope: CHAIN_SCOPE_ALL });
+      return performance.now() - t0;
+    };
+    const p95 = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.ceil(xs.length * 0.95) - 1];
+    await one(-1); // warm the process caches, as a running server would be
+    const sequential: number[] = [];
+    for (let i = 0; i < 200; i++) sequential.push(await one(i));
+    const concurrent: number[] = [];
+    for (let batch = 0; batch < 20; batch++) concurrent.push(...await Promise.all(Array.from({ length: 10 }, (_, k) => one(1000 + batch * 10 + k))));
+    console.log(`roll latency ms: sequential p50 ${sequential.sort((a, b) => a - b)[99].toFixed(1)} p95 ${p95(sequential).toFixed(1)} · 10 concurrent p95 ${p95(concurrent).toFixed(1)}`);
+    expect(p95(sequential)).toBeLessThan(300);
+    expect(p95(concurrent)).toBeLessThan(300);
+  }, 60_000);
+});
+
 run('points (LAB-AC-049/050/052/056)', () => {
   beforeEach(reset);
 

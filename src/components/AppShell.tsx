@@ -18,6 +18,7 @@ import {
 import { LockyLogo } from './LockyLogo';
 import { isUserRejection, useEvmWallet, type EvmProviderDetail } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
+import { AGE_COOKIE } from './language';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -54,7 +55,7 @@ function usePersistedChain(meta: MetaResponse | null) {
   return [selected, set] as const;
 }
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children, ageConfirmed = false }: { children: React.ReactNode; ageConfirmed?: boolean }) {
   const { t } = useT();
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [feed, setFeed] = useState<FeedResponse | null>(null);
@@ -128,7 +129,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser, showToast, setRevealPending }), [meta, feed, user, selectedChain, refreshUser, showToast, setRevealPending]);
   return (
     <AppContext.Provider value={context}>
-      <AgeGate />
+      <AgeGate initiallyConfirmed={ageConfirmed} />
       <Header />
       <FeedTicker />
       {children}
@@ -138,12 +139,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AgeGate() {
+const rememberAge = () => { document.cookie = `${AGE_COOKIE}=1; Path=/; Max-Age=31536000; SameSite=Lax`; };
+
+function AgeGate({ initiallyConfirmed }: { initiallyConfirmed: boolean }) {
   const { t } = useT();
-  const [open, setOpen] = useState(false);
+  // Open on the server unless the cookie says 18+ was confirmed; confirmations stored before the cookie existed close it on mount.
+  const [open, setOpen] = useState(!initiallyConfirmed);
   useEffect(() => {
-    try { setOpen(window.localStorage.getItem('lab_age_confirmed') !== '1'); } catch { setOpen(true); }
-  }, []);
+    if (initiallyConfirmed) return;
+    let stored = false;
+    try { stored = window.localStorage.getItem('lab_age_confirmed') === '1'; } catch { /* storage can be disabled */ }
+    if (stored) { rememberAge(); setOpen(false); }
+  }, [initiallyConfirmed]);
   if (!open) return null;
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="age-title">
@@ -152,7 +159,8 @@ function AgeGate() {
         <h1 id="age-title">{t('ageTitle')}</h1>
         <p>{t('ageDescription')}</p>
         <button className="button button-primary age-confirm" onClick={() => {
-          try { window.localStorage.setItem('lab_age_confirmed', '1'); } catch { /* continue for this visit */ }
+          try { window.localStorage.setItem('lab_age_confirmed', '1'); } catch { /* the cookie still remembers it */ }
+          rememberAge();
           setOpen(false);
         }}>{t('ageConfirm')}</button>
         <p className="fine-print">{t('ageFine')}</p>
