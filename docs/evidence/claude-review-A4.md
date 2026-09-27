@@ -29,6 +29,12 @@ DexPaprika `multiPrices`, the full-screen reel + tier halo that landed in the sa
 | F11 | med | `multiPrices` counted **1 credit per HTTP call**; DexPaprika bills one credit per token (up to 10 per call), so `creditsUsed` under-counted up to 10×. | `+= batch.length`. Unit tests: 2 tokens → 1 call, 2 credits; 23 tokens → calls of 10/10/3, 23 credits. (`worker/fallback.ts` already budgeted per token.) |
 | F12 | low | e2e "tier-specific halo without a celebration overlay" asserted `.tier-celebration` count 0, a class that never exists, so it could not fail. | Now asserts the stage is back to `position: relative` after the reveal, the glow layer has `pointer-events: none`, and the result bar is visible. |
 
+Found later in the session (while building A5), fixed in the A5 commit:
+
+| # | Sev | Finding | Status |
+|---|---|---|---|
+| F13 | med | Switching language re-ran the case loader (effect depended on `t`) and **cleared the current pull**. | `t` read through a ref; e2e "switching language keeps the current pull on screen". |
+
 ## Full-screen reel and halo (tests in `tests/e2e/case.spec.ts`)
 The UI matches the tests: while spinning, `.roll-stage` is `position: fixed; inset: 0` (full viewport, `body` scroll locked), with
 "OPENING CASE" / "ĐANG MỞ HÒM", a skip button and the marker hint; on reveal it returns to the page. The winning card gets

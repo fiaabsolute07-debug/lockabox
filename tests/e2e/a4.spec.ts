@@ -150,3 +150,14 @@ test('Vietnamese sound toggle, contents close button and reel copy are translate
   await expect(page.getByText('ĐANG MỞ HÒM', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Bỏ qua hiệu ứng/ })).toBeVisible();
 });
+
+test('switching language keeps the current pull on screen', async ({ page }) => {
+  await setup(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: /OPEN CASE/ }).click();
+  await expect(page.locator('.unboxed-bar')).toContainText('$GLORP');
+  await page.getByRole('button', { name: 'VI', exact: true }).click();
+  await expect(page.locator('.unboxed-bar')).toContainText('BẠN ĐÃ MỞ');
+  await expect(page.locator('.unboxed-bar')).toContainText('$GLORP');
+});

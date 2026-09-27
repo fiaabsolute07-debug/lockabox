@@ -609,6 +609,31 @@ td a { color: var(--mu); }
   .space-hint { display: none; }
 }
 
+/* A5: EVM wallet chooser, EVM buy box, admin console */
+.wallet-chooser { width: 250px; }
+.chooser-label { display: block; padding: 6px 10px 2px; font: 700 10px var(--font-mono-family); letter-spacing: .08em; }
+.chooser-wallet { display: inline-flex; align-items: center; gap: 8px; color: var(--tx); }
+.chooser-wallet img, .evm-wallet-pick img { border-radius: 4px; }
+.chooser-empty { margin: 0; padding: 6px 10px 10px; font-size: 11px; line-height: 1.4; }
+.evm-wallet-pick { display: grid; gap: 6px; margin: 8px 0; }
+.evm-wallet-pick .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.route-fee span { color: var(--mu); }
+.admin-page .simple-card { width: min(1100px, 100%); }
+.admin-login { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; margin: 14px 0; }
+.admin-login label, .admin-form label, .admin-campaign label { display: grid; gap: 5px; color: var(--mu); font-size: 11px; font-weight: 600; }
+.admin-page input { min-height: 34px; padding: 0 10px; color: var(--tx); background: var(--p2); border: 1px solid var(--ln); border-radius: 7px; }
+.admin-section { margin-top: 22px; }
+.admin-section h2 { margin: 0 0 10px; font-size: 15px; }
+.admin-campaign { display: grid; gap: 8px; padding: 12px; margin-bottom: 10px; background: var(--p2); border: 1px solid var(--ln); border-radius: 8px; }
+.admin-hashes { display: grid; gap: 2px; font-size: 10px; overflow-wrap: anywhere; }
+.admin-actions, .admin-inline { display: flex; gap: 8px; align-items: center; }
+.admin-forms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-form { display: grid; gap: 8px; align-content: start; padding: 12px; background: var(--p2); border: 1px solid var(--ln); border-radius: 8px; }
+.admin-form h3 { margin: 0; font-size: 13px; }
+.admin-audit td { font-size: 11px; vertical-align: top; }
+.admin-audit td:last-child { max-width: 360px; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .admin-login, .admin-forms { grid-template-columns: 1fr; } .admin-inline { flex-wrap: wrap; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

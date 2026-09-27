@@ -6,10 +6,20 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { VersionedTransaction } from '@solana/web3.js';
 import { ApiError, displaySymbol, fetchJson, formatPrice, formatRawAmount, type AssetDetail, type QuoteView } from './api';
 import { useT, translateApiError } from './i18n';
+import { useAppContext } from './AppShell';
+import EvmSwapBox from './EvmSwapBox';
 
 const QUICK_AMOUNTS = ['0.01', '0.05', '0.1', '0.5', '1'];
 
+/** Solana buys through Jupiter; EVM buys through LI.FI only when the owner switched swap on for that chain (DECISIONS #10). */
 export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rollId?: number; onRollAgain?: () => void }) {
+  const { meta } = useAppContext();
+  const chain = meta?.chains.find((item) => item.id === asset.chainId);
+  if (chain?.family === 'evm' && chain.evmChainId && asset.swapEnabled) return <EvmSwapBox asset={asset} chain={chain} rollId={rollId} onRollAgain={onRollAgain} />;
+  return <SolanaSwapBox asset={asset} rollId={rollId} onRollAgain={onRollAgain} />;
+}
+
+function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rollId?: number; onRollAgain?: () => void }) {
   const { t, locale } = useT();
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();

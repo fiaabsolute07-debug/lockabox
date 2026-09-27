@@ -81,6 +81,8 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
   `{ nonce, issuedAt, message }` (EIP-4361); `personal_sign` the exact message; `POST /api/auth/verify { address, nonce, issuedAt, signature, family: 'evm', chainId }`.
   Smart wallets (ERC-1271/6492) work. Same wallet on any EVM chain = same account; `/api/auth/me` lists `{ family: 'evm', address (lowercase) }`.
 - Copy under the EVM swap box: "Routed by LI.FI, an independent non-custodial service; Lockabox adds no fee."
+- UI (A5, `src/components/EvmWallet.tsx` / `EvmSwapBox.tsx`): injected wallets via EIP-6963 (fallback `window.ethereum`) and viem's `custom` transport;
+  no WalletConnect until the owner provides a project id. The approval receipt is polled with `eth_getTransactionReceipt` through the wallet before the swap is sent.
 
 ### Admin (owner only; header `Authorization: Bearer <ADMIN_TOKEN>` + `x-admin-actor: <name>`)
 

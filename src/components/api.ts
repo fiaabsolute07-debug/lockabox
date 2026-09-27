@@ -6,6 +6,11 @@ export type Chain = {
   name: string;
   family: string;
   swapEnabled: boolean;
+  /** EVM chain id for wallet_switchEthereumChain / SIWE; null on Solana. */
+  evmChainId?: number | null;
+  nativeSymbol?: string | null;
+  /** Explorer link template with `{tx}`. */
+  explorerTxUrl?: string | null;
 };
 
 export type CaseSummaryRef = { id: string; title: string; kind: string };
@@ -164,20 +169,40 @@ export type BuyItem = {
   txUrl: string | null;
 };
 
+export type RouteFee = { name: string; percentage: number | null; amountUsd: number | null };
+
 export type QuoteView = {
   assetId: number;
   symbol: string | null;
-  inputSymbol: 'SOL';
+  /** SOL on Solana; ETH, BNB or USDC (Arc) on EVM chains. */
+  inputSymbol: string;
   inputAmount: string;
   outAmount: string;
   outAmountMin: string;
   decimals: number | null;
-  priceImpactPct: number;
+  priceImpactPct: number | null;
   slippageBps: number;
   route: string[];
+  provider?: 'jupiter' | 'lifi';
+  /** Route costs charged by others (e.g. LI.FI's fixed fee as a fraction: 0.0025 = 0.25 %). Lockabox's own fee is always 0. */
+  routeFees?: RouteFee[];
   lockaboxFee: 0;
   sellCheck: 'passed';
 };
+
+export type EvmTxRequest = { to: string; data: string; value: string; gasLimit: string | null; chainId: number };
+
+export type EvmBuildResponse = { tradeId: number; evm: { chainId: number; approval: EvmTxRequest | null; transaction: EvmTxRequest }; quote: QuoteView };
+
+export type AdminOverview = {
+  pendingCampaigns: { id: number; project_name: string; chain_id: string; total_opens: number; starts_at: string; ends_at: string; fee_tx_hash: string | null; deposit_tx_hash: string | null; created_at: string }[];
+  killed: { asset_id: number; chain_id: string; symbol: string | null; reason: string; actor: string; created_at: string }[];
+  audit: { at: string; actor: string; action: string; target: string | null; detail: unknown }[];
+};
+
+export function explorerTxLink(template: string | null | undefined, hash: string) {
+  return template ? template.replace('{tx}', hash) : null;
+}
 
 export type PointsResponse = {
   balance: number;

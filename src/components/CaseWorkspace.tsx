@@ -55,20 +55,23 @@ export default function CaseWorkspace() {
   const [sponsoredBusy, setSponsoredBusy] = useState(false);
   const [sponsoredError, setSponsoredError] = useState<string | null>(null);
 
-  useEffect(() => () => setRevealPending(false), [caseId, selectedChain, sponsoredSelected, t, setRevealPending]);
+  useEffect(() => () => setRevealPending(false), [caseId, selectedChain, sponsoredSelected, setRevealPending]);
 
   useEffect(() => {
     const first = meta?.cases[0]?.id;
     if (first && (!meta.cases.some((item) => item.id === caseId))) setCaseId(first);
   }, [meta, caseId]);
 
+  // Switching language must not reload the case or drop the current pull, so `t` is read through a ref here.
+  const tRef = useRef(t);
+  tRef.current = t;
   useEffect(() => {
     if (!meta?.cases.some((item) => item.id === caseId)) return;
     let active = true;
     setSummary(null); setSummaryError(null); setResult(null); setRollError(null);
-    void fetchJson<CaseResponse>(`/api/cases/${encodeURIComponent(caseId)}?chain=${encodeURIComponent(selectedChain)}`).then((value) => { if (active) setSummary(value); }).catch((error: unknown) => { if (active) setSummaryError(translateApiError(error, t, 'couldNotLoad')); });
+    void fetchJson<CaseResponse>(`/api/cases/${encodeURIComponent(caseId)}?chain=${encodeURIComponent(selectedChain)}`).then((value) => { if (active) setSummary(value); }).catch((error: unknown) => { if (active) setSummaryError(translateApiError(error, tRef.current, 'couldNotLoad')); });
     return () => { active = false; };
-  }, [caseId, meta, selectedChain, t]);
+  }, [caseId, meta, selectedChain]);
 
   useEffect(() => {
     let active = true;

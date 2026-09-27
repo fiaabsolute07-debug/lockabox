@@ -168,6 +168,9 @@ test('a loaded DEX Screener embed is not replaced by the timeout fallback', asyn
   await openCase(page);
   const iframe = page.locator('iframe[title="GLORP chart"]');
   await expect(iframe).toHaveAttribute('src', 'https://dexscreener.com/solana/FixturePair3?embed=1');
+  // The embed must actually have loaded before the fake clock passes the 8 s fallback (a cold dev server can be slow).
+  await expect.poll(() => page.frames().some((frame) => frame.url().startsWith('https://dexscreener.com/'))).toBe(true);
+  await page.frames().find((frame) => frame.url().startsWith('https://dexscreener.com/'))!.waitForLoadState('load');
   await page.clock.runFor(9_000);
   await expect(iframe).toHaveAttribute('src', 'https://dexscreener.com/solana/FixturePair3?embed=1');
 });

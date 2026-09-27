@@ -16,6 +16,7 @@ import {
   type MetaResponse,
 } from './api';
 import { LockyLogo } from './LockyLogo';
+import { isUserRejection, useEvmWallet, type EvmProviderDetail } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
 
 type AppContextValue = {
@@ -165,6 +166,7 @@ function Header() {
   const { meta, selectedChain, setSelectedChain, user, refreshUser } = useAppContext();
   const { connected, publicKey, signMessage, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
+  const evm = useEvmWallet();
   const [chainOpen, setChainOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
@@ -174,6 +176,12 @@ function Header() {
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setHideFromBoard(user?.hideFromBoard ?? false), [user]);
+  // Show the wallet this account signed in with: the connected one if it belongs to the account, else the first on record.
+  const accountWallets = user?.wallets ?? [];
+  const solanaAddress = publicKey?.toBase58();
+  const signedInAddress = accountWallets.find((wallet) => wallet.family === 'evm' && wallet.address === evm.connection?.address)?.address
+    ?? accountWallets.find((wallet) => wallet.family === 'solana' && wallet.address === solanaAddress)?.address
+    ?? accountWallets[0]?.address;
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -189,6 +197,41 @@ function Header() {
   }, [accountOpen]);
 
   const chainName = selectedChain === 'all' ? t('allChains') : meta?.chains.find((chain) => chain.id === selectedChain)?.name ?? 'Solana';
+  const chooserRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!evm.chooserOpen) return;
+    const onPointerDown = (event: PointerEvent) => { if (!chooserRef.current?.contains(event.target as Node)) evm.setChooserOpen(false); };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') evm.setChooserOpen(false); };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+  }, [evm]);
+
+  const connectEvm = async (detail: EvmProviderDetail) => {
+    setAuthError(null); evm.setChooserOpen(false);
+    try { await evm.connect(detail); }
+    catch (error) { if (!isUserRejection(error)) setAuthError(t('evmConnectFailed')); }
+  };
+
+  // SIWE (AC-004): sign on the wallet's current chain when it is an enabled EVM chain, otherwise ask the wallet to move to Base.
+  const signInEvm = async () => {
+    const connection = evm.connection;
+    if (!connection) return;
+    setAuthBusy(true); setAuthError(null);
+    try {
+      const supported = (meta?.chains ?? []).filter((chain) => chain.family === 'evm' && chain.evmChainId).map((chain) => chain.evmChainId);
+      let chainId = connection.chainId;
+      if (!supported.includes(chainId)) { await evm.switchChain(BASE_CHAIN_ID); chainId = BASE_CHAIN_ID; }
+      const address = connection.address;
+      const nonce = await fetchJson<{ nonce: string; issuedAt: string; message: string }>('/api/auth/nonce', { method: 'POST', body: JSON.stringify({ address, family: 'evm', chainId }) });
+      const signature = await evm.signMessage(nonce.message);
+      await fetchJson<{ userId: string }>('/api/auth/verify', { method: 'POST', body: JSON.stringify({ address, nonce: nonce.nonce, issuedAt: nonce.issuedAt, signature, family: 'evm', chainId }) });
+      await refreshUser();
+    } catch (error) {
+      if (!isUserRejection(error)) setAuthError(translateApiError(error, t, 'signInNotCompleted'));
+    } finally { setAuthBusy(false); }
+  };
+
   const signIn = async () => {
     if (!publicKey || !signMessage) return;
     setAuthBusy(true); setAuthError(null);
@@ -220,6 +263,7 @@ function Header() {
       await fetchJson<{ ok: true }>('/api/auth/logout', { method: 'POST' });
       await refreshUser();
       await disconnect();
+      evm.forget();
       setAccountOpen(false);
     } catch (error) {
       setAuthError(translateApiError(error, t, 'couldNotSignOut'));
@@ -244,7 +288,7 @@ function Header() {
           )}
         </div>
         {user && <span className="points-pill mono">{new Intl.NumberFormat(locale).format(user.points)} {t('points')}</span>}
-        {user ? <div className="account-menu-wrap" ref={accountMenuRef}><button className="chip-button wallet-button mono" title={publicKey?.toBase58() ?? user.wallets?.[0]?.address} aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((value) => !value)}>{formatAddress(publicKey?.toBase58() ?? user.wallets?.[0]?.address)}<span className="chevron">⌄</span></button>{accountOpen && <div className="account-menu panel" role="menu"><div className="account-summary"><span className="muted">{t('pointsLabel')}</span><strong>{new Intl.NumberFormat(locale).format(user.points)} {t('points')}</strong></div><Link className="account-link" role="menuitem" href="/earn" onClick={() => setAccountOpen(false)}>{t('inviteFriends')} <span>↗</span></Link><label className="privacy-toggle" role="menuitem"><input type="checkbox" checked={hideFromBoard} disabled={privacyBusy} onChange={(event) => void updatePrivacy(event.target.checked)} /><span><strong>{t('hideWallet')}</strong><small>{t('hideWalletHelp')}</small></span></label><div className="account-divider" /><button className="account-signout" role="menuitem" onClick={() => void signOut()} disabled={authBusy}>{authBusy ? t('signingOut') : t('signOut')}</button></div>}</div> : !connected ? <button className="chip-button wallet-button" onClick={() => setVisible(true)}>{t('connectWallet')}</button> : <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? t('signingIn') : t('signIn')}</button>}
+        {user ? <div className="account-menu-wrap" ref={accountMenuRef}><button className="chip-button wallet-button mono" title={signedInAddress} aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((value) => !value)}>{formatAddress(signedInAddress)}<span className="chevron">⌄</span></button>{accountOpen && <div className="account-menu panel" role="menu"><div className="account-summary"><span className="muted">{t('pointsLabel')}</span><strong>{new Intl.NumberFormat(locale).format(user.points)} {t('points')}</strong></div><Link className="account-link" role="menuitem" href="/earn" onClick={() => setAccountOpen(false)}>{t('inviteFriends')} <span>↗</span></Link><label className="privacy-toggle" role="menuitem"><input type="checkbox" checked={hideFromBoard} disabled={privacyBusy} onChange={(event) => void updatePrivacy(event.target.checked)} /><span><strong>{t('hideWallet')}</strong><small>{t('hideWalletHelp')}</small></span></label><div className="account-divider" /><button className="account-signout" role="menuitem" onClick={() => void signOut()} disabled={authBusy}>{authBusy ? t('signingOut') : t('signOut')}</button></div>}</div> : evm.connection ? <button className="chip-button wallet-button" title={evm.connection.address} onClick={() => void signInEvm()} disabled={authBusy}>{authBusy ? t('signingIn') : `${t('signIn')} · ${formatAddress(evm.connection.address)}`}</button> : connected ? <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? t('signingIn') : t('signIn')}</button> : <div className="account-menu-wrap" ref={chooserRef}><button className="chip-button wallet-button" aria-haspopup="menu" aria-expanded={evm.chooserOpen} onClick={() => evm.setChooserOpen(!evm.chooserOpen)}>{t('connectWallet')}</button>{evm.chooserOpen && <WalletChooser providers={evm.providers} onSolana={() => { evm.setChooserOpen(false); setVisible(true); }} onEvm={(detail) => void connectEvm(detail)} />}</div>}
       </div>
       {authError && <span className="header-error" role="status">{authError}</span>}
     </header>
@@ -287,4 +331,18 @@ export function Sidebar() {
 function Footer() {
   const { t } = useT();
   return <footer className="footer"><span>{t('footerDisclaimer')}</span><span><Link href="/verify">{t('verifyRolls')}</Link><Link href="/earn">{t('earnPoints')}</Link><Link href="/sponsor">{t('forProjects')}</Link><Link href="/legal/terms">{t('terms')}</Link><Link href="/legal/privacy">{t('privacy')}</Link><Link href="/legal/disclaimer">{t('disclaimer')}</Link><Link href="/legal/sponsored">{t('sponsoredPolicy')}</Link></span></footer>;
+}
+
+const BASE_CHAIN_ID = 8453;
+
+function WalletChooser({ providers, onSolana, onEvm }: { providers: EvmProviderDetail[]; onSolana: () => void; onEvm: (detail: EvmProviderDetail) => void }) {
+  const { t } = useT();
+  return <div className="account-menu panel wallet-chooser" role="menu" aria-label={t('chooseWallet')}>
+    <button className="account-link" role="menuitem" onClick={onSolana}>{t('solanaWallet')} <span>◎</span></button>
+    <div className="account-divider" />
+    <span className="chooser-label muted">{t('evmWallet')}</span>
+    {providers.length ? providers.map((detail) => <button key={detail.info.uuid} className="account-link" role="menuitem" onClick={() => onEvm(detail)}>
+      <span className="chooser-wallet">{detail.info.icon ? <img src={detail.info.icon} alt="" width={18} height={18} /> : <i aria-hidden="true">⬡</i>}{detail.info.name}</span><span>↗</span>
+    </button>) : <p className="chooser-empty muted">{t('noEvmWallet')}</p>}
+  </div>;
 }

@@ -2,13 +2,13 @@
 
 Updated 2026-09-27 by Claude (cloud session). Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 63 (of 89)
+Totals: BUILT 6 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 64 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
 | LAB-AC-002 | VERIFIED_LOCAL | scripts/test-db.ts recreates and migrates; no down-migrations (forward-only by design) |
 | LAB-AC-003 | BUILT | SIWS verify route; UI flow in A2 |
-| LAB-AC-004 | PARTIAL | SIWE (EIP-4361) nonce/verify, EOA + ERC-1271/6492 via RPC, one account per wallet (tests/integration/auth.db.test.ts); EVM wallet UI pending |
+| LAB-AC-004 | VERIFIED_LOCAL | SIWE (EIP-4361) nonce/verify, EOA + ERC-1271/6492 (tests/integration/auth.db.test.ts); UI: EIP-6963 wallet chooser, switch to Base when on an unsupported chain; e2e real round trip through the local API + DB with a throwaway key, same wallet → same account (tests/e2e/a5.spec.ts, claude-A5.md) |
 | LAB-AC-005 | VERIFIED_LOCAL | nonce once, 5 min expiry, old nonce refused, issuedAt bound (tests/integration/auth.db.test.ts, Solana + EVM) |
 | LAB-AC-006 | VERIFIED_LOCAL | chains table flags; integration uses them |
 | LAB-AC-007 | VERIFIED_LOCAL | Astra A1 limiter/backoff tests; worker is the only caller |
@@ -40,9 +40,9 @@ Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 63 (o
 | LAB-AC-033 | VERIFIED_LOCAL | token header/rail live-local on real data + e2e (claude-review-A2.md) |
 | LAB-AC-034 | VERIFIED_LOCAL | chart/buys/rail live-local + e2e (claude-review-A2.md) |
 | LAB-AC-035 | VERIFIED_LOCAL | swap box with real Jupiter quotes live-local, fee 0, sell check shown (claude-review-A2.md) |
-| LAB-AC-036 | BUILT | Solana wallet adapter in A2; EVM not built |
+| LAB-AC-036 | PARTIAL | Solana wallet adapter (A2); injected EVM wallets via EIP-6963 + viem, connect/sign-in/sign-out e2e (a5.spec.ts); WalletConnect needs a project id from the owner |
 | LAB-AC-037 | BUILT | no platformFee in quote/build (unit fee guard), live Jupiter quotes; M: owner signs one small real swap |
-| LAB-AC-038 | PARTIAL | EVM buy via LI.FI built + guarded, off by default (DECISIONS #10); live quotes + sell checks OK on Base/BSC/Robinhood/Arc; tests unit swap-evm + integration swap-evm.db; UI + owner decision pending |
+| LAB-AC-038 | PARTIAL | EVM buy via LI.FI built + guarded, off by default (DECISIONS #10); approve exactly the amount, swap only after the approval is mined (server: unit swap-evm + integration swap-evm.db; UI: e2e call order in a5.spec.ts); M: owner decision + one real swap |
 | LAB-AC-039 | VERIFIED_LOCAL | sell check before quote/build quarantines (code) + gate tests |
 | LAB-AC-040 | BUILT | build only on the Buy click, never after a roll (UI code); M/E: owner signs a real swap |
 | LAB-AC-041 | VERIFIED_LOCAL | server never receives keys; build returns unsigned tx |
