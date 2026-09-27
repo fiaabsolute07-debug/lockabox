@@ -93,7 +93,7 @@ test('the reel occupies the viewport while the case is opening', async ({ page }
   // The pull is then presented in the middle of the screen until the user closes it.
   await expect(stage).toHaveCSS('position', 'fixed');
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.locator('.pull-card').getByRole('button', { name: 'Close' }).click();
   await expect(stage).toHaveCSS('position', 'relative');
 });
 
@@ -147,7 +147,7 @@ test('starting another roll clears the old winning card while the API is pending
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
   await expect(page.locator('.unboxed-bar')).toBeVisible();
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.locator('.pull-card').getByRole('button', { name: 'Close' }).click();
   let pendingRoll: Route | undefined;
   await page.route('**/api/rolls', route => { pendingRoll = route; });
   await page.getByRole('button', { name: /OPEN CASE/i }).click();
@@ -232,8 +232,8 @@ test('a Micro pull gets the "womp" reveal without confetti, and Open again rolls
   await expect(dialog.locator('.confetti')).toHaveCount(0);
   await expect(dialog.locator('.reveal-rays')).toHaveCount(0);
   const card = page.locator('.pull-card');
-  await expect(card.getByRole('button', { name: 'Open again' })).toBeFocused();
-  await card.getByRole('button', { name: 'Open again' }).click();
+  await expect(card.getByRole('button', { name: /Open again/ })).toBeFocused();
+  await card.getByRole('button', { name: /Open again/ }).click();
   await expect.poll(state.rollPosts).toBe(2);
   await expect(page.locator('.roll-spinning, .roll-charging').first()).toBeVisible();
 });
@@ -261,7 +261,10 @@ test('after the reveal a coin card shows real market data and puts the buy box f
   await expect(card.locator('.pull-buy .button-buy')).toBeVisible();
   await expect(card).not.toContainText(/guarantee|moon|100x|last chance|only \d+ left/i);
   expect(state.rollPosts()).toBe(1);
-  await card.getByRole('button', { name: 'Continue' }).click();
+  // The chart sits on the card, with DEX Screener's drawing toolbar off; the actions stay in the sticky top bar.
+  await expect(card.locator('.pull-chart iframe')).toHaveAttribute('src', /chartLeftToolbar=0/);
+  await expect(card.locator('.pull-bar').getByRole('button', { name: /Open again/ })).toBeVisible();
+  await card.locator('.pull-bar').getByRole('button', { name: 'Close' }).click();
   await expect(card).toHaveCount(0);
   await expect(page.locator('.unboxed-bar')).toBeVisible();
 });

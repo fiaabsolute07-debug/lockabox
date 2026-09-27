@@ -29,7 +29,17 @@ export function TokenHeader({ asset, tier, rollId }: { asset: AssetDetail; tier:
   </section>;
 }
 
-export function ChartEmbed({ asset }: { asset: AssetDetail }) {
+/** Extra DEX Screener embed options for small frames: no drawing toolbar, dark chart, 15-minute candles. */
+const COMPACT_DEX = { chartLeftToolbar: '0', chartTheme: 'dark', interval: '15' };
+
+function withParams(url: string | null, params: Record<string, string>) {
+  if (!url) return url;
+  const next = new URL(url);
+  for (const [key, value] of Object.entries(params)) next.searchParams.set(key, value);
+  return next.toString();
+}
+
+export function ChartEmbed({ asset, compact = false }: { asset: AssetDetail; compact?: boolean }) {
   const { t } = useT();
   const [source, setSource] = useState<'dex' | 'gecko'>('dex');
   const [failed, setFailed] = useState(false);
@@ -49,8 +59,8 @@ export function ChartEmbed({ asset }: { asset: AssetDetail }) {
     return () => window.clearTimeout(timeout);
   }, [asset.id, asset.chart.dexscreenerEmbed, asset.chart.geckoterminalEmbed]);
 
-  const url = source === 'dex' ? asset.chart.dexscreenerEmbed : asset.chart.geckoterminalEmbed;
-  return <section className="panel chart-panel">
+  const url = source === 'dex' ? (compact ? withParams(asset.chart.dexscreenerEmbed, COMPACT_DEX) : asset.chart.dexscreenerEmbed) : asset.chart.geckoterminalEmbed;
+  return <section className={`panel chart-panel ${compact ? 'chart-compact' : ''}`}>
     <div className="chart-tabs"><button className={source === 'dex' ? 'active' : ''} disabled={!asset.chart.dexscreenerEmbed} onClick={() => { manualSourceRef.current = true; setSource('dex'); setFailed(false); }}>DEX Screener</button><button className={source === 'gecko' ? 'active' : ''} disabled={!asset.chart.geckoterminalEmbed} onClick={() => { manualSourceRef.current = true; setSource('gecko'); setFailed(false); }}>GeckoTerminal</button><span className="chart-note">{t('officialEmbed')}</span></div>
     <div className="chart-frame">{url && !failed ? <iframe title={`${displaySymbol(asset)} chart`} src={url} onLoad={() => { if (source === 'dex') dexLoadedRef.current = true; }} /> : <div className="chart-empty">{t('chartUnavailable')}</div>}</div>
   </section>;

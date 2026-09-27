@@ -28,17 +28,28 @@ export default function PullCard({ asset, tier, chance, rollId, chain, againRef,
     [t('pullAge'), asset.pairCreatedAt ? age(asset.pairCreatedAt).replace(' ago', '') : '—'],
   ];
   return <div className="pull-card" style={{ '--rarity': tierColor(tier) } as React.CSSProperties} role="document">
-    <section className="pull-coin">
+    <header className="pull-bar">
       <span className="pull-eyebrow">{tierLabel(tier)}{chance ? ` · ${t('revealOdds', { percent: number(chance / 100, { maximumFractionDigits: 2 }) })}` : ''} · {t('pullUnboxed')}</span>
-      <h2>${symbol}</h2>
-      <p className="pull-sub">{asset.name && asset.name !== asset.symbol ? `${asset.name} · ` : ''}<ChainIcon id={asset.chainId} name={chain?.name} size={14} /> {chain?.name ?? asset.chainId}</p>
-      <div className="pull-price"><b>{asset.stale ? '—' : formatPrice(asset.priceUsd, locale)}</b>{!asset.stale && change !== null && <span className={change >= 0 ? 'up-text' : 'down-text'}>{formatPercent(change, locale)} · 24h</span>}</div>
+      <div className="pull-bar-actions">
+        <button ref={againRef} type="button" className="button button-outline" onClick={onAgain}>↻ {t('openAgain')}</button>
+        <button type="button" className="pull-close" onClick={onClose} aria-label={t('close')} title={t('close')}>✕</button>
+      </div>
+    </header>
+    <section className="pull-coin">
       <div className="pull-art" style={asset.imageUrl ? { backgroundImage: `url(${asset.imageUrl})` } : undefined}>{asset.imageUrl ? null : symbol[0]}</div>
+      <div className="pull-name">
+        <h2>${symbol}</h2>
+        <p className="pull-sub">{asset.name && asset.name !== asset.symbol ? `${asset.name} · ` : ''}<ChainIcon id={asset.chainId} name={chain?.name} size={14} /> {chain?.name ?? asset.chainId}</p>
+      </div>
+      <div className="pull-price"><b>{asset.stale ? '—' : formatPrice(asset.priceUsd, locale)}</b>{!asset.stale && change !== null && <span className={change >= 0 ? 'up-text' : 'down-text'}>{formatPercent(change, locale)} · 24h</span>}</div>
+    </section>
+    <section className="pull-buy">
+      <SwapBox asset={asset} rollId={rollId} onRollAgain={onAgain} />
     </section>
     <section className="pull-details">
       <div className="pull-stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><b>{value}</b></div>)}</div>
-      {/* Owner request: the chart right on the card (official embed, GeckoTerminal fallback; LAB §3.4). */}
-      <div className="pull-chart"><ChartEmbed asset={asset} /></div>
+      {/* Owner request: the chart right on the card (official embed, GeckoTerminal fallback; LAB §3.4), compact toolbar. */}
+      <div className="pull-chart"><ChartEmbed asset={asset} compact /></div>
       {asset.lockaboxBuys24h > 0 && <p className="pull-proof">{t('pullBuysToday', { count: asset.lockaboxBuys24h })}</p>}
       <div className="pull-links">
         {asset.links.dexscreener && <a href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('pullChart')}</a>}
@@ -47,12 +58,5 @@ export default function PullCard({ asset, tier, chance, rollId, chain, againRef,
         <SharePullButton rollId={rollId} symbol={symbol} />
       </div>
     </section>
-    <section className="pull-buy">
-      <SwapBox asset={asset} rollId={rollId} onRollAgain={onAgain} />
-    </section>
-    <footer className="pull-footer">
-      <button ref={againRef} type="button" className="button button-outline" onClick={onAgain}>{t('openAgain')}</button>
-      <button type="button" className="button button-ghost" onClick={onClose}>{t('pullContinue')}</button>
-    </footer>
   </div>;
 }

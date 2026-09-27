@@ -32,6 +32,12 @@ function tierFor(items: PoolItem[] | undefined, id: number): Tier | null {
   return items?.find((i) => i.a === id)?.t ?? null;
 }
 
+/** GeckoTerminal network ids where they differ from the DEX Screener chain id (chart fallback, LAB §3.4). */
+const GECKO_NETWORK: Record<string, string> = {
+  ethereum: 'eth', polygon: 'polygon_pos', avalanche: 'avax', fantom: 'ftm', cronos: 'cro', sui: 'sui-network',
+  gnosischain: 'xdai', seiv2: 'sei-evm', xlayer: 'x-layer',
+};
+
 export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
   const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
     select id, name, family, swap_enabled, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
@@ -110,7 +116,7 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
     // LAB §3.4: official embeds only (DEX Screener first, GeckoTerminal fallback). Never our own chart from their data.
     chart: {
       dexscreenerEmbed: pair ? `https://dexscreener.com/${r.chain_id}/${pair}?embed=1&theme=dark&trades=0&info=0` : null,
-      geckoterminalEmbed: pair ? `https://www.geckoterminal.com/${r.chain_id === 'bsc' ? 'bsc' : r.chain_id === 'ethereum' ? 'eth' : r.chain_id}/pools/${pair}?embed=1&info=0&swaps=0&grayscale=0&light_chart=0` : null,
+      geckoterminalEmbed: pair ? `https://www.geckoterminal.com/${GECKO_NETWORK[r.chain_id] ?? r.chain_id}/pools/${pair}?embed=1&info=0&swaps=0&grayscale=0&light_chart=0` : null,
     },
     swapEnabled: r.swap_enabled && !killed && !stale,
     lockaboxBuys24h: r.buys_24h ?? 0,
