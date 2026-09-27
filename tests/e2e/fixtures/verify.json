@@ -1,0 +1,41 @@
+{
+  "status": "verified",
+  "serverSeed": "astra-fixture-seed",
+  "serverSeedHash": "8c6664b8e4db9383ad2f34c9b4dfa847eb3500c197e3eeeffd53fc8765c0c803",
+  "hashMatches": true,
+  "recomputed": {
+    "tier": "micro",
+    "assetId": 1
+  },
+  "recorded": {
+    "tier": "micro",
+    "assetId": 1
+  },
+  "items": [
+    {
+      "a": 1,
+      "t": "micro"
+    },
+    {
+      "a": 2,
+      "t": "small"
+    },
+    {
+      "a": 3,
+      "t": "mid"
+    },
+    {
+      "a": 4,
+      "t": "mid"
+    }
+  ],
+  "odds": {
+    "micro": 3500,
+    "small": 3000,
+    "mid": 2000,
+    "large": 1200,
+    "top": 300
+  },
+  "clientSeed": "fixture-client",
+  "nonce": 7
+}

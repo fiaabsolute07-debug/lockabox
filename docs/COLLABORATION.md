@@ -7,7 +7,7 @@ second engineer. Claude assigns tasks on this board, integrates, runs DB/E2E sui
 
 | Owner | Paths |
 |---|---|
-| **Claude** | `db/**`, `src/lib/**`, `src/modules/{rolls,cases,points,auth,swap,sponsors,admin,gates}/**`, `src/app/api/**`, `worker/**`, `scripts/**`, `tests/integration/**`, `tests/unit/{rolls,cases,points,gates,auth,swap}*.test.ts`, `docs/COLLABORATION.md`, `docs/DECISIONS.md`, `docs/UI_CONTRACT.md`, `docs/BUILD_STATUS.md`, `docs/HANDOFF.md`, `docs/evidence/claude-*.md` |
+| **Claude** | `db/**`, `src/lib/**`, `src/modules/{rolls,cases,points,auth,swap,sponsors,admin,gates,board,health,invites}/**`, `src/content/**`, `src/assets/**`, `src/app/api/**`, `worker/**`, `scripts/**`, `tests/integration/**`, `tests/unit/{rolls,cases,points,gates,auth,swap}*.test.ts`, `docs/COLLABORATION.md`, `docs/DECISIONS.md`, `docs/UI_CONTRACT.md`, `docs/BUILD_STATUS.md`, `docs/HANDOFF.md`, `docs/evidence/claude-*.md` |
 | **Astra** | `src/modules/sources/**`, `src/app/**` except `src/app/api/**`, `src/components/**`, `src/styles/**`, `tests/unit/sources*.test.ts`, `tests/unit/ui*.test.ts`, `tests/e2e/**`, `playwright.config.ts`, `docs/evidence/astra-*.md` |
 | Shared, change by request | `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `vitest.config.ts`, `next.config.ts`. Write the request in your evidence file; Claude applies it. |
 
@@ -31,6 +31,8 @@ second engineer. Claude assigns tasks on this board, integrates, runs DB/E2E sui
 | A1 | Astra | `src/modules/sources`: DEX Screener + DexPaprika clients (rate limit, retry, typed errors), normalisation to asset snapshots, market-cap tiering, unit tests on fixtures | C0 | DONE (reviewed: claude-review-A1.md; F1 fixed by Claude) |
 | C1 | Claude | DB schema (assets, snapshots, gates, cases, pools, seeds, rolls, users, wallets, points, trades, sponsors), provably-fair roll engine, pool builder | C0 | DONE |
 | C2 | Claude | Hidden gates (Solana sell route via Jupiter quote, liquidity floor), worker (discover → enrich → gate → pools), API routes + `docs/UI_CONTRACT.md` | A1, C1 | DONE |
-| A2 | Astra | UI per `design/brand-explore-v11.html`: case page, spinner, contents grid, token header, DEX Screener embed chart (fallback GeckoTerminal), buys table, token rail, swap box, proof box, verify page, mobile | C2 contract | IN PROGRESS (re-dispatched: first prompt wrongly read as 'edit only COLLABORATION.md') |
+| A2 | Astra | UI per `design/brand-explore-v11.html`: case page, spinner, contents grid, token header, DEX Screener embed chart (fallback GeckoTerminal), buys table, token rail, swap box, proof box, verify page, mobile | C2 contract | DONE (A2 + A2-fix accepted: claude-review-A2.md) |
 | C3 | Claude | Wallet auth (SIWS), Jupiter swap build endpoint, trade recording, points + tasks, FOMO feed from real events | C2 | DONE (backend); UI in A2 |
 | R* | both | Cross-review each other's tasks; findings in evidence files | — | ongoing |
+| C4 | Claude | Verify payload for browser recompute, invites + invite task, Best pulls API + opt-out, share image, health/alerts + worker_runs, pool pruning, write rate limits, CSP, legal copy (en/vi, draft) | C3 | DONE |
+| A3 | Astra | UI for C4: Best pulls page, settings (hide wallet, sign out), invite link + `?ref=` accept, share button + og meta on `/verify/:id`, sponsored case UI, legal pages + footer, en/vi switch | C4 contract | TODO |

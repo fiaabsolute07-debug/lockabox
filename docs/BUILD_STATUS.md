@@ -2,10 +2,10 @@
 
 Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 16 · NEEDS_OWNER 4 · PARTIAL 10 · SPEC 14 · VERIFIED_LOCAL 45 (of 89)
+Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
-| LAB-AC-001 | PARTIAL | unit+integration+tsc green locally; no CI workflow yet |
+| LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
 | LAB-AC-002 | VERIFIED_LOCAL | scripts/test-db.ts recreates and migrates; no down-migrations (forward-only by design) |
 | LAB-AC-003 | BUILT | SIWS verify route; UI flow in A2 |
 | LAB-AC-004 | SPEC | EVM sign-in not built (EVM chains are View-on-DEX only) |
@@ -23,7 +23,7 @@ Totals: BUILT 16 · NEEDS_OWNER 4 · PARTIAL 10 · SPEC 14 · VERIFIED_LOCAL 45 
 | LAB-AC-016 | VERIFIED_LOCAL | tests/unit/gates.test.ts + live 60 checks |
 | LAB-AC-017 | VERIFIED_LOCAL | gates.test.ts |
 | LAB-AC-018 | PARTIAL | gates are data-driven; per-gate config flag not yet exposed |
-| LAB-AC-019 | BUILT | read models expose no risk fields; UI check in A2 e2e |
+| LAB-AC-019 | VERIFIED_LOCAL | no risk fields in read models; e2e "no prohibited risk-label language" (tests/e2e/case.spec.ts) |
 | LAB-AC-020 | VERIFIED_LOCAL | marketCapTier tests |
 | LAB-AC-021 | VERIFIED_LOCAL | core.db.test: immutable trigger |
 | LAB-AC-022 | PARTIAL | stale → price hidden + pool excluded; DexPaprika price fallback not implemented |
@@ -37,9 +37,9 @@ Totals: BUILT 16 · NEEDS_OWNER 4 · PARTIAL 10 · SPEC 14 · VERIFIED_LOCAL 45 
 | LAB-AC-030 | VERIFIED_LOCAL | verify test after rotation |
 | LAB-AC-031 | VERIFIED_LOCAL | 10 000-roll odds test |
 | LAB-AC-032 | VERIFIED_LOCAL | pacing + concurrency tests |
-| LAB-AC-033 | BUILT | AssetDetail; UI in A2 |
-| LAB-AC-034 | BUILT | A2 |
-| LAB-AC-035 | BUILT | A2 |
+| LAB-AC-033 | VERIFIED_LOCAL | token header/rail live-local on real data + e2e (claude-review-A2.md) |
+| LAB-AC-034 | VERIFIED_LOCAL | chart/buys/rail live-local + e2e (claude-review-A2.md) |
+| LAB-AC-035 | VERIFIED_LOCAL | swap box with real Jupiter quotes live-local, fee 0, sell check shown (claude-review-A2.md) |
 | LAB-AC-036 | BUILT | Solana wallet adapter in A2; EVM not built |
 | LAB-AC-037 | BUILT | quote/build with fee guard (unit); real signing needs the owner |
 | LAB-AC-038 | SPEC | EVM swap not built |
@@ -50,19 +50,19 @@ Totals: BUILT 16 · NEEDS_OWNER 4 · PARTIAL 10 · SPEC 14 · VERIFIED_LOCAL 45 
 | LAB-AC-043 | VERIFIED_LOCAL | no fee param + fee guard tests |
 | LAB-AC-044 | BUILT | clamp in service; UI confirm in A2 |
 | LAB-AC-045 | VERIFIED_LOCAL | swap_disabled for non-Solana chains |
-| LAB-AC-046 | SPEC | share image not built |
-| LAB-AC-047 | BUILT | A2 mobile layout |
+| LAB-AC-046 | PARTIAL | GET /api/rolls/:id/og renders (Inter, no referral link, no price/gain); share button + og meta in A3 |
+| LAB-AC-047 | VERIFIED_LOCAL | 375×812: no horizontal overflow, OPEN CASE first (claude-review-A2.md) |
 | LAB-AC-048 | VERIFIED_LOCAL | GEO_BLOCK_SWAP flag, off by default |
 | LAB-AC-049 | VERIFIED_LOCAL | ledger tests |
 | LAB-AC-050 | VERIFIED_LOCAL | no buy/transfer route; append-only trigger |
 | LAB-AC-051 | VERIFIED_LOCAL | no points on swap (no code path) |
 | LAB-AC-052 | VERIFIED_LOCAL | check constraint test |
 | LAB-AC-053 | BUILT | getTokenAccountsByOwner on claim; needs a real wallet |
-| LAB-AC-054 | SPEC | invite task not built |
-| LAB-AC-055 | PARTIAL | one wallet one account via unique; 24 h wait not enforced |
+| LAB-AC-054 | PARTIAL | invites + invite-friend task, 3 distinct days + wallet, cap 10/day (tests/integration/r3.db.test.ts); UI in A3 |
+| LAB-AC-055 | VERIFIED_LOCAL | unique wallet; accounts < 24 h cannot spend points (sponsors.db.test); invites accepted only by accounts < 24 h (r3.db.test) |
 | LAB-AC-056 | VERIFIED_LOCAL | concurrent claim test |
-| LAB-AC-057 | SPEC | leaderboard not built |
-| LAB-AC-058 | PARTIAL | roll pacing; task endpoints not rate limited |
+| LAB-AC-057 | PARTIAL | GET /api/leaderboard: % since pull, real rolls, one per coin, opt-out anon (r3.db.test); UI in A3 |
+| LAB-AC-058 | VERIFIED_LOCAL | per-route limiter on every write endpoint (src/lib/ratelimit.ts; limiter test in r3.db.test) |
 | LAB-AC-059 | VERIFIED_LOCAL | sponsor create |
 | LAB-AC-060 | VERIFIED_LOCAL | review requires txs + gates |
 | LAB-AC-061 | BUILT | label in API; UI in A2 |
@@ -82,15 +82,15 @@ Totals: BUILT 16 · NEEDS_OWNER 4 · PARTIAL 10 · SPEC 14 · VERIFIED_LOCAL 45 
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |
 | LAB-AC-076 | SPEC | en only for now |
 | LAB-AC-077 | SPEC | not measured |
-| LAB-AC-078 | SPEC | legal pages not written |
+| LAB-AC-078 | PARTIAL | Terms/Privacy/Disclaimer/Sponsored policy drafted en+vi in src/content/legal.ts (DRAFT); pages in A3; lawyer review NEEDS_OWNER |
 | LAB-AC-079 | NEEDS_OWNER | lawyer sign-off |
-| LAB-AC-080 | SPEC | monitoring not set up |
+| LAB-AC-080 | PARTIAL | /api/health: worker late >10 min, DS/DexPaprika budget >80 %, swap failures >5 % (r3.db.test); owner must point an uptime checker at it |
 | LAB-AC-081 | SPEC | runbooks not written |
 | LAB-AC-082 | SPEC | no backups (local only) |
 | LAB-AC-083 | SPEC | load test not run |
-| LAB-AC-084 | SPEC | security review pending |
+| LAB-AC-084 | PARTIAL | CSP + nosniff + frame-ancestors none + X-Frame-Options; no keys in code; pnpm audit: 2 moderate transitive via @solana/web3.js (uuid, stream-json), not reachable from our code; full review before LIVE |
 | LAB-AC-085 | NEEDS_OWNER | wallet domain verification: owner |
 | LAB-AC-086 | PARTIAL | most prohibitions covered, see mapping |
 | LAB-AC-087 | NEEDS_OWNER | owner approval of staging |
 | LAB-AC-088 | VERIFIED_LOCAL | feed only real rows; empty test |
-| LAB-AC-089 | BUILT | embed URLs only; UI in A2 |
+| LAB-AC-089 | VERIFIED_LOCAL | DEX Screener embed + GeckoTerminal fallback; live candles from localhost (docs/evidence/img/chart-embeds-localhost.png); e2e fallback tests |

@@ -110,8 +110,9 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
 /** LAB-AC-088: every FOMO element comes from real rows (rolls, confirmed trades) and carries its proof/tx reference. */
 export async function feed(limit = 20, sql: postgres.Sql = defaultSql) {
   const rows = await sql<{ kind: string; at: Date; ref: string; who: string | null; asset_id: number; symbol: string | null; chain_id: string; tier: string | null; amount: string | null; input_symbol: string | null }[]>`
-    (select 'buy' as kind, t.created_at as at, t.tx_hash as ref, t.wallet as who, t.asset_id, a.symbol, a.chain_id, null as tier, t.input_amount as amount, t.input_symbol
-       from trades t join assets a on a.id = t.asset_id where t.status = 'confirmed' and t.tx_hash is not null order by t.created_at desc limit ${limit})
+    (select 'buy' as kind, t.created_at as at, t.tx_hash as ref, case when u.hide_from_board then null else t.wallet end as who, t.asset_id, a.symbol, a.chain_id,
+            null as tier, t.input_amount as amount, t.input_symbol
+       from trades t join assets a on a.id = t.asset_id left join users u on u.id = t.user_id where t.status = 'confirmed' and t.tx_hash is not null order by t.created_at desc limit ${limit})
     union all
     (select 'pull' as kind, r.created_at, r.id::text, null, r.result_asset_id, a.symbol, a.chain_id, r.tier, null, null
        from rolls r join assets a on a.id = r.result_asset_id where r.tier in ('large','top') order by r.created_at desc limit ${limit})
@@ -129,10 +130,11 @@ export async function feed(limit = 20, sql: postgres.Sql = defaultSql) {
 
 /** Lockabox buys of one asset (the default tab of the trades table; LAB §3.4). */
 export async function assetBuys(assetId: number, limit = 30, sql: postgres.Sql = defaultSql) {
-  const rows = await sql<{ created_at: Date; wallet: string; input_amount: string; input_symbol: string; out_amount_min: string; tx_hash: string | null; explorer_tx_url: string | null }[]>`
-    select t.created_at, t.wallet, t.input_amount, t.input_symbol, t.out_amount_min, t.tx_hash, ch.explorer_tx_url
-    from trades t join chains ch on ch.id = t.chain_id where t.asset_id = ${assetId} and t.status = 'confirmed' order by t.created_at desc limit ${limit}`;
-  return rows.map((r) => ({ at: r.created_at.toISOString(), maker: `${r.wallet.slice(0, 4)}…${r.wallet.slice(-4)}`, inputAmount: r.input_amount,
+  // A user who hid their wallet (POST /api/me/privacy) shows as "anon" here too.
+  const rows = await sql<{ created_at: Date; wallet: string | null; input_amount: string; input_symbol: string; out_amount_min: string; tx_hash: string | null; explorer_tx_url: string | null }[]>`
+    select t.created_at, case when u.hide_from_board then null else t.wallet end as wallet, t.input_amount, t.input_symbol, t.out_amount_min, t.tx_hash, ch.explorer_tx_url
+    from trades t join chains ch on ch.id = t.chain_id left join users u on u.id = t.user_id where t.asset_id = ${assetId} and t.status = 'confirmed' order by t.created_at desc limit ${limit}`;
+  return rows.map((r) => ({ at: r.created_at.toISOString(), maker: r.wallet ? `${r.wallet.slice(0, 4)}…${r.wallet.slice(-4)}` : 'anon', inputAmount: r.input_amount,
     inputSymbol: r.input_symbol, outAmountMin: r.out_amount_min, txHash: r.tx_hash, txUrl: r.tx_hash && r.explorer_tx_url ? r.explorer_tx_url.replace('{tx}', r.tx_hash) : null }));
 }
 

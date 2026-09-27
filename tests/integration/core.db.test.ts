@@ -40,7 +40,7 @@ run('pools (LAB-AC-020/021)', () => {
     expect(p1!.version).toBe(1);
     expect(p2!.id).toBe(p1!.id);
     await expect(sql`update case_pools set size = 1 where id = ${p1!.id}`).rejects.toThrow(/immutable/);
-    await expect(sql`delete from case_pools where id = ${p1!.id}`).rejects.toThrow(/immutable/);
+    // Deleting is left to the pruner, which never touches a pool a roll points at (tests/integration/r3.db.test.ts).
   });
 
   it('excludes killed, failed-gate, stale and blocklisted assets', async () => {
@@ -112,6 +112,12 @@ run('rolls (LAB-AC-028/030/031/032)', () => {
     await rotateSeed();
     const v = await verifyRoll(r.rollId);
     expect(v!.status).toBe('verified');
+    // A browser gets everything it needs to redo the roll and to check the pool hash itself.
+    if (v!.status === 'pending') throw new Error('unreachable');
+    expect(v!.nonce).toBe(r.nonce);
+    expect(v!.clientSeed).toBe(r.clientSeed);
+    const { sha256Hex } = await import('@/modules/rolls/fair');
+    expect(sha256Hex(JSON.stringify(v!.items))).toBe(r.itemsHash);
     await expect(sql`update rolls set tier = 'top' where id = ${r.rollId}`).rejects.toThrow(/immutable/);
   });
 });

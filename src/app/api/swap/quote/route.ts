@@ -1,4 +1,5 @@
 import { handleError, json, problem, readJson } from '@/lib/api';
+import { limited } from '@/lib/ratelimit';
 import { swapBlockedFor } from '@/modules/admin/guard';
 import { quote, SwapError } from '@/modules/swap/service';
 
@@ -8,6 +9,8 @@ const STATUS: Record<SwapError['code'], number> = { not_found: 404, swap_disable
 
 export async function POST(req: Request) {
   try {
+    const tooMany = await limited('swap-quote', null, 60);
+    if (tooMany) return tooMany;
     const blocked = swapBlockedFor(req);
     if (blocked) return problem(451, 'swap_unavailable_region', `in-app swap is not available in ${blocked}; View on DEX instead`);
     const b = await readJson<{ assetId?: number; amountSol?: string; slippageBps?: number }>(req);

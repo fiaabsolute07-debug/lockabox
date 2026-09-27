@@ -14,7 +14,7 @@ are signed in the user's wallet; the UI never sees a key. Demo/fixture data must
 | `GET /api/assets/:id/buys` | `{ items: [{at, maker, inputAmount, inputSymbol, outAmountMin, txHash, txUrl}] }`: confirmed buys made through Lockabox only (default tab "Buys via Lockabox") |
 | `GET /api/feed` | `{ items: [{kind:'buy'|'pull', at, ref, who, assetId, symbol, chainId, tier, amount, inputSymbol}], stats: {rolls1h, buysToday, lastTopPullAt} }`. Only real events (LAB-AC-088). `kind:'pull'` ref = roll id (link to `/verify/<ref>`); `kind:'buy'` ref = tx hash. Empty list → hide the ticker/toasts, never show placeholders. |
 | `GET /api/rolls/:id` | `{ roll: {id, caseId, poolId, clientSeed, nonce, tier, itemsHash, poolSize, filters, serverSeedHash, seedRevealed, createdAt}, asset: AssetDetail }` |
-| `GET /api/rolls/:id/verify` | `{status:'pending', serverSeedHash, message}` or `{status:'verified'|'mismatch', serverSeed, serverSeedHash, hashMatches, recomputed:{tier,assetId}, recorded:{tier,assetId}}` |
+| `GET /api/rolls/:id/verify` | `{status:'pending', serverSeedHash, message}` or `{status:'verified'|'mismatch', serverSeed, serverSeedHash, hashMatches, recomputed:{tier,assetId}, recorded:{tier,assetId}, clientSeed, nonce, items:[{a,t}] (filtered pool, canonical order), odds:{tier: weight} (case odds before renormalising)}`. The browser recomputes from these and checks `sha256(JSON.stringify(items)) == itemsHash`. |
 | `GET /api/auth/me` | `{ user: null }` or `{ user: {id, clientSeed, nonce, points, wallets:[{family,address}]} }` |
 | `GET /api/points` (signed in) | `{ balance, tasks: [{id,title,points,goal,daily,progress|null,claimed}] }`; 401 `sign_in_required` when signed out |
 
@@ -40,3 +40,22 @@ are signed in the user's wallet; the UI never sees a key. Demo/fixture data must
 
 Amounts: `outAmount`/`outAmountMin` are raw integer strings; divide by `10**decimals` when `decimals` is not null.
 Slippage default 300 bps; above 1000 bps ask for confirmation; max 4900.
+
+Every write endpoint is rate limited: 429 `rate_limited` → "too many requests, try again in a minute" (no counters shown).
+
+## R3–R6 additions (2026-09-27)
+
+| Method & path | Body / query | Result |
+|---|---|---|
+| `GET /api/auth/me` | — | `user` now also has `inviteCode` (10 hex chars) and `hideFromBoard` (boolean). |
+| `GET /api/leaderboard?window=24h\|7d` | — | `{ window, items: [{rollId, at, assetId, chainId, symbol, imageUrl, tier, priceAtPull, priceNow, changePct, who}] }`, best first, ≤ 20, one row per coin. `who` is a short wallet or `"anon"`. Real rolls only; sponsored-case rolls excluded. Empty list → "No pulls yet", never placeholders. |
+| `POST /api/me/privacy` (signed in) | `{ hideFromBoard: boolean }` | `{ hideFromBoard }` |
+| `GET /api/invites` (signed in) | — | `{ code, path: '/?ref=<code>', invited, rewarded, claimable, rewardedToday, dailyCap: 10, daysRequired: 3 }` |
+| `POST /api/invites/accept` (signed in) | `{ code }` | `{ ok: true }`; 404 `bad_code`, 409 `self` / `already_invited` / `too_old` (only accounts < 24 h can accept). |
+| `POST /api/tasks/invite-friend/claim` | — | Same as other tasks; repeatable once per qualified friend. 409 `not_done`, 429 `daily_cap`. The task is never `claimed: true`; `progress` = friends ready to claim. |
+| `GET /api/rolls/:id/og` | — | 1200×630 PNG share image (coin, tier, case, chain, verify link). Use it as `og:image`/`twitter:image` of `/verify/:id`. |
+| `GET /api/health` | — | 200 `{status:'ok', …}` or 503 `{status:'degraded', alerts:[{code,message}], …}`. Ops only; the UI doesn't call it. |
+| `GET /api/sponsored/live` | — | live sponsored drops (see route). Every item is labelled **Sponsored** (vi: **Quảng cáo · Sponsored**). |
+| `POST /api/sponsored/open` (signed in) | — | 201 `{ rollId, redemptionId, campaignId, assetId, tier, amount, cost, serverSeedHash, nonce, sponsored: true, label: 'Sponsored', asset }`; 402-style errors via `error.code`: `insufficient_points` (also for accounts < 24 h), `empty`, `needs_wallet`. |
+
+Invites: the invite link is `https://lockabox.fun/?ref=<code>`. The UI stores `ref` (localStorage `lab_ref`) and calls `POST /api/invites/accept` once right after the user signs in, then forgets it. **Share links for pulls never carry `?ref=`** (AC-046): sharing is not rewarded.

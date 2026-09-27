@@ -1,0 +1,40 @@
+{
+  "roll": {
+    "id": 42,
+    "caseId": "fixture-case",
+    "poolId": 9,
+    "clientSeed": "fixture-client",
+    "nonce": 7,
+    "tier": "micro",
+    "itemsHash": "35c3d0aef0c3312d99f2b88a6f7e8e3e45dab2435bad20b6ed1d5c7fb5c865c9",
+    "poolSize": 4,
+    "filters": {},
+    "serverSeedHash": "8c6664b8e4db9383ad2f34c9b4dfa847eb3500c197e3eeeffd53fc8765c0c803",
+    "seedRevealed": true,
+    "createdAt": "2026-09-27T09:02:00.000Z"
+  },
+  "asset": {
+    "id": 1,
+    "chainId": "solana",
+    "address": "FixtureMint1",
+    "symbol": "BONKLE",
+    "name": "Bonkle",
+    "imageUrl": null,
+    "tier": "micro",
+    "priceUsd": 0.00001,
+    "marketCap": 80000,
+    "liquidityUsd": 12000,
+    "fdv": 80000,
+    "volume24h": 12000,
+    "change": { "m5": 1, "h1": 2, "h6": 3, "h24": 4 },
+    "pairAddress": "FixturePair1",
+    "dexId": "raydium",
+    "pairCreatedAt": "2026-09-25T04:00:00.000Z",
+    "snapshotAt": "2026-09-27T09:00:00.000Z",
+    "stale": false,
+    "links": { "dexscreener": null, "explorer": null, "websites": [], "socials": [] },
+    "chart": { "dexscreenerEmbed": null, "geckoterminalEmbed": null },
+    "swapEnabled": false,
+    "lockaboxBuys24h": 0
+  }
+}

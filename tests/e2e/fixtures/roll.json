@@ -1,0 +1,51 @@
+{
+  "roll": {
+    "rollId": 42,
+    "caseId": "trending",
+    "chainScope": "solana",
+    "poolId": 9,
+    "poolVersion": 3,
+    "poolHash": "fixture-pool-hash-9",
+    "itemsHash": "fixture-items-hash-9",
+    "poolSize": 24,
+    "tier": "mid",
+    "assetId": 3,
+    "serverSeedHash": "8c6664b8e4db9383ad2f34c9b4dfa847eb3500c197e3eeeffd53fc8765c0c803",
+    "clientSeed": "fixture-client",
+    "nonce": 7,
+    "odds": { "micro": 4118, "small": 3529, "mid": 2353 },
+    "createdAt": "2026-09-27T09:02:00.000Z"
+  },
+  "asset": {
+    "id": 3,
+    "chainId": "solana",
+    "address": "FixtureMint3",
+    "symbol": "GLORP",
+    "name": "Glorp",
+    "imageUrl": null,
+    "tier": "mid",
+    "priceUsd": 0.004821,
+    "marketCap": 4820000,
+    "liquidityUsd": 412000,
+    "fdv": 4820000,
+    "volume24h": 1910000,
+    "change": { "m5": 2.1, "h1": 9.4, "h6": -3.2, "h24": 38.21 },
+    "pairAddress": "FixturePair3",
+    "dexId": "raydium",
+    "pairCreatedAt": "2026-09-25T04:00:00.000Z",
+    "snapshotAt": "2026-09-27T09:00:00.000Z",
+    "stale": false,
+    "links": { "dexscreener": null, "explorer": null, "websites": [], "socials": [] },
+    "chart": { "dexscreenerEmbed": null, "geckoterminalEmbed": null },
+    "swapEnabled": false,
+    "lockaboxBuys24h": 0
+  },
+  "reel": {
+    "winIndex": 1,
+    "cards": [
+      { "id": 2, "chainId": "solana", "address": "FixtureMint2", "symbol": "PUDDLE", "name": "Puddle", "imageUrl": null, "tier": "small", "priceUsd": 0.00021, "marketCap": 800000, "liquidityUsd": 100000 },
+      { "id": 3, "chainId": "solana", "address": "FixtureMint3", "symbol": "GLORP", "name": "Glorp", "imageUrl": null, "tier": "mid", "priceUsd": 0.004821, "marketCap": 4820000, "liquidityUsd": 412000 },
+      { "id": 1, "chainId": "solana", "address": "FixtureMint1", "symbol": "BONKLE", "name": "Bonkle", "imageUrl": null, "tier": "micro", "priceUsd": 0.00001, "marketCap": 80000, "liquidityUsd": 12000 }
+    ]
+  }
+}

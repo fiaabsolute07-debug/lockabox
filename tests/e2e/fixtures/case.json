@@ -1,0 +1,14 @@
+{
+  "case": { "id": "trending", "title": "Trending Case", "kind": "trending" },
+  "chainScope": "solana",
+  "pool": { "id": 9, "version": 3, "hash": "fixture-pool-hash-9", "size": 24, "createdAt": "2026-09-27T08:00:00.000Z" },
+  "tierCounts": { "micro": 10, "small": 7, "mid": 4, "large": 2, "top": 1 },
+  "odds": { "micro": 3500, "small": 3000, "mid": 2000, "large": 1200, "top": 300 },
+  "contents": [
+    { "id": 5, "chainId": "solana", "address": "FixtureMint5", "symbol": "TOPAZ", "name": "Topaz", "imageUrl": null, "tier": "top", "priceUsd": 2.11, "marketCap": 210000000, "liquidityUsd": 4100000 },
+    { "id": 4, "chainId": "solana", "address": "FixtureMint4", "symbol": "VIOLET", "name": "Violet", "imageUrl": null, "tier": "large", "priceUsd": 0.22, "marketCap": 22000000, "liquidityUsd": 900000 },
+    { "id": 3, "chainId": "solana", "address": "FixtureMint3", "symbol": "GLORP", "name": "Glorp", "imageUrl": null, "tier": "mid", "priceUsd": 0.004821, "marketCap": 4820000, "liquidityUsd": 412000 },
+    { "id": 2, "chainId": "solana", "address": "FixtureMint2", "symbol": "PUDDLE", "name": "Puddle", "imageUrl": null, "tier": "small", "priceUsd": 0.00021, "marketCap": 800000, "liquidityUsd": 100000 },
+    { "id": 1, "chainId": "solana", "address": "FixtureMint1", "symbol": "BONKLE", "name": "Bonkle", "imageUrl": null, "tier": "micro", "priceUsd": 0.00001, "marketCap": 80000, "liquidityUsd": 12000 }
+  ]
+}

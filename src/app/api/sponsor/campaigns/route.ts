@@ -1,4 +1,5 @@
 import { handleError, json, problem, readJson } from '@/lib/api';
+import { limited } from '@/lib/ratelimit';
 import { sql } from '@/lib/db';
 import { currentUserId, isSolanaAddress } from '@/modules/auth/session';
 import { sponsorProblem } from '@/modules/sponsors/errors';
@@ -9,6 +10,8 @@ export async function POST(req: Request) {
   try {
     const userId = await currentUserId();
     if (!userId) return problem(401, 'sign_in_required', 'sign in with the sponsor wallet');
+    const tooMany = await limited('sponsor-campaign', userId, 5);
+    if (tooMany) return tooMany;
     const [w] = await sql<{ address: string }[]>`select address from wallets where user_id = ${userId} and chain_family = 'solana' limit 1`;
     const b = await readJson<Partial<CampaignInput>>(req);
     if (!b.projectName || !b.tokenAddress || !isSolanaAddress(b.tokenAddress) || !b.amountPerOpen || !Number.isInteger(b.totalOpens) || !b.startsAt || !b.endsAt) {

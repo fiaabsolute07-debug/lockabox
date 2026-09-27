@@ -1,9 +1,12 @@
 import { handleError, json, problem, readJson } from '@/lib/api';
+import { limited } from '@/lib/ratelimit';
 import { markSubmitted, SwapError } from '@/modules/swap/service';
 
 /** PATCH { txHash, wallet }: the client reports the signature after the wallet sent it; the worker confirms on-chain. */
 export async function PATCH(req: Request, ctx: RouteContext<'/api/trades/[id]'>) {
   try {
+    const tooMany = await limited('trade-patch', null, 30);
+    if (tooMany) return tooMany;
     const id = Number((await ctx.params).id);
     const b = await readJson<{ txHash?: string; wallet?: string }>(req);
     if (!Number.isSafeInteger(id) || !b.txHash || !b.wallet) return problem(400, 'missing_fields', 'txHash and wallet are required');

@@ -130,7 +130,7 @@ async function enrich(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'log'>>, en
   return { due: due.length, saved };
 }
 
-async function honeypots(sql: postgres.Sql, log: (m: string) => void) {
+async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl: typeof fetch = fetch) {
   const due = await sql<{ id: number; address: string }[]>`
     select a.id, a.address from assets a
     join asset_snapshots s on s.asset_id = a.id
@@ -142,7 +142,7 @@ async function honeypots(sql: postgres.Sql, log: (m: string) => void) {
   let checked = 0, failed = 0;
   for (const d of due) {
     try {
-      const out = await solanaHoneypotGate(d.address);
+      const out = await solanaHoneypotGate(d.address, fetchImpl);
       await recordGate(Number(d.id), 'honeypot', out, sql);
       checked++; if (!out.passed) failed++;
     } catch (e) { log(`honeypot ${d.address} deferred: ${(e as Error).message}`); }
@@ -163,22 +163,53 @@ async function pools(sql: postgres.Sql, chains: { id: string }[]) {
   return out;
 }
 
+/** Counts outbound calls per provider so /api/health can alert before a free budget runs out (AC-080). */
+export function countingFetch(counter: { n: number }, base: typeof fetch = fetch): typeof fetch {
+  return ((input: RequestInfo | URL, init?: RequestInit) => { counter.n++; return base(input, init); }) as typeof fetch;
+}
+
+/** Old pool versions nobody rolled on are dropped after a day; the latest version of every case/scope is kept. */
+export async function prunePools(sql: postgres.Sql, keepHours = 24) {
+  const gone = await sql`
+    delete from case_pools p
+    where p.created_at < now() - make_interval(hours => ${keepHours})
+      and not exists (select 1 from rolls r where r.pool_id = p.id)
+      and p.version < (select max(version) from case_pools q where q.case_id = p.case_id and q.chain_scope = p.chain_scope)
+    returning p.id`;
+  return gone.length;
+}
+
 export async function runCycle(deps: IngestDeps) {
   const log = deps.log ?? ((m: string) => console.log(`[worker] ${m}`));
-  const ds = deps.ds ?? createDexScreenerClient();
-  const dp = deps.dp ?? createDexPaprikaClient({ apiKey: process.env.DEXPAPRIKA_API_KEY || undefined });
+  const calls = { ds: { n: 0 }, dp: { n: 0 }, jup: { n: 0 } };
+  const ds = deps.ds ?? createDexScreenerClient({ fetch: countingFetch(calls.ds) });
+  const dp = deps.dp ?? createDexPaprikaClient({ apiKey: process.env.DEXPAPRIKA_API_KEY || undefined, fetch: countingFetch(calls.dp) });
   const { sql } = deps;
-  const chains = await enabledChains(sql);
-  const enabled = new Set(chains.map((c) => c.id));
-  const t0 = Date.now();
-  const d = await discover({ sql, ds, dp, log }, enabled, chains);
-  const e = await enrich({ sql, ds, log }, enabled);
-  const h = await honeypots(sql, log);
-  const p = await pools(sql, chains);
-  const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });
-  const seed = await activeSeed(sql);
-  const [{ old }] = await sql<{ old: boolean }[]>`select active_from < now() - interval '24 hours' as old from server_seeds where id = ${seed.id}`;
-  if (old) { const r = await rotateSeed(sql); log(`seed rotated; revealed ${r.revealedHash?.slice(0, 12)}…`); }
-  log(`cycle ${Date.now() - t0} ms · discovered ${d.upserted} (+${d.paprika} paprika, ${d.metaSnaps} meta snaps) · enriched ${e.saved}/${e.due} · honeypot ${h.checked} (${h.failed} failed) · confirmed ${confirmed} · pools ${p.join(' ')}`);
-  return { d, e, h, p, confirmed };
+  const started = new Date();
+  try {
+    const chains = await enabledChains(sql);
+    const enabled = new Set(chains.map((c) => c.id));
+    const t0 = Date.now();
+    const d = await discover({ sql, ds, dp, log }, enabled, chains);
+    const e = await enrich({ sql, ds, log }, enabled);
+    const h = await honeypots(sql, log, countingFetch(calls.jup));
+    const p = await pools(sql, chains);
+    const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });
+    const seed = await activeSeed(sql);
+    const [{ old }] = await sql<{ old: boolean }[]>`select active_from < now() - interval '24 hours' as old from server_seeds where id = ${seed.id}`;
+    if (old) { const r = await rotateSeed(sql); log(`seed rotated; revealed ${r.revealedHash?.slice(0, 12)}…`); }
+    const pruned = await prunePools(sql);
+    log(`cycle ${Date.now() - t0} ms · discovered ${d.upserted} (+${d.paprika} paprika, ${d.metaSnaps} meta snaps) · enriched ${e.saved}/${e.due} · honeypot ${h.checked} (${h.failed} failed) · confirmed ${confirmed} · pruned ${pruned} · calls ds ${calls.ds.n} dp ${calls.dp.n} jup ${calls.jup.n} · pools ${p.join(' ')}`);
+    await recordRun(sql, started, true, calls);
+    return { d, e, h, p, confirmed, pruned, calls: { ds: calls.ds.n, dp: calls.dp.n, jup: calls.jup.n } };
+  } catch (err) {
+    await recordRun(sql, started, false, calls, (err as Error).message).catch(() => undefined);
+    throw err;
+  }
+}
+
+async function recordRun(sql: postgres.Sql, started: Date, ok: boolean, calls: { ds: { n: number }; dp: { n: number }; jup: { n: number } }, note?: string) {
+  await sql`insert into worker_runs (started_at, ok, ds_calls, paprika_calls, jupiter_calls, note)
+            values (${started}, ${ok}, ${calls.ds.n}, ${calls.dp.n}, ${calls.jup.n}, ${note ?? null})`;
+  await sql`delete from worker_runs where finished_at < now() - interval '35 days'`;
 }

@@ -1,10 +1,11 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
+import { claimableInvitees, INVITE_DAILY_CAP, rewardedToday } from '@/modules/invites/service';
 
 /** Points (LAB §7.4): only tasks add points, the ledger is append-only, points can't be bought or transferred (LAB-AC-049/050). */
 
 export class TaskError extends Error {
-  constructor(public code: 'unknown_task' | 'not_done' | 'already_claimed' | 'needs_wallet', message: string) { super(message); }
+  constructor(public code: 'unknown_task' | 'not_done' | 'already_claimed' | 'needs_wallet' | 'daily_cap', message: string) { super(message); }
 }
 
 type TaskRow = { id: string; title: string; points: number; kind: string; goal: number; daily: boolean };
@@ -31,6 +32,7 @@ async function progress(userId: string, t: TaskRow, sql: postgres.Sql): Promise<
     const held = await holdsAnyMint(wallets[0].address, mints.map((m) => m.address));
     return held ? 1 : 0;
   }
+  if (t.kind === 'invite') return (await claimableInvitees(userId, sql)).length;
   return 0;
 }
 
@@ -54,7 +56,8 @@ export async function tasksFor(userId: string, sql: postgres.Sql = defaultSql) {
   const out = [];
   for (const t of tasks) {
     const period = t.daily ? today() : 'once';
-    const claimed = done.some((d) => d.task_id === t.id && d.period === period);
+    // The invite task repeats once per qualified invitee, so it is never "claimed" as a whole.
+    const claimed = t.kind === 'invite' ? false : done.some((d) => d.task_id === t.id && d.period === period);
     // 'hold' hits the chain; only evaluate it on claim to keep this read cheap.
     const p = t.kind === 'hold' ? null : await progress(userId, t, sql);
     out.push({ id: t.id, title: t.title, points: t.points, goal: t.goal, daily: t.daily, progress: p, claimed });
@@ -65,10 +68,22 @@ export async function tasksFor(userId: string, sql: postgres.Sql = defaultSql) {
 export async function claim(userId: string, taskId: string, sql: postgres.Sql = defaultSql) {
   const [t] = await sql<TaskRow[]>`select id, title, points, kind, goal, daily from tasks where id = ${taskId} and active`;
   if (!t) throw new TaskError('unknown_task', 'unknown task');
-  const p = await progress(userId, t, sql);
-  if (p < t.goal) throw new TaskError('not_done', `progress ${p}/${t.goal}`);
-  const period = t.daily ? today() : 'once';
+  let period = t.daily ? today() : 'once';
+  if (t.kind === 'invite') {
+    // One completion per qualified invitee (AC-054), at most INVITE_DAILY_CAP a day.
+    if ((await rewardedToday(userId, sql)) >= INVITE_DAILY_CAP) throw new TaskError('daily_cap', `invite rewards are capped at ${INVITE_DAILY_CAP} a day`);
+    const [next] = await claimableInvitees(userId, sql);
+    if (!next) throw new TaskError('not_done', 'no invited friend has qualified yet');
+    period = `invitee:${next}`;
+  } else {
+    const p = await progress(userId, t, sql);
+    if (p < t.goal) throw new TaskError('not_done', `progress ${p}/${t.goal}`);
+  }
   return sql.begin(async (tx) => {
+    await tx`select 1 from users where id = ${userId} for update`; // serialise a user's claims so the daily cap holds
+    if (t.kind === 'invite' && (await rewardedToday(userId, tx as unknown as postgres.Sql)) >= INVITE_DAILY_CAP) {
+      throw new TaskError('daily_cap', `invite rewards are capped at ${INVITE_DAILY_CAP} a day`);
+    }
     const [c] = await tx`insert into task_completions (user_id, task_id, period) values (${userId}, ${t.id}, ${period}) on conflict do nothing returning task_id`;
     if (!c) throw new TaskError('already_claimed', 'already claimed');
     await tx`insert into points_ledger (user_id, delta, reason, ref) values (${userId}, ${t.points}, ${`task:${t.id}`}, ${period})`;

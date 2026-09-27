@@ -149,7 +149,8 @@ export async function roll(input: Actor & { caseId: string; chainScope: string; 
 
 export type Verification =
   | { status: 'pending'; serverSeedHash: string; message: string }
-  | { status: 'verified' | 'mismatch'; serverSeed: string; serverSeedHash: string; hashMatches: boolean; recomputed: { tier: Tier; assetId: number }; recorded: { tier: Tier; assetId: number } };
+  | { status: 'verified' | 'mismatch'; serverSeed: string; serverSeedHash: string; hashMatches: boolean; recomputed: { tier: Tier; assetId: number }; recorded: { tier: Tier; assetId: number };
+      clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds };
 
 /** LAB-AC-030: after the seed is revealed anyone can recompute the roll; before that we only show the committed hash. */
 export async function verifyRoll(rollId: number, sql: postgres.Sql = defaultSql): Promise<Verification | undefined> {
@@ -163,5 +164,9 @@ export async function verifyRoll(rollId: number, sql: postgres.Sql = defaultSql)
   const hashMatches = sha256Hex(r.seed) === r.hash;
   const recorded = { tier: r.tier, assetId: Number(r.result_asset_id) };
   const ok = hashMatches && out.tier === recorded.tier && out.assetId === recorded.assetId;
-  return { status: ok ? 'verified' : 'mismatch', serverSeed: r.seed, serverSeedHash: r.hash, hashMatches, recomputed: { tier: out.tier, assetId: out.assetId }, recorded };
+  // Everything a browser needs to redo the roll without trusting us (the filtered canonical pool and the case odds).
+  return {
+    status: ok ? 'verified' : 'mismatch', serverSeed: r.seed, serverSeedHash: r.hash, hashMatches, recomputed: { tier: out.tier, assetId: out.assetId }, recorded,
+    clientSeed: r.client_seed, nonce: Number(r.nonce), items: canonicalPool(r.items), odds: r.tier_odds,
+  };
 }

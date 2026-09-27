@@ -1,0 +1,11 @@
+{
+  "chains": [
+    { "id": "solana", "name": "Solana", "family": "solana", "swapEnabled": true },
+    { "id": "base", "name": "Base", "family": "evm", "swapEnabled": false }
+  ],
+  "cases": [
+    { "id": "trending", "title": "Trending Case", "kind": "trending" },
+    { "id": "new", "title": "New < 24h", "kind": "new" }
+  ],
+  "activeSeedHash": "fixture-active-seed-hash"
+}
