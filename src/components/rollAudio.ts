@@ -3,17 +3,29 @@
 import type { Tier } from './api';
 
 /**
- * Case-opening sound, synthesised with Web Audio (no sample files): a CS:GO-style run of crisp clicks that slow down, a riser and a
- * heartbeat under the reel, a drum roll just before the stop, then a reveal that depends on the tier — a sad "womp" for Micro up to a
- * full fanfare with crash and crowd for ★ Top. Everything goes through one gain + limiter, so a higher tier is richer, not louder.
+ * Case-opening sound modelled on how CS:GO's case opening is structured: a latch when the case opens, one dry tick per item that
+ * crosses the marker (constant pitch, so the slowdown is heard in the rhythm, not in the pitch), no music under the reel, and a
+ * rarity reveal that is a bell "shing" with a reverb tail, richer and longer for rarer tiers (blue → purple → pink → red → gold).
+ *
+ * Everything is synthesised with Web Audio: Valve's own sound files are not used (they are Valve's copyright). To use licensed
+ * files instead, put them in /public/sounds with a manifest.json such as
+ *   { "open": "open.mp3", "tick": "tick.mp3", "reveal-micro": "blue.mp3", "reveal-small": "purple.mp3",
+ *     "reveal-mid": "pink.mp3", "reveal-large": "red.mp3", "reveal-top": "gold.mp3" }
+ * Any event with a file plays the file; the others keep the synthesised sound.
  */
 
+type SoundEvent = 'open' | 'tick' | `reveal-${Tier}`;
+
 const STORAGE_KEY = 'lab_roll_sound';
+const MASTER = 0.55;
 let context: AudioContext | undefined;
 let master: GainNode | undefined;
+let reverb: GainNode | undefined;
 let noiseBuffer: AudioBuffer | undefined;
 let enabled = true;
 let lastTick = 0;
+let filesRequested = false;
+const files = new Map<SoundEvent, AudioBuffer>();
 const active = new Set<AudioScheduledSourceNode>();
 
 export function rollSoundEnabled() {
@@ -26,6 +38,39 @@ export function stopRollAudio() {
   active.clear();
 }
 
+/** A short synthetic room (decaying stereo noise) for the bells' tail. */
+function makeReverb(ctx: AudioContext) {
+  const seconds = 1.8;
+  const impulse = ctx.createBuffer(2, ctx.sampleRate * seconds, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+  }
+  const convolver = ctx.createConvolver();
+  convolver.buffer = impulse;
+  const send = ctx.createGain();
+  send.gain.value = 0.32;
+  send.connect(convolver);
+  convolver.connect(master!);
+  return send;
+}
+
+/** Optional licensed sound files (see the header comment). Missing manifest = synthesised sound only. */
+async function loadFiles(ctx: AudioContext) {
+  if (filesRequested) return;
+  filesRequested = true;
+  try {
+    const response = await fetch('/sounds/manifest.json', { cache: 'no-store' });
+    if (!response.ok) return;
+    const manifest = (await response.json()) as Partial<Record<SoundEvent, string>>;
+    await Promise.all(Object.entries(manifest).map(async ([event, file]) => {
+      if (typeof file !== 'string' || !/^[\w.-]+\.(mp3|ogg|wav|m4a)$/.test(file)) return;
+      const bytes = await (await fetch(`/sounds/${file}`)).arrayBuffer();
+      files.set(event as SoundEvent, await ctx.decodeAudioData(bytes));
+    }));
+  } catch { /* Keep the synthesised sounds. */ }
+}
+
 // Unlock before awaiting the roll API, while still inside the user's gesture.
 export function unlockRollAudio() {
   if (!rollSoundEnabled()) return;
@@ -33,19 +78,21 @@ export function unlockRollAudio() {
     if (!context || context.state === 'closed') {
       context = new AudioContext();
       master = context.createGain();
-      master.gain.value = 0.55;
+      master.gain.value = MASTER;
       const limiter = context.createDynamicsCompressor();
-      limiter.threshold.value = -12;
-      limiter.knee.value = 12;
-      limiter.ratio.value = 8;
-      limiter.attack.value = 0.003;
-      limiter.release.value = 0.15;
+      limiter.threshold.value = -10;
+      limiter.knee.value = 10;
+      limiter.ratio.value = 6;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.2;
       master.connect(limiter);
       limiter.connect(context.destination);
+      reverb = makeReverb(context);
       noiseBuffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
       const samples = noiseBuffer.getChannelData(0);
       for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
       document.addEventListener('visibilitychange', () => { if (document.hidden) stopRollAudio(); });
+      void loadFiles(context);
     }
     if (context.state === 'suspended') void context.resume().catch(() => undefined);
   } catch { /* Unsupported audio must never block opening a case. */ }
@@ -55,7 +102,7 @@ export function setRollSoundEnabled(value: boolean) {
   enabled = value;
   try { localStorage.setItem(STORAGE_KEY, value ? 'on' : 'off'); } catch { /* Keep session preference. */ }
   if (!value) stopRollAudio();
-  if (master && context) master.gain.setValueAtTime(value ? 0.55 : 0, context.currentTime);
+  if (master && context) master.gain.setValueAtTime(value ? MASTER : 0, context.currentTime);
   if (value) unlockRollAudio();
 }
 
@@ -68,53 +115,43 @@ function track(source: AudioScheduledSourceNode, start: number, stop: number, cl
   source.stop(stop);
 }
 
-function envelope(volume: number, start: number, duration: number, attack: number) {
+/** Plays a licensed file for this event if one was provided; returns false to fall back to the synthesised sound. */
+function playFile(event: SoundEvent, volume = 1) {
+  const buffer = files.get(event);
+  if (!buffer || !ready() || !context) return false;
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  const gain = context.createGain();
+  gain.gain.value = volume;
+  source.connect(gain);
+  gain.connect(master!);
+  track(source, context.currentTime, context.currentTime + buffer.duration + 0.05, [gain]);
+  return true;
+}
+
+function voice(volume: number, start: number, duration: number, attack: number, wet: boolean) {
   const gain = context!.createGain();
   gain.gain.setValueAtTime(0, start);
   gain.gain.linearRampToValueAtTime(volume, start + attack);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
   gain.connect(master!);
+  if (wet && reverb) gain.connect(reverb);
   return gain;
 }
 
-type ToneOptions = { type?: OscillatorType; attack?: number; vibrato?: { rate: number; depth: number; after?: number }; lowpass?: [number, number] };
-
-function tone(frequency: number, endFrequency: number, duration: number, volume: number, delay = 0, options: ToneOptions = {}) {
+function tone(frequency: number, endFrequency: number, duration: number, volume: number, delay = 0, type: OscillatorType = 'sine', attack = 0.002, wet = false) {
   if (!ready() || !context) return;
   const start = context.currentTime + delay;
   const source = context.createOscillator();
-  source.type = options.type ?? 'sine';
+  source.type = type;
   source.frequency.setValueAtTime(frequency, start);
   if (endFrequency !== frequency) source.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
-  const gain = envelope(volume, start, duration, options.attack ?? 0.002);
-  const cleanup: AudioNode[] = [gain];
-  let input: AudioNode = gain;
-  if (options.lowpass) {
-    const filter = context.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.Q.value = 4;
-    filter.frequency.setValueAtTime(options.lowpass[0], start);
-    filter.frequency.linearRampToValueAtTime(options.lowpass[1], start + duration * 0.35);
-    filter.frequency.linearRampToValueAtTime(options.lowpass[0], start + duration);
-    filter.connect(gain);
-    cleanup.push(filter);
-    input = filter;
-  }
-  source.connect(input);
-  if (options.vibrato) {
-    const lfo = context.createOscillator();
-    const depth = context.createGain();
-    lfo.frequency.value = options.vibrato.rate;
-    depth.gain.setValueAtTime(0, start);
-    depth.gain.linearRampToValueAtTime(options.vibrato.depth, start + (options.vibrato.after ?? 0) + 0.12);
-    lfo.connect(depth);
-    depth.connect(source.frequency);
-    track(lfo, start, start + duration + 0.03, [depth]);
-  }
-  track(source, start, start + duration + 0.03, cleanup);
+  const gain = voice(volume, start, duration, attack, wet);
+  source.connect(gain);
+  track(source, start, start + duration + 0.03, [gain]);
 }
 
-function noise(frequency: number, endFrequency: number, duration: number, volume: number, delay = 0, attack = 0.002, q = 1.4, type: BiquadFilterType = 'bandpass') {
+function noise(frequency: number, duration: number, volume: number, delay = 0, type: BiquadFilterType = 'highpass', attack = 0.0005, wet = false, endFrequency = frequency) {
   if (!ready() || !context || !noiseBuffer) return;
   const start = context.currentTime + delay;
   const source = context.createBufferSource();
@@ -122,142 +159,88 @@ function noise(frequency: number, endFrequency: number, duration: number, volume
   source.loop = true;
   const filter = context.createBiquadFilter();
   filter.type = type;
-  filter.Q.value = q;
   filter.frequency.setValueAtTime(frequency, start);
-  filter.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
-  const gain = envelope(volume, start, duration, attack);
+  if (endFrequency !== frequency) filter.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
+  const gain = voice(volume, start, duration, attack, wet);
   source.connect(filter);
   filter.connect(gain);
   track(source, start, start + duration + 0.03, [filter, gain]);
 }
 
-/** A crowd-like swell: band-passed noise with a fast, uneven amplitude flutter. */
-function cheer(duration: number, volume: number, delay = 0) {
-  if (!ready() || !context || !noiseBuffer) return;
-  const start = context.currentTime + delay;
-  const source = context.createBufferSource();
-  source.buffer = noiseBuffer;
-  source.loop = true;
-  const filter = context.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 1300;
-  filter.Q.value = 0.7;
-  const gain = context.createGain();
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(volume, start + duration * 0.25);
-  gain.gain.linearRampToValueAtTime(volume * 0.8, start + duration * 0.7);
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  const flutter = context.createOscillator();
-  const flutterDepth = context.createGain();
-  flutter.frequency.value = 7.3;
-  flutterDepth.gain.value = volume * 0.35;
-  flutter.connect(flutterDepth);
-  flutterDepth.connect(gain.gain);
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(master!);
-  track(flutter, start, start + duration, [flutterDepth]);
-  track(source, start, start + duration + 0.03, [filter, gain]);
+/** A struck bell: fundamental plus the inharmonic partials that make it "ring" rather than beep. */
+function bell(frequency: number, duration: number, volume: number, delay = 0) {
+  tone(frequency, frequency, duration, volume, delay, 'sine', 0.002, true);
+  tone(frequency * 2.76, frequency * 2.76, duration * 0.5, volume * 0.28, delay, 'sine', 0.001, true);
+  tone(frequency * 5.4, frequency * 5.4, duration * 0.25, volume * 0.1, delay, 'sine', 0.001, true);
 }
 
-const brass = (frequency: number, duration: number, volume: number, delay: number) =>
-  tone(frequency, frequency, duration, volume, delay, { type: 'sawtooth', attack: 0.025, lowpass: [900, 2600] });
-const bell = (frequency: number, duration: number, volume: number, delay: number) => {
-  tone(frequency, frequency, duration, volume, delay, { type: 'triangle', attack: 0.003 });
-  tone(frequency * 2.01, frequency * 2.01, duration * 0.6, volume * 0.35, delay, { attack: 0.002 });
-};
-const crash = (volume: number, delay: number, duration = 1.6) => noise(9000, 3500, duration, volume, delay, 0.003, 0.6, 'highpass');
-const impact = (volume: number, delay = 0) => { tone(95, 32, 0.9, volume, delay, { attack: 0.004 }); noise(2600, 500, 0.16, volume * 0.8, delay); };
+/** The airy "shing" that opens every reveal: a filtered noise sweep upwards into the reverb. */
+function shing(duration: number, volume: number, delay = 0) {
+  noise(2500, duration, volume, delay, 'bandpass', 0.01, true, 9000);
+}
 
 export function playRollStart() {
   stopRollAudio();
   lastTick = 0;
-  // The case unlatches: a metal clack, a low thump and air rushing in.
-  noise(3000, 1200, 0.07, 0.75);
-  noise(2200, 900, 0.06, 0.5, 0.06);
-  tone(150, 45, 0.3, 0.5);
-  noise(700, 4200, 0.35, 0.22, 0.05, 0.08);
+  if (playFile('open')) return;
+  // The case unlocks: two quick metal clicks and a short slide.
+  noise(3500, 0.03, 0.5);
+  tone(900, 600, 0.04, 0.12, 0, 'triangle');
+  noise(2800, 0.035, 0.4, 0.07);
+  tone(700, 450, 0.05, 0.1, 0.07, 'triangle');
+  noise(1200, 0.22, 0.12, 0.1, 'bandpass', 0.03, false, 3000);
 }
 
-/** Under the whole spin: a rising riser, a low drone and a heartbeat that speeds up as the reel slows. */
-export function playRollBed(durationMs = 4700) {
-  const seconds = durationMs / 1000;
-  noise(220, 2600, seconds, 0.075, 0, seconds * 0.8, 1.6);
-  tone(55, 82, seconds, 0.06, 0, { type: 'sawtooth', attack: seconds * 0.6, lowpass: [180, 320] });
-  let at = 0.5;
-  let gap = 0.95;
-  while (at < seconds - 0.2) {
-    const weight = at / seconds;
-    tone(62, 40, 0.16, 0.22 + weight * 0.25, at);
-    tone(55, 36, 0.14, 0.15 + weight * 0.18, at + 0.16);
-    at += gap;
-    gap = Math.max(0.36, gap * 0.86);
-  }
-}
+/** CS:GO plays nothing under the reel but the ticks. Kept as a hook for a licensed ambience file later. */
+export function playRollBed(_durationMs = 4700) { void _durationMs; }
 
-/** One crisp click per card that crosses the marker; slow clicks get a little more body, like the last teeth of a ratchet. */
+/** One dry tick per item crossing the marker, always the same pitch; the reel's slowdown is heard in the spacing. */
 export function playRollTick() {
   const now = performance.now();
-  const gap = lastTick ? now - lastTick : 40;
-  if (gap < 30) return;
+  if (lastTick && now - lastTick < 28) return;
   lastTick = now;
-  const weight = Math.min(1, gap / 260);
-  const pitch = 0.98 + Math.random() * 0.04;
-  noise(4200 * pitch, 2600, 0.018 + weight * 0.02, 0.5 + weight * 0.2, 0, 0.0008, 3);
-  tone(1500 * pitch, 900, 0.02, 0.08 + weight * 0.05, 0, { type: 'square' });
-  tone(210, 110, 0.03 + weight * 0.04, 0.1 + weight * 0.15);
+  if (playFile('tick', 0.9)) return;
+  noise(5200, 0.012, 0.35);
+  tone(2350, 2150, 0.028, 0.2, 0, 'sine', 0.0005);
+  tone(1180, 1100, 0.022, 0.07, 0, 'triangle', 0.0005);
 }
 
-/** The reel has stopped: a drum roll that swells, then a beat of silence before the reveal. */
-export function playRollSuspense(durationMs = 700) {
-  const seconds = durationMs / 1000;
-  const roll = seconds - 0.12;
-  for (let at = 0; at < roll; at += 0.045) noise(1900, 1500, 0.04, 0.12 + (at / roll) * 0.4, at, 0.001, 1.2);
-  tone(280, 920, roll, 0.05, 0, { type: 'triangle', attack: roll * 0.8 });
-}
+/** No drum roll: the reveal follows the stop almost at once. */
+export function playRollSuspense(_durationMs = 0) { void _durationMs; }
+
+// E major (E6, G#6, B6, E7, G#7, B7) — bright, open, like an item reveal.
+const E6 = 1318.51, GS6 = 1661.22, B6 = 1975.53, E7 = 2637.02, GS7 = 3322.44, B7 = 3951.07;
 
 export function playRollReveal(tier: Tier) {
+  if (playFile(`reveal-${tier}`)) return;
   switch (tier) {
-    case 'micro':
-      // "Lỏm": the classic sad trombone, womp womp womp wooomp.
-      noise(1600, 500, 0.08, 0.35);
-      tone(120, 60, 0.18, 0.3);
-      [293.66, 277.18, 261.63].forEach((f, i) => brass(f, 0.34, 0.13, 0.12 + i * 0.36));
-      tone(246.94, 238, 1.15, 0.14, 1.2, { type: 'sawtooth', attack: 0.03, lowpass: [700, 1500], vibrato: { rate: 5.5, depth: 7, after: 0.25 } });
+    case 'micro': // blue: one plain ding
+      shing(0.25, 0.05);
+      bell(E6, 0.7, 0.11);
       break;
-    case 'small':
-      // Plain: a latch and a shrug of two soft notes.
-      noise(2300, 800, 0.09, 0.42);
-      tone(150, 60, 0.24, 0.34);
-      tone(659.25, 659.25, 0.14, 0.07, 0.1, { type: 'square', lowpass: [1400, 2000] });
-      tone(554.37, 550, 0.26, 0.07, 0.25, { type: 'square', lowpass: [1400, 2000] });
+    case 'small': // purple: two rising dings
+      shing(0.3, 0.06);
+      bell(E6, 0.7, 0.11);
+      bell(GS6, 0.8, 0.11, 0.09);
       break;
-    case 'mid':
-      // Nice: a solid hit and a bright major arpeggio.
-      impact(0.4);
-      [523.25, 659.25, 783.99].forEach((f, i) => bell(f, 0.9, 0.12, 0.05 + i * 0.08));
-      bell(1046.5, 1.2, 0.1, 0.32);
+    case 'mid': // pink: a quick bright arpeggio
+      shing(0.45, 0.08);
+      [E6, GS6, B6].forEach((f, i) => bell(f, 1.0, 0.11, i * 0.07));
+      bell(E7, 1.2, 0.08, 0.21);
       break;
-    case 'large':
-      // Xịn: fanfare + crash.
-      impact(0.45);
-      crash(0.14, 0.02, 1.4);
-      [392, 523.25, 659.25].forEach((f, i) => brass(f, 0.16, 0.12, 0.08 + i * 0.13));
-      brass(783.99, 0.9, 0.14, 0.47);
-      bell(1567.98, 1.3, 0.06, 0.5);
-      noise(1200, 6000, 0.6, 0.08, 0.3, 0.2);
+    case 'large': // red: a swell, a wide chord and a long shimmer
+      shing(0.6, 0.1);
+      tone(110, 55, 0.5, 0.25, 0, 'sine', 0.004);
+      [E6, GS6, B6, E7].forEach((f, i) => bell(f, 1.5, 0.1, 0.05 + i * 0.06));
+      noise(7000, 1.3, 0.035, 0.25, 'highpass', 0.3, true);
       break;
-    case 'top':
-      // ★ Top: boom, crash, "ta-ta-ta-taaa", a held chord, sparkles and a crowd.
-      tone(70, 28, 1.6, 0.5, 0, { attack: 0.004 });
-      noise(3000, 400, 0.22, 0.45);
-      crash(0.18, 0.02, 2.4);
-      [523.25, 523.25, 523.25].forEach((f, i) => brass(f, 0.13, 0.13, 0.12 + i * 0.14));
-      brass(659.25, 0.5, 0.14, 0.56);
-      [523.25, 659.25, 783.99, 1046.5].forEach((f) => brass(f, 1.7, 0.075, 1.08));
-      crash(0.12, 1.08, 2);
-      for (let i = 0; i < 18; i++) { const f = 2000 + Math.random() * 3200; tone(f, f * 1.02, 0.18, 0.04, 0.5 + i * 0.07); }
-      cheer(3, 0.16, 0.9);
+    case 'top': // gold: a sparkling run up two octaves, then a held chord in a big tail
+      shing(0.8, 0.12);
+      tone(98, 40, 0.9, 0.3, 0, 'sine', 0.004);
+      [E6, GS6, B6, E7, GS7, B7, E7 * 2].forEach((f, i) => bell(f, 0.6, 0.075, 0.04 + i * 0.05));
+      [E6, GS6, B6, E7].forEach((f) => bell(f, 2.4, 0.07, 0.42));
+      [329.63, 415.3, 493.88].forEach((f) => tone(f, f, 2.2, 0.035, 0.4, 'triangle', 0.35, true));
+      noise(8000, 2.2, 0.05, 0.3, 'highpass', 0.4, true);
       break;
   }
 }

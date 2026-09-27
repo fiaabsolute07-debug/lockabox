@@ -236,3 +236,12 @@ test('a Micro pull gets the "womp" reveal without confetti, and Open again rolls
   await expect.poll(state.rollPosts).toBe(2);
   await expect(page.locator('.roll-spinning, .roll-charging').first()).toBeVisible();
 });
+
+test('licensed sound files in /public/sounds replace the synthesised sounds when a manifest lists them', async ({ page }) => {
+  await fixtures(page);
+  const requested: string[] = [];
+  await page.route('**/sounds/manifest.json', (route) => json(route, { tick: 'tick.mp3', 'reveal-top': 'gold.mp3', bad: '../x.mp3' }));
+  await page.route('**/sounds/*.mp3', (route) => { requested.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 200, contentType: 'audio/mpeg', body: '' }); });
+  await openCase(page);
+  await expect.poll(() => requested.sort()).toEqual(['/sounds/gold.mp3', '/sounds/tick.mp3']);
+});

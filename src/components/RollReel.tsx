@@ -6,13 +6,13 @@ import { useT, type TranslationKey } from './i18n';
 import { playRollBed, playRollReveal, playRollStart, playRollSuspense, playRollTick, stopRollAudio } from './rollAudio';
 
 const SPIN_MS = 4700;
-const SUSPENSE_MS = 700;
+const SUSPENSE_MS = 220; // CS:GO reveals almost as soon as the reel stops
 const HEADLINE: Record<Tier, TranslationKey> = { micro: 'revealMicro', small: 'revealSmall', mid: 'revealMid', large: 'revealLarge', top: 'revealTop' };
 const CONFETTI: Record<Tier, number> = { micro: 0, small: 0, mid: 18, large: 60, top: 140 };
 
 /**
- * The cosmetic reel (the result is decided by the server before it starts). It opens full screen, spins with ticks and a heartbeat,
- * holds on the marker for a drum roll, then presents the pull in the middle of the screen with a tier-specific sound and effect until
+ * The cosmetic reel (the result is decided by the server before it starts). It opens full screen, spins with one tick per item,
+ * stops with a short beat, then presents the pull in the middle of the screen with a tier-specific sound and effect until
  * the user closes it or opens again. Reduced motion skips all of it and reveals in place.
  */
 export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain }: {
