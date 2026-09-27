@@ -98,7 +98,10 @@ test('the winning coin gets a tier-specific halo without a celebration overlay',
   await fixtures(page, { rollBody: topRoll });
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
-  await expect(page.locator('.tier-celebration')).toHaveCount(0);
+  // No overlay stays on top after the reveal: the stage drops back into the page and the glow layer never takes clicks.
+  await expect(page.locator('.roll-stage')).toHaveCSS('position', 'relative');
+  await expect(page.locator('.reveal-burst')).toHaveCSS('pointer-events', 'none');
+  await expect(page.locator('.unboxed-bar')).toBeVisible();
   await expect(page.locator('.reel-card.winner')).toHaveClass(/tier-top/);
   await expect(page.locator('.reel-card.winner .reel-art')).toHaveCSS('animation-name', /coin-halo/);
 });

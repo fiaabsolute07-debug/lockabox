@@ -13,7 +13,7 @@ import { marketCapTier } from '@/modules/sources/tier';
  */
 
 export class SponsorError extends Error {
-  constructor(public code: 'bad_input' | 'policy' | 'not_found' | 'not_reviewable' | 'gates' | 'insufficient_points' | 'empty' | 'needs_wallet', message: string) { super(message); }
+  constructor(public code: 'bad_input' | 'policy' | 'not_found' | 'not_reviewable' | 'gates' | 'insufficient_points' | 'empty' | 'needs_wallet' | 'locked', message: string) { super(message); }
 }
 
 /** LAB-AC-070: no promised returns in anything a sponsor writes. */
@@ -104,7 +104,7 @@ export async function liveSponsoredItems(sql: postgres.Sql = defaultSql): Promis
 export async function openSponsored(userId: string, sql: postgres.Sql = defaultSql) {
   const [wallet] = await sql<{ address: string }[]>`select address from wallets where user_id = ${userId} and chain_family = 'solana' limit 1`;
   if (!wallet) throw new SponsorError('needs_wallet', 'sign in with a Solana wallet first');
-  if (await isLocked(userId, sql)) throw new SponsorError('insufficient_points', 'this account is locked; contact support');
+  if (await isLocked(userId, sql)) throw new SponsorError('locked', 'this account is locked; contact support');
   await activeSeed(sql); // makes sure one exists
   return sql.begin(async (tx) => {
     const seed = await lockedActiveSeed(tx);

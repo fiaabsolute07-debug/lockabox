@@ -27,7 +27,7 @@ export const LEGAL: LegalDoc[] = [
         vi: ['Lockabox không cộng phí vào giao dịch swap. Phí mạng và chi phí của tuyến giao dịch vẫn áp dụng và được ví của bạn hiển thị.', 'Mỗi lần mở hòm là một lựa chọn ngẫu nhiên, không phải khuyến nghị. Không nội dung nào trên Lockabox là tư vấn đầu tư, tài chính, pháp lý hay thuế.'] } },
       { h: { en: 'Points', vi: 'Điểm' }, p: {
         en: ['Points are earned only by completing tasks. They cannot be bought, sold or transferred and have no cash value. They can be used to open sponsored cases.', 'We may hold or remove points gained through abuse (for example many accounts or automated activity).'],
-        vi: ['Điểm chỉ có được khi hoàn thành task. Điểm không mua, bán hay chuyển nhượng được và không có giá trị quy đổi tiền. Điểm dùng để mở hòm tài trợ.', 'Chúng tôi có thể giữ hoặc huỷ điểm có được do lạm dụng (ví dụ nhiều tài khoản hoặc hoạt động tự động).'] } },
+        vi: ['Điểm chỉ có được khi hoàn thành nhiệm vụ. Điểm không mua, bán hay chuyển nhượng được và không có giá trị quy đổi tiền. Điểm dùng để mở hòm tài trợ.', 'Chúng tôi có thể giữ hoặc huỷ điểm có được do lạm dụng (ví dụ nhiều tài khoản hoặc hoạt động tự động).'] } },
       { h: { en: 'Third-party data and services', vi: 'Dữ liệu và dịch vụ bên thứ ba' }, p: {
         en: ['Market data comes from third parties (DEX Screener, DexPaprika, GeckoTerminal) and swap routes from Jupiter. It can be delayed, incomplete or wrong. Charts are embedded from their providers.'],
         vi: ['Dữ liệu thị trường đến từ bên thứ ba (DEX Screener, DexPaprika, GeckoTerminal) và tuyến swap từ Jupiter. Dữ liệu có thể chậm, thiếu hoặc sai. Biểu đồ được nhúng từ nhà cung cấp.'] } },
@@ -45,16 +45,16 @@ export const LEGAL: LegalDoc[] = [
     sections: [
       { h: { en: 'What we store', vi: 'Chúng tôi lưu gì' }, p: {
         en: ['A random device id in a cookie, so your rolls can be verified. If you sign in: your public wallet address and a session cookie.', 'Your rolls (case, result, time) and swaps built through Lockabox (wallet address, amounts, transaction hash). Points and task completions.', 'We do not ask for your name, email or phone number, and we never see your private keys.'],
-        vi: ['Một mã thiết bị ngẫu nhiên trong cookie để có thể kiểm chứng các lần roll của bạn. Nếu bạn đăng nhập: địa chỉ ví công khai và cookie phiên.', 'Các lần roll (hòm, kết quả, thời gian) và giao dịch swap tạo qua Lockabox (địa chỉ ví, số lượng, mã giao dịch). Điểm và task đã hoàn thành.', 'Chúng tôi không hỏi tên, email hay số điện thoại, và không bao giờ thấy khoá bí mật của bạn.'] } },
+        vi: ['Một mã thiết bị ngẫu nhiên trong cookie để có thể kiểm chứng các lượt mở của bạn. Nếu bạn đăng nhập: địa chỉ ví công khai và cookie phiên.', 'Các lượt mở hòm (hòm, kết quả, thời gian) và giao dịch swap tạo qua Lockabox (địa chỉ ví, số lượng, mã giao dịch). Điểm và nhiệm vụ đã hoàn thành.', 'Chúng tôi không hỏi tên, email hay số điện thoại, và không bao giờ thấy khoá bí mật của bạn.'] } },
       { h: { en: 'What is public', vi: 'Thông tin công khai' }, p: {
         en: ['Recent pulls and buys made through Lockabox appear in the live feed and on Best pulls with a shortened wallet address. You can hide your wallet from Best pulls, the live feed and the buys table in settings. Blockchain transactions are public by nature.'],
-        vi: ['Các lần mở hòm và lệnh mua gần đây qua Lockabox xuất hiện trong feed trực tiếp và bảng Best pulls với địa chỉ ví rút gọn. Bạn có thể ẩn ví khỏi Best pulls, feed trực tiếp và bảng lệnh mua trong phần cài đặt. Giao dịch blockchain vốn công khai.'] } },
+        vi: ['Các lần mở hòm và lệnh mua gần đây qua Lockabox xuất hiện trong feed trực tiếp và bảng Lượt mở nổi bật với địa chỉ ví rút gọn. Bạn có thể ẩn ví khỏi bảng Lượt mở nổi bật, feed trực tiếp và bảng lệnh mua trong phần cài đặt. Giao dịch blockchain vốn công khai.'] } },
       { h: { en: 'Third parties', vi: 'Bên thứ ba' }, p: {
         en: ['Charts are embedded from DEX Screener or GeckoTerminal, which may set their own cookies. Your wallet talks to Solana RPC providers and Jupiter. We use no advertising trackers.', 'Your IP address is used briefly to limit request rates and is not stored with your account.'],
         vi: ['Biểu đồ được nhúng từ DEX Screener hoặc GeckoTerminal, các bên này có thể đặt cookie riêng. Ví của bạn kết nối với nhà cung cấp RPC Solana và Jupiter. Chúng tôi không dùng tracker quảng cáo.', 'Địa chỉ IP được dùng tạm thời để giới hạn tần suất truy cập và không lưu cùng tài khoản.'] } },
       { h: { en: 'Your choices', vi: 'Lựa chọn của bạn' }, p: {
         en: [`You can sign out at any time and clear cookies in your browser. To ask what we hold about your wallet, or to have it removed where the law allows, contact ${CONTACT}. Rolls are kept because they prove fairness to everyone.`],
-        vi: [`Bạn có thể đăng xuất bất cứ lúc nào và xoá cookie trong trình duyệt. Để hỏi chúng tôi đang giữ gì về ví của bạn, hoặc yêu cầu xoá trong phạm vi pháp luật cho phép, liên hệ ${CONTACT}. Dữ liệu roll được giữ lại vì nó chứng minh tính công bằng cho mọi người.`] } },
+        vi: [`Bạn có thể đăng xuất bất cứ lúc nào và xoá cookie trong trình duyệt. Để hỏi chúng tôi đang giữ gì về ví của bạn, hoặc yêu cầu xoá trong phạm vi pháp luật cho phép, liên hệ ${CONTACT}. Dữ liệu lượt mở được giữ lại vì nó chứng minh tính công bằng cho mọi người.`] } },
     ],
   },
   {
@@ -69,7 +69,7 @@ export const LEGAL: LegalDoc[] = [
         vi: ['Memecoin biến động cực mạnh. Bạn có thể mất toàn bộ số tiền bỏ vào. Chỉ dùng số tiền bạn chấp nhận mất.', 'Lockabox tự động loại một số token (ví dụ khi bán thử thất bại hoặc thanh khoản gần bằng 0). Các kiểm tra này có giới hạn và không phải là bảo đảm.'] } },
       { h: { en: 'Provably fair', vi: 'Công bằng kiểm chứng được' }, p: {
         en: ['Each roll is decided by a server seed committed in advance, your client seed and a nonce. After the seed is revealed you can recompute any roll on the Verify page.'],
-        vi: ['Mỗi lần roll được quyết định bởi server seed đã cam kết trước, client seed của bạn và nonce. Sau khi seed được công bố, bạn có thể tự tính lại bất kỳ lần roll nào ở trang Verify.'] } },
+        vi: ['Mỗi lượt mở được quyết định bởi server seed đã cam kết trước, client seed của bạn và nonce. Sau khi seed được công bố, bạn có thể tự tính lại bất kỳ lượt mở nào ở trang Kiểm chứng.'] } },
     ],
   },
   {

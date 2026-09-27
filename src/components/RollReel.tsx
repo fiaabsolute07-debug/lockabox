@@ -13,7 +13,7 @@ export function RollReel({ cards, winIndex, tier, onSettled }: { cards: AssetCar
   const landingRef = useRef<{ cards: AssetCard[]; winIndex: number; fraction: number } | null>(null);
   const [settled, setSettled] = useState(false);
   const [phase, setPhase] = useState<'charging' | 'spinning' | 'suspense' | 'revealed'>('charging');
-  const { lang } = useT();
+  const { t } = useT();
   onSettledRef.current = onSettled;
 
   useLayoutEffect(() => {
@@ -97,11 +97,11 @@ export function RollReel({ cards, winIndex, tier, onSettled }: { cards: AssetCar
 
   return (
     <div ref={viewportRef} className={`spinner roll-stage roll-${phase} ${tier === 'top' && settled ? 'top-celebration' : ''}`} style={{ '--reveal-color': settled ? tierColor(tier) : '#FFC53D' } as React.CSSProperties} onClick={skipToEnd}>
-      {!settled && <div className="reel-overlay-title" aria-hidden="true"><span>LOCKABOX</span><strong>{lang === 'vi' ? 'ĐANG MỞ HÒM' : 'OPENING CASE'}</strong></div>}
+      {!settled && <div className="reel-overlay-title" aria-hidden="true"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div>}
       <div className="marker" aria-hidden="true" />
       <div className="reveal-burst" aria-hidden="true" />
-      {!settled && <button type="button" className="reel-skip" onClick={(event) => { event.stopPropagation(); skipToEnd(); }}>{lang === 'vi' ? 'Bỏ qua hiệu ứng' : 'Skip animation'} <span aria-hidden="true">»</span></button>}
-      {!settled && <span className="reel-overlay-hint" aria-hidden="true">{lang === 'vi' ? 'Token dưới vạch sẽ là kết quả' : 'The token under the marker wins'}</span>}
+      {!settled && <button type="button" className="reel-skip" onClick={(event) => { event.stopPropagation(); skipToEnd(); }}>{t('reelSkip')} <span aria-hidden="true">»</span></button>}
+      {!settled && <span className="reel-overlay-hint" aria-hidden="true">{t('reelHint')}</span>}
       <div ref={stripRef} className={`reel-strip ${settled ? 'settled' : ''}`}>
         {cards.map((card, index) => <ReelCard key={`${card.id}-${index}`} card={card} winner={settled && index === winIndex} />)}
       </div>

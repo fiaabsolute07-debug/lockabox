@@ -164,14 +164,35 @@ describe("source clients", () => {
       expect(String(url)).toBe(`${DEXPAPRIKA_BASE_URL}/networks/solana/multi/prices?tokens=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263,EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm`);
       return jsonResponse(body);
     });
-    const result = await new DexPaprikaClient({ fetch: fetcher, sleep: async () => undefined }).multiPrices('solana', [
+    const client = new DexPaprikaClient({ fetch: fetcher, sleep: async () => undefined });
+    const result = await client.multiPrices('solana', [
       'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
       'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
     ]);
+    // One HTTP call, but DexPaprika bills one credit per token.
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(client.creditsUsed).toBe(2);
     expect(result).toEqual([
       { address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', priceUsd: 0.000003640729606326853, lastUpdated: '2026-09-27T01:46:30Z' },
       { address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', priceUsd: 0.2433160654377283, lastUpdated: '2026-09-27T01:46:30Z' },
     ]);
+  });
+});
+
+describe("DexPaprika multi-price batching", () => {
+  it("splits 23 tokens into 3 calls of at most 10 and counts 23 credits", async () => {
+    const urls: string[] = [];
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      urls.push(String(url));
+      const tokens = new URL(String(url)).searchParams.get("tokens")!.split(",");
+      return jsonResponse(tokens.map((id) => ({ chain: "solana", id, price_usd: 1, last_updated: null })));
+    });
+    const client = new DexPaprikaClient({ fetch: fetcher, sleep: async () => undefined });
+    const tokens = Array.from({ length: 23 }, (_, i) => `Token${i}`);
+    const result = await client.multiPrices("solana", tokens);
+    expect(urls.map((url) => new URL(url).searchParams.get("tokens")!.split(",").length)).toEqual([10, 10, 3]);
+    expect(result).toHaveLength(23);
+    expect(client.creditsUsed).toBe(23);
   });
 });
 

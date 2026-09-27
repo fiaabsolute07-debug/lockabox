@@ -58,11 +58,11 @@ run('admin actions and audit log (LAB §7.6, AC-069)', () => {
     const u = await user(72, 'Locked11111111111111111111111111111111111111');
     await setUserLock(u, true, 'farm ring', 'owner');
     await expect(claim(u, 'daily-checkin')).rejects.toMatchObject({ code: 'locked' });
-    await expect(openSponsored(u)).rejects.toThrow(/locked/);
+    await expect(openSponsored(u)).rejects.toMatchObject({ code: 'locked' });
     const inviter = await user(72);
     const young = await user(1);
     await setUserLock(young, true, 'farm ring', 'owner');
-    await expect(acceptInvite(young, (await inviteSummary(inviter)).code)).rejects.toThrow(/locked/);
+    await expect(acceptInvite(young, (await inviteSummary(inviter)).code)).rejects.toMatchObject({ code: 'locked' });
     await setUserLock(u, false, 'appeal ok', 'owner');
     expect((await claim(u, 'daily-checkin')).points).toBe(50);
     expect((await audits()).map((a) => a.action)).toEqual(['user.lock', 'user.lock', 'user.unlock']);

@@ -156,7 +156,8 @@ export class DexPaprikaClient {
     for (let offset = 0; offset < tokens.length; offset += 10) {
       const batch = tokens.slice(offset, offset + 10);
       const query = batch.map((token) => encodeURIComponent(token)).join(',');
-      this._creditsUsed += 1;
+      // DexPaprika bills one credit per token, even inside a batch.
+      this._creditsUsed += batch.length;
       const payload = await this.http.getJson<unknown>(
         this.url(`/networks/${encodeURIComponent(network)}/multi/prices?tokens=${query}`),
         { headers: this.headers(), limiter: this.limiter },

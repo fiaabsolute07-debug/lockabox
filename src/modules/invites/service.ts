@@ -12,7 +12,7 @@ export const INVITE_DAILY_CAP = 10;
 export const INVITE_TASK_ID = 'invite-friend';
 
 export class InviteError extends Error {
-  constructor(public code: 'bad_code' | 'self' | 'already_invited' | 'too_old', message: string) { super(message); }
+  constructor(public code: 'bad_code' | 'self' | 'already_invited' | 'too_old' | 'locked', message: string) { super(message); }
 }
 
 /** Binds the signed-in user to an inviter. Only accounts younger than 24 h can accept, so old accounts can't be farmed. */
@@ -22,7 +22,7 @@ export async function acceptInvite(inviteeUserId: string, code: string, sql: pos
   if (!inviter) throw new InviteError('bad_code', 'unknown invite code');
   if (inviter.id === inviteeUserId) throw new InviteError('self', 'you cannot invite yourself');
   const [me] = await sql<{ young: boolean; locked: boolean }[]>`select created_at > now() - interval '24 hours' as young, locked_at is not null as locked from users where id = ${inviteeUserId}`;
-  if (me?.locked) throw new InviteError('too_old', 'this account is locked');
+  if (me?.locked) throw new InviteError('locked', 'this account is locked; contact support');
   if (!me?.young) throw new InviteError('too_old', 'invites can only be accepted by new accounts');
   const [row] = await sql`insert into invites (invitee_user_id, inviter_user_id) values (${inviteeUserId}, ${inviter.id}) on conflict do nothing returning invitee_user_id`;
   if (!row) throw new InviteError('already_invited', 'this account already has an inviter');

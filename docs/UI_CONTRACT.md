@@ -52,12 +52,12 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
 | `GET /api/leaderboard?window=24h\|7d` | — | `{ window, items: [{rollId, at, assetId, chainId, symbol, imageUrl, tier, priceAtPull, priceNow, changePct, who}] }`, best first, ≤ 20, one row per coin. `who` is a short wallet or `"anon"`. Real rolls only; sponsored-case rolls excluded. Empty list → "No pulls yet", never placeholders. |
 | `POST /api/me/privacy` (signed in) | `{ hideFromBoard: boolean }` | `{ hideFromBoard }` |
 | `GET /api/invites` (signed in) | — | `{ code, path: '/?ref=<code>', invited, rewarded, claimable, rewardedToday, dailyCap: 10, daysRequired: 3 }` |
-| `POST /api/invites/accept` (signed in) | `{ code }` | `{ ok: true }`; 404 `bad_code`, 409 `self` / `already_invited` / `too_old` (only accounts < 24 h can accept). |
-| `POST /api/tasks/invite-friend/claim` | — | Same as other tasks; repeatable once per qualified friend. 409 `not_done`, 429 `daily_cap`. The task is never `claimed: true`; `progress` = friends ready to claim. |
+| `POST /api/invites/accept` (signed in) | `{ code }` | `{ ok: true }`; 404 `bad_code`, 409 `self` / `already_invited` / `too_old` (only accounts < 24 h can accept), 403 `locked`. |
+| `POST /api/tasks/invite-friend/claim` | — | Same as other tasks; repeatable once per qualified friend. 409 `not_done`, 429 `daily_cap` (10 invite rewards per day). Any task claim: 403 `locked` when the owner locked the account. The task is never `claimed: true`; `progress` = friends ready to claim. |
 | `GET /api/rolls/:id/og` | — | 1200×630 PNG share image (coin, tier, case, chain, verify link). Use it as `og:image`/`twitter:image` of `/verify/:id`. |
 | `GET /api/health` | — | 200 `{status:'ok', …}` or 503 `{status:'degraded', alerts:[{code,message}], …}`. Ops only; the UI doesn't call it. |
 | `GET /api/sponsored/live` | — | live sponsored drops (see route). Every item is labelled **Sponsored** (vi: **Quảng cáo · Sponsored**). |
-| `POST /api/sponsored/open` (signed in) | — | 201 `{ rollId, redemptionId, campaignId, assetId, tier, amount, cost, serverSeedHash, nonce, sponsored: true, label: 'Sponsored', asset }`; 402-style errors via `error.code`: `insufficient_points` (also for accounts < 24 h), `empty`, `needs_wallet`. |
+| `POST /api/sponsored/open` (signed in) | — | 201 `{ rollId, redemptionId, campaignId, assetId, tier, amount, cost, serverSeedHash, nonce, sponsored: true, label: 'Sponsored', asset }`; 402-style errors via `error.code`: `insufficient_points` (also for accounts < 24 h), `empty`, `needs_wallet`, 403 `locked` (account locked by the owner). |
 
 ### Sponsor dashboard (AC-068), signed in with the sponsor's Solana wallet
 

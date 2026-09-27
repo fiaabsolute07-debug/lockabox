@@ -3,7 +3,7 @@ import { limited } from '@/lib/ratelimit';
 import { currentUserId } from '@/modules/auth/session';
 import { acceptInvite, InviteError } from '@/modules/invites/service';
 
-const STATUS: Record<InviteError['code'], number> = { bad_code: 404, self: 409, already_invited: 409, too_old: 409 };
+const STATUS: Record<InviteError['code'], number> = { bad_code: 404, self: 409, already_invited: 409, too_old: 409, locked: 403 };
 
 export async function POST(req: Request) {
   try {

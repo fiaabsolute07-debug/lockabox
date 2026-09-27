@@ -83,7 +83,7 @@ export function TokenInfo({ asset }: { asset: AssetDetail }) {
     <div className="metric-grid three"><Metric label={t('liquidity')} value={formatCompactUsd(asset.liquidityUsd, locale)} title={formatUsd(asset.liquidityUsd, locale)} /><Metric label={t('fdv')} value={formatCompactUsd(asset.fdv, locale)} title={formatUsd(asset.fdv, locale)} /><Metric label={t('marketCap')} value={formatCompactUsd(asset.marketCap, locale)} title={formatUsd(asset.marketCap, locale)} /></div>
     <div className="change-grid">{changes.map(([label, value]) => <div key={label} className={value !== null && value !== undefined && value >= 0 ? 'up-text' : 'down-text'}><span>{label}</span><b>{formatPercent(value, locale)}</b></div>)}</div>
     <button className="address-row mono" onClick={() => void copyAddress()} title={t('copyContract')}><span>CA</span><b>{formatAddress(asset.address, 8)}</b><i>{copied ? t('copied') : '⧉'}</i></button>
-    <div className="external-links">{asset.links.dexscreener && <a href={asset.links.dexscreener} target="_blank" rel="noreferrer">DEX Screener ↗</a>}{asset.links.explorer && <a href={asset.links.explorer} target="_blank" rel="noreferrer">Explorer ↗</a>}{asset.links.websites[0] && <a href={asset.links.websites[0]} target="_blank" rel="noreferrer">Web ↗</a>}</div>
+    <div className="external-links">{asset.links.dexscreener && <a href={asset.links.dexscreener} target="_blank" rel="noreferrer">DEX Screener ↗</a>}{asset.links.explorer && <a href={asset.links.explorer} target="_blank" rel="noreferrer">{t('explorerLink')}</a>}{asset.links.websites[0] && <a href={asset.links.websites[0]} target="_blank" rel="noreferrer">Web ↗</a>}</div>
   </section>;
 }
 

@@ -1,8 +1,8 @@
 # BUILD_STATUS
 
-Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
+Updated 2026-09-27 by Claude (cloud session). Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 2 · VERIFIED_LOCAL 62 (of 89)
+Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 1 · VERIFIED_LOCAL 63 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
@@ -65,7 +65,7 @@ Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 2 · VERIFIED_LOCAL 62 (o
 | LAB-AC-058 | VERIFIED_LOCAL | per-route limiter on every write endpoint (src/lib/ratelimit.ts; limiter test in r3.db.test) |
 | LAB-AC-059 | VERIFIED_LOCAL | sponsor create |
 | LAB-AC-060 | VERIFIED_LOCAL | review requires txs + gates |
-| LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts); vi label in A4 |
+| LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts); vi shows "Quảng cáo · Sponsored" on tab, badges and result (e2e a4.spec.ts) |
 | LAB-AC-062 | VERIFIED_LOCAL | sponsored only with points |
 | LAB-AC-063 | PARTIAL | approval checks the deposit tx on-chain: campaign token into SPONSOR_VAULT ≥ amount × opens; one tx per campaign (unit sponsor-verify with a real mainnet tx, sponsors.db.test); M: first real deposit by the owner |
 | LAB-AC-064 | VERIFIED_LOCAL | one open per roll, unique redemption |
@@ -80,7 +80,7 @@ Totals: BUILT 7 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 2 · VERIFIED_LOCAL 62 (o
 | LAB-AC-073 | VERIFIED_LOCAL | meta cases live |
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |
-| LAB-AC-076 | SPEC | en only for now |
+| LAB-AC-076 | VERIFIED_LOCAL | en/vi dictionary for every UI string incl. legal pages, case/task titles and API error codes; server picks the language from cookie/Accept-Language (e2e a4.spec.ts, 6 tests; claude-review-A4.md) |
 | LAB-AC-077 | PARTIAL | server-side roll ~24 ms sequential on next start (claude-ops-drills.md); LCP on 4G not measured yet |
 | LAB-AC-078 | PARTIAL | 4 pages at /legal/[slug] from src/content/legal.ts, draft notice, footer links (e2e); en only until A4; lawyer review NEEDS_OWNER |
 | LAB-AC-079 | NEEDS_OWNER | lawyer sign-off |
