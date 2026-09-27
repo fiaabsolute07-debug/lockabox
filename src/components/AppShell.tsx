@@ -11,11 +11,13 @@ import {
   displaySymbol,
   fetchJson,
   formatAddress,
+  orderedChains,
   type FeedResponse,
   type MeResponse,
   type MetaResponse,
 } from './api';
 import { LockyLogo } from './LockyLogo';
+import { ChainIcon } from './ChainIcon';
 import { isUserRejection, useEvmWallet, type EvmProviderDetail } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
 import { AGE_COOKIE } from './language';
@@ -285,12 +287,12 @@ function Header() {
       <div className="top-actions">
         <div className="chain-select-wrap">
           <button className="chip-button" onClick={() => setChainOpen((value) => !value)} aria-expanded={chainOpen}>
-            <span className={`chain-dot ${selectedChain === 'all' ? 'all' : selectedChain}`} />{chainName}<span className="chevron">⌄</span>
+            <ChainIcon id={selectedChain} name={chainName} />{chainName}<span className="chevron">⌄</span>
           </button>
           {chainOpen && (
             <div className="chain-menu panel">
               <button className={selectedChain === 'all' ? 'selected' : ''} onClick={() => { setSelectedChain('all'); setChainOpen(false); }}>{t('allChains')}</button>
-              {(meta?.chains ?? []).map((chain) => <button key={chain.id} className={selectedChain === chain.id ? 'selected' : ''} onClick={() => { setSelectedChain(chain.id); setChainOpen(false); }}><span className={`chain-dot ${chain.id}`} />{chain.name}</button>)}
+              {orderedChains(meta?.chains).map((chain) => <button key={chain.id} className={`${selectedChain === chain.id ? 'selected' : ''} ${chain.poolSize ? '' : 'chain-empty'}`} onClick={() => { setSelectedChain(chain.id); setChainOpen(false); }}><ChainIcon id={chain.id} name={chain.name} />{chain.name}{chain.poolSize ? <small className="chain-count">{chain.poolSize}</small> : null}</button>)}
             </div>
           )}
         </div>
@@ -324,12 +326,12 @@ export function Sidebar() {
       </nav>
       <div className="side-section">{t('chains')}</div>
       <div className="chain-list">
-        <button className={`chain-row ${selectedChain === 'all' ? 'active' : ''}`} onClick={() => setSelectedChain('all')}><span className="chain-dot all" />{t('allChains')}</button>
-        {(meta?.chains ?? []).map((chain) => <button key={chain.id} className={`chain-row ${selectedChain === chain.id ? 'active' : ''}`} onClick={() => setSelectedChain(chain.id)}><span className={`chain-dot ${chain.id}`} />{chain.name}</button>)}
+        <button className={`chain-row ${selectedChain === 'all' ? 'active' : ''}`} onClick={() => setSelectedChain('all')}><ChainIcon id="all" />{t('allChains')}</button>
+        {orderedChains(meta?.chains).map((chain) => <button key={chain.id} className={`chain-row ${selectedChain === chain.id ? 'active' : ''} ${chain.poolSize ? '' : 'chain-empty'}`} onClick={() => setSelectedChain(chain.id)}><ChainIcon id={chain.id} name={chain.name} />{chain.name}{chain.poolSize ? <small className="chain-count">{chain.poolSize}</small> : null}</button>)}
       </div>
       <div className="side-section">{t('hotPulls')}</div>
       <div className="hot-pulls">
-        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: `var(--r-${item.tier ?? 'micro'})` }}>{symbol[0]}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
+        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: item.imageUrl ? `url(${item.imageUrl}) center/cover` : `var(--r-${item.tier ?? 'micro'})`, boxShadow: `0 0 0 2px var(--r-${item.tier ?? 'micro'})` }}>{item.imageUrl ? null : symbol[0]}{item.chainId ? <span className="avatar-chain"><ChainIcon id={item.chainId} size={11} /></span> : null}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
       </div>
     </aside>
   );

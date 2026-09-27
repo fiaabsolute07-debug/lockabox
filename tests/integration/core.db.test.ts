@@ -199,3 +199,24 @@ run('feed (LAB-AC-088)', () => {
 });
 
 afterAll(async () => { await sql.end(); });
+
+run('chains from DEX Screener (owner request 2026-09-27)', () => {
+  it('lists the DEX Screener chains with swap off, and registers unknown feed chain ids once', async () => {
+    const { registerChains } = await import('../../worker/ingest');
+    const rows = await sql<{ id: string; family: string; enabled: boolean; swap_enabled: boolean }[]>`select id, family, enabled, swap_enabled from chains`;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const id of ['arbitrum', 'monad', 'blast', 'polygon', 'avalanche', 'sui', 'ton', 'tron', 'hyperevm']) expect(byId.get(id)).toMatchObject({ enabled: true, swap_enabled: false });
+    expect(byId.get('sui')!.family).toBe('other');
+    expect(byId.get('monad')!.family).toBe('evm');
+    await sql`delete from chains where id in ('zz-newchain', 'zzoff')`;
+    await sql`insert into chains (id, name, family, enabled) values ('zzoff', 'Off', 'other', false)`;
+    const known = new Set(rows.map((r) => r.id));
+    const added = await registerChains(sql, ['zz-newchain', 'zz-newchain', 'monad', 'Bad Id!', 'zzoff'], known);
+    expect(added).toEqual(['zz-newchain']);
+    const [fresh] = await sql`select name, family, enabled, swap_enabled from chains where id = 'zz-newchain'`;
+    expect(fresh).toEqual({ name: 'Zz Newchain', family: 'other', enabled: true, swap_enabled: false });
+    const [off] = await sql`select enabled from chains where id = 'zzoff'`;
+    expect(off.enabled).toBe(false); // a chain the owner switched off stays off
+    await sql`delete from chains where id in ('zz-newchain', 'zzoff')`;
+  });
+});

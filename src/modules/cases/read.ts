@@ -36,10 +36,14 @@ export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
   const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
     select id, name, family, swap_enabled, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
   const cases = await listCases(sql);
+  // Coins in each chain's latest Trending pool, so the UI can list active chains first and show how full they are.
+  const sizes = await sql<{ chain_scope: string; size: number }[]>`
+    select distinct on (chain_scope) chain_scope, size from case_pools where case_id = 'trending' order by chain_scope, version desc`;
+  const poolSize = new Map(sizes.map((s) => [s.chain_scope, Number(s.size)]));
   const [seed] = await sql<{ hash: string; active_from: Date }[]>`select hash, active_from from server_seeds where revealed_at is null`;
   return {
     chains: chains.map((c) => ({ id: c.id, name: c.name, family: c.family, swapEnabled: c.swap_enabled, evmChainId: c.evm_chain_id,
-      nativeSymbol: c.native_symbol, explorerTxUrl: c.explorer_tx_url })),
+      nativeSymbol: c.native_symbol, explorerTxUrl: c.explorer_tx_url, poolSize: poolSize.get(c.id) ?? 0 })),
     cases: cases.filter((c) => !c.cost_points).map((c) => ({ id: c.id, title: c.title, kind: c.kind })),
     activeSeedHash: seed?.hash ?? null,
   };
@@ -115,12 +119,12 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
 
 /** LAB-AC-088: every FOMO element comes from real rows (rolls, confirmed trades) and carries its proof/tx reference. */
 export async function feed(limit = 20, sql: postgres.Sql = defaultSql) {
-  const rows = await sql<{ kind: string; at: Date; ref: string; who: string | null; asset_id: number; symbol: string | null; chain_id: string; tier: string | null; amount: string | null; input_symbol: string | null }[]>`
-    (select 'buy' as kind, t.created_at as at, t.tx_hash as ref, case when u.hide_from_board then null else t.wallet end as who, t.asset_id, a.symbol, a.chain_id,
+  const rows = await sql<{ kind: string; at: Date; ref: string; who: string | null; asset_id: number; symbol: string | null; image_url: string | null; chain_id: string; tier: string | null; amount: string | null; input_symbol: string | null }[]>`
+    (select 'buy' as kind, t.created_at as at, t.tx_hash as ref, case when u.hide_from_board then null else t.wallet end as who, t.asset_id, a.symbol, a.image_url, a.chain_id,
             null as tier, t.input_amount as amount, t.input_symbol
        from trades t join assets a on a.id = t.asset_id left join users u on u.id = t.user_id where t.status = 'confirmed' and t.tx_hash is not null order by t.created_at desc limit ${limit})
     union all
-    (select 'pull' as kind, r.created_at, r.id::text, null, r.result_asset_id, a.symbol, a.chain_id, r.tier, null, null
+    (select 'pull' as kind, r.created_at, r.id::text, null, r.result_asset_id, a.symbol, a.image_url, a.chain_id, r.tier, null, null
        from rolls r join assets a on a.id = r.result_asset_id where r.tier in ('large','top') order by r.created_at desc limit ${limit})
     order by at desc limit ${limit}`;
   const [stats] = await sql<{ rolls_1h: number; buys_today: number; last_top: Date | null }[]>`
@@ -129,7 +133,7 @@ export async function feed(limit = 20, sql: postgres.Sql = defaultSql) {
            (select max(created_at) from rolls where tier = 'top') as last_top`;
   return {
     items: rows.map((r) => ({ kind: r.kind, at: r.at.toISOString(), ref: r.ref, who: r.who ? `${r.who.slice(0, 4)}…${r.who.slice(-4)}` : null,
-      assetId: Number(r.asset_id), symbol: r.symbol, chainId: r.chain_id, tier: r.tier, amount: r.amount, inputSymbol: r.input_symbol })),
+      assetId: Number(r.asset_id), symbol: r.symbol, imageUrl: r.image_url, chainId: r.chain_id, tier: r.tier, amount: r.amount, inputSymbol: r.input_symbol })),
     stats: { rolls1h: stats.rolls_1h, buysToday: stats.buys_today, lastTopPullAt: stats.last_top?.toISOString() ?? null },
   };
 }

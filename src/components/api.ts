@@ -11,6 +11,8 @@ export type Chain = {
   nativeSymbol?: string | null;
   /** Explorer link template with `{tx}`. */
   explorerTxUrl?: string | null;
+  /** Coins in this chain's latest Trending pool (0 = nothing live yet). */
+  poolSize?: number;
 };
 
 export type CaseSummaryRef = { id: string; title: string; kind: string };
@@ -71,6 +73,7 @@ export type FeedItem = {
   who: string | null;
   assetId: number;
   symbol: string | null;
+  imageUrl?: string | null;
   chainId: string;
   tier: Tier | null;
   amount: string | null;
@@ -385,4 +388,10 @@ export function tierLabel(tier: Tier | null | undefined) {
 
 export function tierColor(tier: Tier | null | undefined) {
   return tier ? `var(--r-${tier})` : 'var(--muted)';
+}
+
+/** Chains with coins in their Trending pool first (in registry order), then the ones that are still empty. */
+export function orderedChains(chains: Chain[] | undefined) {
+  const list = chains ?? [];
+  return [...list.filter((chain) => (chain.poolSize ?? 0) > 0), ...list.filter((chain) => !(chain.poolSize ?? 0))];
 }

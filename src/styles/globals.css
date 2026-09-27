@@ -81,6 +81,14 @@ a:hover { color: var(--tx); }
 .chain-dot.ethereum { background: #627EEA; }
 .chain-dot.robinhood { background: #CCFF00; }
 .chain-dot.arc { background: #D9D9DE; }
+.chain-icon { flex: none; border-radius: 50%; object-fit: cover; background: #fff1; }
+.chain-letter { display: inline-grid; place-items: center; color: #0B0C10; background: var(--mu); font-weight: 800; line-height: 1; }
+.chain-count { margin-left: auto; padding: 1px 6px; color: var(--mu); background: var(--p2); border-radius: 9px; font: 600 10px var(--font-mono-family); }
+.chain-empty { opacity: .55; }
+.chain-list { max-height: 42vh; overflow-y: auto; scrollbar-width: thin; }
+.chain-menu { max-height: min(70vh, 520px); overflow-y: auto; }
+.token-avatar { position: relative; }
+.avatar-chain { position: absolute; right: -4px; bottom: -4px; display: flex; border-radius: 50%; box-shadow: 0 0 0 2px #0B0C10; }
 .chain-dot.all { background: conic-gradient(var(--acc), var(--r-mid), var(--up), var(--acc)); }
 .header-error { position: fixed; top: 64px; right: 16px; z-index: 35; padding: 8px 10px; color: #fff; background: #3a1810; border: 1px solid #6e2a17; border-radius: 6px; }
 .feed-ticker { min-height: 30px; display: flex; align-items: center; gap: 20px; padding: 0 16px; overflow: hidden; color: var(--mu); background: #101217; border-bottom: 1px solid var(--ln); font: 500 11px var(--font-mono-family); white-space: nowrap; }
@@ -538,6 +546,13 @@ td a { color: var(--mu); }
   .case-art { transform: scale(.84); }
   .contents-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .seed-badge { display: none; }
+}
+
+/* 901–1500 px: three fixed columns leave the case title ~100 px wide, so the OPEN CASE button takes its own row. */
+@media (min-width: 901px) and (max-width: 1500px) {
+  .case-hero { grid-template-columns: 170px minmax(0, 1fr); }
+  .case-art { transform: scale(.84); }
+  .open-area { grid-column: 1 / -1; }
 }
 
 @media (max-width: 900px) {

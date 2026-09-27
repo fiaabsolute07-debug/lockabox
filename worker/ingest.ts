@@ -1,3 +1,4 @@
+import { KNOWN_CHAINS } from '@/modules/sources/chains';
 import type postgres from 'postgres';
 import { buildPool, CHAIN_SCOPE_ALL, listCases } from '@/modules/cases/pools';
 import { liquidityGate, recordGate, solanaHoneypotGate } from '@/modules/gates';
@@ -24,6 +25,9 @@ const REFRESH_AFTER_MS = 4 * 60_000;
 const PAPRIKA_EVERY_MS = 15 * 60_000;
 const HONEYPOT_RECHECK_H = 6;
 const MAX_ENRICH = 600;
+// Price refresh calls per cycle (one per chain per 30 tokens). With ~60 chains this keeps DEX Screener well under the 60/min
+// alert line together with the feeds (/api/health ds_budget); the stalest snapshots go first.
+const MAX_ENRICH_CALLS = 30;
 const MAX_HONEYPOT = 40;
 const TOP_METAS = 3;
 let lastPaprika = 0;
@@ -76,6 +80,9 @@ async function discover(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'dp' | 'l
     settle('profiles', ds.tokenProfilesLatest()), settle('boosts', ds.tokenBoostsLatest()), settle('top', ds.tokenBoostsTop()),
     settle('cto', ds.communityTakeoversLatest()), settle('metas', ds.metasTrending()),
   ]);
+  // Any chain DEX Screener lists is welcome (owner request): unknown ids in the feeds become enabled, swap-off chains.
+  const feedChains = [...(profiles ?? []), ...(boosts ?? []), ...(top ?? []), ...(cto ?? [])].map((x) => x.chainId);
+  for (const id of await registerChains(sql, feedChains, enabled)) { enabled.add(id); log(`new chain from DEX Screener feeds: ${id}`); }
   for (const p of profiles ?? []) found.push({ chainId: p.chainId, address: p.tokenAddress, source: 'ds:profile' });
   for (const b of boosts ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:boost' });
   for (const b of top ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:top' });
@@ -111,6 +118,21 @@ async function discover(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'dp' | 'l
   return { upserted, metaSnaps, paprika };
 }
 
+/** Registers DEX Screener chain ids we have not seen before (enabled, swap off). Returns the ids it added. */
+export async function registerChains(sql: postgres.Sql, ids: string[], known: Set<string>) {
+  const fresh = [...new Set(ids)].filter((id) => /^[a-z0-9][a-z0-9_-]{1,31}$/.test(id) && !known.has(id));
+  const added: string[] = [];
+  for (const id of fresh) {
+    const k = KNOWN_CHAINS[id];
+    const name = k?.name ?? id.replace(/(^|[-_])(\w)/g, (_m, sep: string, c: string) => `${sep ? ' ' : ''}${c.toUpperCase()}`);
+    // A chain the owner switched off stays off: `do nothing` keeps its row as it is.
+    const [row] = await sql`insert into chains (id, name, family, enabled, swap_enabled, sort) values (${id}, ${name}, ${k?.family === 'evm' ? 'evm' : 'other'}, true, false, 900)
+                            on conflict (id) do nothing returning id`;
+    if (row) added.push(id);
+  }
+  return added;
+}
+
 async function enrich(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'log'>>, enabled: Set<string>) {
   const { sql, ds, log } = deps;
   const due = await sql<{ chain_id: string; address: string }[]>`
@@ -122,8 +144,10 @@ async function enrich(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'log'>>, en
   const byChain = new Map<string, string[]>();
   for (const d of due) byChain.set(d.chain_id, [...(byChain.get(d.chain_id) ?? []), d.address]);
   let saved = 0;
+  let calls = 0;
   for (const [chain, addrs] of byChain) {
-    for (let i = 0; i < addrs.length; i += 30) {
+    for (let i = 0; i < addrs.length && calls < MAX_ENRICH_CALLS; i += 30) {
+      calls++;
       try {
         const pairs = await ds.tokens(chain, addrs.slice(i, i + 30));
         saved += await saveSnapshots(sql, pairsToAssets(pairs), enabled);

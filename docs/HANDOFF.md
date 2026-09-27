@@ -1,8 +1,8 @@
 # HANDOFF (2026-09-27, Claude, cloud session, solo; no Codex/Astra)
 
-State: backend R0–R6 core, UI A1–A5, all committed on `claude/tender-lovelace-rgid6q`. `docs/BUILD_STATUS.md`: **74/89 VERIFIED_LOCAL**,
-9 PARTIAL, 1 BUILT, 1 SPEC, 4 NEEDS_OWNER. Everything still open needs the owner (list below).
-Tests: unit **40** · DB integration **44** · e2e **44** (Playwright) · `pnpm lint` 0 errors · typecheck clean · `pnpm build` green.
+State: backend R0–R6 core, UI A1–A5, all committed on `claude/tender-lovelace-rgid6q`. `docs/BUILD_STATUS.md`: **73/89 VERIFIED_LOCAL**,
+9 PARTIAL, 1 BUILT, 1 SPEC, 4 NEEDS_OWNER, 1 DROPPED (vi UI, owner decision). Everything still open needs the owner (list below).
+Tests: unit **40** · DB integration **45** · e2e **44** (Playwright) · `pnpm lint` 0 errors · typecheck clean · `pnpm build` green.
 GitHub Actions (`.github/workflows/ci.yml`, every push/PR, macOS) runs all of it incl. lint, build and e2e: green on this branch.
 
 This session (commits 7622082 → 72ef011):
@@ -15,6 +15,13 @@ This session (commits 7622082 → 72ef011):
    4.76 s until the 18+ gate moved server-side, `lab_age` cookie). Roll service p95 4.3 ms (18 ms at 10 concurrent).
 4. Closed without the owner: AC-001 (lint config + CI), 003, 004, 034, 035, 040, 044, 061, 068, 071 (DB guard, migration 0012), 076, 078, 080, 086.
    AC-042 now shows confirmed/failed (`GET /api/trades/:id`); its real-transaction half is the owner's.
+
+Later the same day (owner requests, commits after 0f07bf1):
+5. CS:GO-style case opening: synthesised sound (clicks, heartbeat, drum roll, tier stings from a sad trombone to a fanfare + crowd)
+   and a full-screen reveal per tier (confetti, rays, shake, flash; womp for Micro), closed by the user (DECISIONS #14).
+6. **English only**: the Vietnamese UI and legal drafts are removed (DECISIONS #13). Lawyer: check the Vietnamese advertising-label rule.
+7. **All DEX Screener chains** (58, with self-hosted logos; auto-registration of new ids; DECISIONS #15). Chains with coins are listed first.
+   Hero layout fixed for 901–1500 px screens.
 
 ## Run locally
 `pnpm install` · `pnpm db:start` (embedded Postgres 127.0.0.1:55442) · `pnpm db:migrate` · `pnpm db:test:prepare` · `pnpm worker` · `pnpm dev` → http://127.0.0.1:4310.
@@ -29,6 +36,7 @@ Ops: `docs/RUNBOOKS.md` (§8 new: turning on EVM buys) · `GET /api/health` · `
 - Refactor the 19 React Compiler lint warnings (`react-hooks/set-state-in-effect`, `refs`; DECISIONS #11) and make them errors.
 - 18+ gate: its button works only after hydration (~4.7 s on Slow 4G); a plain `<form method="post">` fallback would fix taps before that.
 - `.env.example` lists `SESSION_SECRET`, which no code reads: remove it or use it.
+- With network access to DEX Screener: run `pnpm worker:once` and check which of the 58 chain ids produce assets; fix any id that stays empty.
 - Once staging exists: re-run `scripts/lcp.ts` with live data (AC-077) and `pnpm loadtest` from another machine (AC-083, p95 was 507–658 ms locally).
 - After the owner decides: vault distribution/refund job (AC-066), WalletConnect (AC-036).
 

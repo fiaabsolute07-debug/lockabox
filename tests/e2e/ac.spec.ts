@@ -77,3 +77,26 @@ test('AC-044: slippage defaults to 3 %, needs a confirmation above 10 % and stop
   await page.getByRole('spinbutton', { name: 'Slippage' }).fill('10');
   await expect(confirm).toHaveCount(0);
 });
+
+test('every DEX Screener chain is listed with its self-hosted logo; chains with coins come first', async ({ page, request }) => {
+  const chains = [
+    { id: 'solana', name: 'Solana', family: 'solana', swapEnabled: true, poolSize: 51 },
+    { id: 'monad', name: 'Monad', family: 'evm', swapEnabled: false, poolSize: 0 },
+    { id: 'arbitrum', name: 'Arbitrum', family: 'evm', swapEnabled: false, poolSize: 24 },
+    { id: 'blast', name: 'Blast', family: 'evm', swapEnabled: false, poolSize: 0 },
+    { id: 'story', name: 'Story', family: 'evm', swapEnabled: false, poolSize: 0 },
+  ];
+  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const body: Record<string, unknown> = { '/api/meta': { ...meta, chains }, '/api/feed': feed, '/api/cases/trending': caseSummary, '/api/auth/me': { user: null }, '/api/sponsored/live': { label: 'Sponsored', items: [] } };
+    return json(route, body[path] ?? {});
+  });
+  await page.goto('/');
+  const rows = page.locator('.chain-list .chain-row');
+  await expect(rows).toHaveText(['All chains', 'Solana51', 'Arbitrum24', 'Monad', 'Blast', 'SStory']); // "S" is the lettered badge of a chain without a logo
+  await expect(rows.nth(2).locator('img')).toHaveAttribute('src', '/chains/arbitrum.png');
+  await expect(rows.nth(3).locator('img')).toHaveAttribute('src', /\/chains\/monad\.(png|svg)$/);
+  await expect(rows.nth(5).locator('.chain-letter')).toHaveText('S');
+  for (const src of ['/chains/arbitrum.png', await rows.nth(3).locator('img').getAttribute('src'), '/chains/blast.png']) expect((await request.get(src!)).status()).toBe(200);
+});

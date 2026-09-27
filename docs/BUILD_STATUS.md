@@ -75,7 +75,7 @@ Totals: BUILT 1 · DROPPED 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED
 | LAB-AC-068 | VERIFIED_LOCAL | sponsor dashboard: own campaigns, stats (opens, unique wallets, sent, confirmed buys after start), CSV (e2e a4.spec.ts; stats numbers in sponsors.db.test) |
 | LAB-AC-069 | VERIFIED_LOCAL | kill switch at roll time + audit_log (append-only), unkill, system quarantines audited (core.db.test, admin.db.test) |
 | LAB-AC-070 | VERIFIED_LOCAL | policy test |
-| LAB-AC-071 | VERIFIED_LOCAL | per-chain flags (AC-006); swap only on an enabled chain with its route configured, enforced by DB checks (migration 0012, swap-evm.db.test); sell check per family (Jupiter round trip / honeypot.is / LI.FI round trip); turning a chain on stays the owner's decision (RUNBOOKS §8) |
+| LAB-AC-071 | VERIFIED_LOCAL | per-chain flags (AC-006); 58 chains from DEX Screener (migration 0013, auto-registration from feeds; core.db.test); swap only on an enabled chain with its route configured (migration 0012, swap-evm.db.test); turning swap on stays the owner's decision (RUNBOOKS §8) |
 | LAB-AC-072 | PARTIAL | Robinhood + Arc: data yes; swap route via LI.FI verified live (quotes only), off until the owner enables it |
 | LAB-AC-073 | VERIFIED_LOCAL | meta cases live |
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
