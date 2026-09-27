@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { sql } from '@/lib/db';
-import { build, confirmSubmitted, markSubmitted, quote } from '@/modules/swap/service';
+import { build, confirmSubmitted, markSubmitted, quote, tradeStatus } from '@/modules/swap/service';
 
 const run = process.env.RUN_DB_INTEGRATION ? describe : describe.skip;
 const fx = (p: string) => JSON.parse(readFileSync(`tests/fixtures/${p}`, 'utf8'));
@@ -64,10 +64,21 @@ run('EVM swap via LI.FI (AC-038, DECISIONS #10)', () => {
     expect(b.evm.transaction).toMatchObject({ chainId: 8453, value: '0x2386f26fc10000' });
     const hash = `0x${'ab'.repeat(32)}`;
     await expect(markSubmitted(b.tradeId, 'not-a-hash', WALLET)).rejects.toMatchObject({ code: 'bad_amount' });
+    expect(await tradeStatus(b.tradeId)).toEqual({ id: b.tradeId, status: 'built', txHash: null, chainId: 'base' });
     expect(await markSubmitted(b.tradeId, hash, WALLET)).toBe(true); // wallet case doesn't matter on EVM
+    expect((await tradeStatus(b.tradeId))!.status).toBe('submitted');
     expect(await confirmSubmitted(sql, net.f)).toBe(1);
+    expect(await tradeStatus(b.tradeId)).toEqual({ id: b.tradeId, status: 'confirmed', txHash: hash, chainId: 'base' }); // AC-042
     const [t] = await sql<{ status: string; wallet: string; input_symbol: string }[]>`select status, wallet, input_symbol from trades where id = ${b.tradeId}`;
     expect(t).toEqual({ status: 'confirmed', wallet: WALLET.toLowerCase(), input_symbol: 'ETH' });
+  });
+
+  it('a chain offers swap only when enabled and its EVM route is configured (AC-071)', async () => {
+    await expect(sql`update chains set swap_enabled = true, enabled = false where id = 'arc'`).rejects.toThrow(/chains_swap_needs_enabled/);
+    await expect(sql`update chains set swap_enabled = true, rpc_url = null where id = 'arc'`).rejects.toThrow(/chains_swap_needs_route/);
+    await expect(sql`update chains set swap_enabled = true, evm_chain_id = null where id = 'robinhood'`).rejects.toThrow(/chains_swap_needs_route/);
+    await sql`update chains set swap_enabled = true where id = 'arc'`; // configured: allowed (the owner's switch)
+    await sql`update chains set swap_enabled = false where id = 'arc'`;
   });
 
   it('refuses a route built for someone else', async () => {

@@ -378,6 +378,8 @@ const EN = {
   adminKilledDone: 'Coin removed from every case; swap is locked.',
   adminBlocklistDone: 'Blocklist updated.',
   adminLockDone: 'Account updated.',
+  swapConfirmed: 'Buy confirmed on-chain ✓',
+  swapFailed: 'The transaction failed on-chain; nothing was bought',
 } as const;
 
 const VI: Record<keyof typeof EN, string> = {
@@ -752,6 +754,8 @@ const VI: Record<keyof typeof EN, string> = {
   adminKilledDone: 'Đã gỡ coin khỏi mọi hòm; swap đã khoá.',
   adminBlocklistDone: 'Đã cập nhật danh sách chặn.',
   adminLockDone: 'Đã cập nhật tài khoản.',
+  swapConfirmed: 'Lệnh mua đã được xác nhận trên chuỗi ✓',
+  swapFailed: 'Giao dịch thất bại trên chuỗi; chưa có gì được mua',
 };
 
 export type TranslationKey = keyof typeof EN;

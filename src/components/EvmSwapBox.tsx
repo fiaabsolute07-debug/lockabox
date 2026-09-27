@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, displaySymbol, explorerTxLink, fetchJson, formatPrice, formatRawAmount, type AssetDetail, type Chain, type EvmBuildResponse, type QuoteView } from './api';
 import { isUserRejection, useEvmWallet } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
+import { useTradeStatus } from './useTradeStatus';
 
 /**
  * EVM buy through LI.FI (AC-038, DECISIONS #10). Rendered only when the coin's chain has swap switched on. Every route fee is shown
@@ -13,7 +14,7 @@ import { useT, translateApiError } from './i18n';
 
 const QUICK_AMOUNTS: Record<string, string[]> = { ETH: ['0.002', '0.005', '0.01', '0.05'], BNB: ['0.01', '0.05', '0.1', '0.5'], USDC: ['5', '10', '25', '50'] };
 
-type Status = { kind: 'approve' | 'approvalPending' | 'confirm' | 'pending' | 'submitted'; hash?: string };
+type Status = { kind: 'approve' | 'approvalPending' | 'confirm' | 'pending' | 'submitted'; hash?: string; tradeId?: number };
 
 export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asset: AssetDetail; chain: Chain; rollId?: number; onRollAgain?: () => void }) {
   const { t, locale, number } = useT();
@@ -31,6 +32,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const [busy, setBusy] = useState(false);
   const [swapAvailable, setSwapAvailable] = useState(true);
   const [pickWallet, setPickWallet] = useState(false);
+  const final = useTradeStatus(status?.kind === 'submitted' ? status.tradeId ?? null : null);
 
   useEffect(() => {
     setSwapAvailable(true); setQuote(null); setError(null); setShowRollAgain(false); setStatus(null); setAmount(quick[1]);
@@ -78,7 +80,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
       const hash = await evm.sendTransaction(built.evm.transaction);
       setStatus({ kind: 'pending', hash });
       await fetchJson<{ ok: boolean; status: 'submitted' }>(`/api/trades/${built.tradeId}`, { method: 'PATCH', body: JSON.stringify({ txHash: hash, wallet: connection.address }) });
-      setStatus({ kind: 'submitted', hash });
+      setStatus({ kind: 'submitted', hash, tradeId: built.tradeId });
     } catch (reason) {
       setStatus((current) => current?.hash && current.kind !== 'approvalPending' ? current : null);
       if (isUserRejection(reason)) return;
@@ -96,7 +98,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     approvalPending: t('waitingApproval'),
     confirm: t('confirmBuyInWallet'),
     pending: t('swapPending'),
-    submitted: t('swapSubmitted'),
+    submitted: final === 'confirmed' ? t('swapConfirmed') : final === 'failed' ? t('swapFailed') : t('swapSubmitted'),
   })[status.kind];
 
   return <section className="panel swap-card evm-swap">

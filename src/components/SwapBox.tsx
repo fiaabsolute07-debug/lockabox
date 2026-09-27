@@ -8,6 +8,7 @@ import { ApiError, displaySymbol, fetchJson, formatPrice, formatRawAmount, type 
 import { useT, translateApiError } from './i18n';
 import { useAppContext } from './AppShell';
 import EvmSwapBox from './EvmSwapBox';
+import { useTradeStatus } from './useTradeStatus';
 
 const QUICK_AMOUNTS = ['0.01', '0.05', '0.1', '0.5', '1'];
 
@@ -30,7 +31,8 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
   const [quote, setQuote] = useState<QuoteView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRollAgain, setShowRollAgain] = useState(false);
-  const [status, setStatus] = useState<{ kind: 'pending' | 'submitted'; signature?: string } | null>(null);
+  const [status, setStatus] = useState<{ kind: 'pending' | 'submitted'; signature?: string; tradeId?: number } | null>(null);
+  const final = useTradeStatus(status?.kind === 'submitted' ? status.tradeId ?? null : null);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [swapAvailable, setSwapAvailable] = useState(asset.swapEnabled);
 
@@ -71,7 +73,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
       const signature = await sendTransaction(tx, connection);
       setStatus({ kind: 'pending', signature });
       await fetchJson<{ ok: boolean; status: 'submitted' }>(`/api/trades/${built.tradeId}`, { method: 'PATCH', body: JSON.stringify({ txHash: signature, wallet: publicKey.toBase58() }) });
-      setStatus({ kind: 'submitted', signature });
+      setStatus({ kind: 'submitted', signature, tradeId: built.tradeId });
     } catch (reason) {
       if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
       else if (reason instanceof ApiError && reason.code === 'sell_check_failed') { setError(t('sellCheckFailed')); setShowRollAgain(true); }
@@ -89,7 +91,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
     <div className="quote-details"><div><span>{t('route')}</span><b>{quote?.route.length ? `SOL → ${quote.route.join(' → ')} → ${symbol}` : '—'}</b></div><div><span>{t('lockaboxFee')}</span><b className="up-text">0</b></div><div><span>{t('sellCheck')}</span><b className="up-text">{quote ? t('passed') : '—'}</b></div></div>
     {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
     {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
-    {status && <div className="trade-status" role="status">{status.kind === 'submitted' ? t('swapSubmitted') : t('swapPending')} · <a href={`https://solscan.io/tx/${status.signature}`} target="_blank" rel="noreferrer">{t('viewOnSolscan')}</a></div>}
+    {status && <div className="trade-status" role="status">{status.kind === 'submitted' ? (final === 'confirmed' ? t('swapConfirmed') : final === 'failed' ? t('swapFailed') : t('swapSubmitted')) : t('swapPending')} · <a href={`https://solscan.io/tx/${status.signature}`} target="_blank" rel="noreferrer">{t('viewOnSolscan')}</a></div>}
     <button className="button button-buy full-width" onClick={() => void buy()} disabled={!quote || quoteBusy || (highSlippage && !confirmHighSlippage)}>{publicKey ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectToBuy')}</button>
     <p className="disclaimer">{t('ownWalletDisclaimer')}</p>
   </section>;

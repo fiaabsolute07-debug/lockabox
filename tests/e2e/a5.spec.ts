@@ -74,7 +74,7 @@ async function mockWallet(page: Page, options: { chainId?: number; rejectSign?: 
 const walletCalls = (page: Page) => page.evaluate(() => (window as unknown as { __wallet: { calls: WalletCall[] } }).__wallet.calls);
 
 async function setup(page: Page, options: { asset?: unknown } = {}) {
-  const state = { signedIn: false, nonceBody: null as unknown, verifyBody: null as unknown, buildBody: null as unknown, patch: null as { url: string; body: unknown } | null };
+  const state = { statusPolls: 0, signedIn: false, nonceBody: null as unknown, verifyBody: null as unknown, buildBody: null as unknown, patch: null as { url: string; body: unknown } | null };
   await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -97,6 +97,7 @@ async function setup(page: Page, options: { asset?: unknown } = {}) {
         approval: { to: USDC, data: '0x095ea7b3', value: '0x0', gasLimit: null, chainId: 8453 },
         transaction: { to: LIFI_DIAMOND, data: '0xabcdef', value: '0x11c37937e08000', gasLimit: '0x7a120', chainId: 8453 } } }, 201);
     }
+    if (url.pathname === '/api/trades/77' && request.method() === 'GET') { state.statusPolls += 1; return json(route, { id: 77, status: state.statusPolls > 1 ? 'confirmed' : 'submitted', txHash: `0x${'2'.padStart(64, '0')}`, chainId: 'base' }); }
     if (url.pathname === '/api/trades/77' && request.method() === 'PATCH') { state.patch = { url: url.pathname, body: request.postDataJSON() }; return json(route, { ok: true, status: 'submitted' }); }
     return json(route, {});
   });
@@ -205,6 +206,9 @@ test('EVM buy: route fees on their own lines, exact approval mined before the sw
   expect(approval).toMatchObject({ from: ADDRESS, to: USDC, data: '0x095ea7b3' });
   expect(swap).toMatchObject({ from: ADDRESS, to: LIFI_DIAMOND, data: '0xabcdef', value: '0x11c37937e08000', gas: '0x7a120' });
   expect(state.patch).toEqual({ url: '/api/trades/77', body: { txHash: `0x${'2'.padStart(64, '0')}`, wallet: ADDRESS } });
+  // AC-042: the box follows the trade until the worker confirms it on-chain.
+  await expect(box.getByRole('status')).toContainText('Buy confirmed on-chain ✓', { timeout: 15_000 });
+  await expect(box.getByRole('link', { name: /View on explorer/ })).toHaveAttribute('href', `https://basescan.org/tx/0x${'2'.padStart(64, '0')}`);
   await page.getByRole('button', { name: 'VI', exact: true }).click();
   await expect(box.getByText('Định tuyến bởi LI.FI', { exact: false })).toBeVisible();
 });

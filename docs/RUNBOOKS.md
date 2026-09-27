@@ -79,3 +79,10 @@ Local drill: invite cap + 24 h rules in `r3.db.test.ts` and `sponsors.db.test.ts
 ## 7. Deploy / rollback (for the owner; the agent never deploys)
 - Deploy = migrations first (`pnpm db:migrate`, additive only), then app, then worker. One worker instance only.
 - Rollback = previous app build; migrations are additive so the old app keeps working. Never run a destructive migration without a backup from §6.
+
+## 8. Turning on in-app EVM buys (owner decision, DECISIONS #10)
+Off today on every EVM chain. Before switching a chain on: accept LI.FI's terms (0.25 % LI.FI fee shown to users, US persons excluded,
+integration described as independent and non-custodial), check `GET /api/health` is `ok`, then
+`update chains set swap_enabled = true where id = 'base';` (one chain at a time). The database refuses it unless the chain is enabled
+and has `evm_chain_id`, `rpc_url` and `native_symbol` (migration 0012). Do one small buy from your own wallet and check the trade row
+reaches `confirmed` and shows in "Buys via Lockabox". Undo: `update chains set swap_enabled = false where id = 'base';`.

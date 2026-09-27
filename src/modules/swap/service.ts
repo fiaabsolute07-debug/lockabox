@@ -191,6 +191,11 @@ export async function markSubmitted(tradeId: number, txHash: string, wallet: str
   return !!row;
 }
 
+export async function tradeStatus(tradeId: number, sql: postgres.Sql = defaultSql) {
+  const [t] = await sql<{ id: number; status: string; tx_hash: string | null; chain_id: string }[]>`select id, status, tx_hash, chain_id from trades where id = ${tradeId}`;
+  return t ? { id: Number(t.id), status: t.status as 'built' | 'submitted' | 'confirmed' | 'failed', txHash: t.tx_hash, chainId: t.chain_id } : null;
+}
+
 /** Worker: confirms submitted trades on-chain (only confirmed trades ever reach the feed). */
 export async function confirmSubmitted(sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch) {
   return (await confirmSolana(sql, fetchImpl)) + (await confirmEvm(sql, fetchImpl));

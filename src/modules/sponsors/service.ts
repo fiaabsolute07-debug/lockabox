@@ -156,5 +156,5 @@ export async function campaignStats(campaignId: number, sponsorUserId: string, s
     select count(*)::int as opens, count(distinct r.wallet)::int as wallets, count(*) filter (where r.status = 'sent')::int as sent,
            (select count(*)::int from trades t join sponsor_campaigns sc on sc.asset_id = t.asset_id where sc.id = ${campaignId} and t.status = 'confirmed' and t.created_at >= sc.starts_at) as buys
     from redemptions r where r.campaign_id = ${campaignId}`;
-  return { campaign: c, stats: s };
+  return { campaign: { ...c, id: Number(c.id) }, stats: s };
 }

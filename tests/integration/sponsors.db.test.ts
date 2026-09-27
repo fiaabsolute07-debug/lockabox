@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from '@/lib/db';
 import { claim } from '@/modules/points/service';
-import { createCampaign, listCampaigns, openSponsored, policyViolations, reviewCampaign, SponsorError } from '@/modules/sponsors/service';
+import { campaignStats, createCampaign, listCampaigns, openSponsored, policyViolations, reviewCampaign, SponsorError } from '@/modules/sponsors/service';
 
 const run = process.env.RUN_DB_INTEGRATION ? describe : describe.skip;
 
@@ -67,6 +67,31 @@ run('sponsored cases (LAB R4)', () => {
     expect((await listCampaigns(sponsor)).map((x) => [x.id, x.status])).toEqual([[c.id, 'approved']]);
     const other = await userWithWallet('Other11111111111111111111111111111111111111');
     expect(await listCampaigns(other)).toEqual([]);
+  });
+
+  it('dashboard stats count opens, unique wallets, sent drops and confirmed buys after the start; own campaigns only (AC-068)', async () => {
+    const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
+    const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', { ...campaign, totalOpens: 5 });
+    await passGates();
+    await reviewCampaign(c.id, 'approve', 'admin', 'ok', sql, verified);
+    const players = [await userWithWallet('PlayerA1111111111111111111111111111111111111'), await userWithWallet('PlayerB1111111111111111111111111111111111111')];
+    for (const p of players) for (let d = 0; d < 30; d++) await sql`insert into points_ledger (user_id, delta, reason, ref) values (${p}, 50, 'task:daily-checkin', ${`2026-08-${String(d + 1).padStart(2, '0')}`})`;
+    await openSponsored(players[0]);
+    await openSponsored(players[0]);
+    await openSponsored(players[1]);
+    const [first] = await sql<{ id: number }[]>`select id from redemptions where campaign_id = ${c.id} order by id limit 1`;
+    await sql`update redemptions set status = 'sent', tx_hash = 'sent-sig-1' where id = ${first.id}`;
+    const [a] = await sql<{ id: number }[]>`select id from assets where address = ${campaign.tokenAddress}`;
+    const trade = (status: string, at: string, hash: string) => sql`
+      insert into trades (wallet, chain_id, asset_id, input_symbol, input_amount, out_amount_min, quote, tx_hash, status, created_at)
+      values ('PlayerA1111111111111111111111111111111111111', 'solana', ${a.id}, 'SOL', '0.05', '1', '{}', ${hash}, ${status}, ${at})`;
+    await trade('confirmed', new Date().toISOString(), 'buy-after-start');
+    await trade('failed', new Date().toISOString(), 'buy-failed');
+    await trade('confirmed', new Date(Date.now() - 3_600_000).toISOString(), 'buy-before-start');
+    const r = await campaignStats(c.id, sponsor);
+    expect(r.stats).toEqual({ opens: 3, wallets: 2, sent: 1, buys: 1 });
+    expect(r.campaign).toMatchObject({ id: c.id, status: 'approved', total_opens: 5, opens_used: 3 });
+    await expect(campaignStats(c.id, players[0])).rejects.toMatchObject({ code: 'not_found' });
   });
 
   it('opening spends points, reserves one open, stops when the budget is used (AC-062/064/065)', async () => {
