@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import bs58 from 'bs58';
 import nacl from 'tweetnacl';
+import { createPublicClient, getAddress, http, verifyMessage } from 'viem';
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
 
@@ -30,42 +31,91 @@ export async function currentUserId(sql: postgres.Sql = defaultSql): Promise<str
   return row?.user_id ?? null;
 }
 
+export type Family = 'solana' | 'evm';
+const STATEMENT = 'Sign in to Lockabox. This does not send a transaction or cost anything.';
+
 export function signInMessage(address: string, nonce: string, issuedAt: string, domain = 'lockabox.fun') {
-  return `${domain} wants you to sign in with your Solana account:\n${address}\n\nSign in to Lockabox. This does not send a transaction or cost anything.\n\nNonce: ${nonce}\nIssued At: ${issuedAt}`;
+  return `${domain} wants you to sign in with your Solana account:\n${address}\n\n${STATEMENT}\n\nNonce: ${nonce}\nIssued At: ${issuedAt}`;
 }
 
-export async function createNonce(address: string, sql: postgres.Sql = defaultSql) {
-  if (!isSolanaAddress(address)) throw new Error('invalid address');
-  const nonce = randomBytes(16).toString('hex');
-  const issuedAt = new Date().toISOString();
-  await sql`insert into auth_nonces (nonce, address, chain_family, expires_at, issued_at) values (${nonce}, ${address}, 'solana', now() + make_interval(mins => ${NONCE_MINUTES}), ${issuedAt})`;
-  return { nonce, issuedAt, message: signInMessage(address, nonce, issuedAt) };
+/** EIP-4361 (Sign-In with Ethereum). `address` must be the EIP-55 checksummed form. */
+export function siweMessage(address: string, chainId: number, nonce: string, issuedAt: string, domain = 'lockabox.fun') {
+  return `${domain} wants you to sign in with your Ethereum account:\n${address}\n\n${STATEMENT}\n\nURI: https://${domain}\nVersion: 1\nChain ID: ${chainId}\nNonce: ${nonce}\nIssued At: ${issuedAt}`;
 }
 
 export function isSolanaAddress(a: string) {
   try { return bs58.decode(a).length === 32; } catch { return false; }
 }
 
+export function isEvmAddress(a: string) {
+  return /^0x[0-9a-fA-F]{40}$/.test(a);
+}
+
+/** Chains a SIWE message may name: the enabled EVM chains we know. */
+async function evmChain(chainId: number, sql: postgres.Sql) {
+  const [c] = await sql<{ rpc_url: string | null }[]>`select rpc_url from chains where family = 'evm' and enabled and evm_chain_id = ${chainId}`;
+  return c;
+}
+
+export async function createNonce(address: string, sql: postgres.Sql = defaultSql, opts: { family?: Family; chainId?: number } = {}) {
+  const family = opts.family ?? 'solana';
+  if (family === 'solana' ? !isSolanaAddress(address) : !isEvmAddress(address)) throw new Error('invalid address');
+  if (family === 'evm' && !(opts.chainId && (await evmChain(opts.chainId, sql)))) throw new Error('unsupported chain');
+  const nonce = randomBytes(16).toString('hex');
+  const issuedAt = new Date().toISOString();
+  const key = family === 'evm' ? address.toLowerCase() : address;
+  await sql`insert into auth_nonces (nonce, address, chain_family, expires_at, issued_at) values (${nonce}, ${key}, ${family}, now() + make_interval(mins => ${NONCE_MINUTES}), ${issuedAt})`;
+  const message = family === 'evm' ? siweMessage(getAddress(address), opts.chainId!, nonce, issuedAt) : signInMessage(address, nonce, issuedAt);
+  return { nonce, issuedAt, message };
+}
+
+/** EOA signatures are checked locally; smart-contract wallets (ERC-1271 / ERC-6492) through the chain's RPC. */
+async function evmSignatureValid(address: string, chainId: number, message: string, signature: string, sql: postgres.Sql) {
+  if (!/^0x[0-9a-fA-F]+$/.test(signature)) return false;
+  const addr = getAddress(address);
+  try { if (await verifyMessage({ address: addr, message, signature: signature as `0x${string}` })) return true; } catch { /* not an EOA signature */ }
+  // A 65-byte signature is a plain EOA one; if it didn't recover to the address, it's wrong. Longer ones are smart wallets.
+  if (signature.length === 2 + 65 * 2) return false;
+  const c = await evmChain(chainId, sql);
+  if (!c?.rpc_url) return false;
+  const client = createPublicClient({ transport: http(c.rpc_url, { timeout: 10_000 }) });
+  return client.verifyMessage({ address: addr, message, signature: signature as `0x${string}` }).catch(() => false);
+}
+
 /** LAB-AC-005: a nonce works once and expires after 5 minutes. Returns the user id and sets the session cookie. */
-export async function verifySignIn(p: { address: string; nonce: string; issuedAt: string; signature: string }, sql: postgres.Sql = defaultSql): Promise<string> {
+type SignIn = { address: string; nonce: string; issuedAt: string; signature: string; family?: Family; chainId?: number };
+
+export async function verifySignIn(p: SignIn, sql: postgres.Sql = defaultSql): Promise<string> {
   const { userId, token } = await signInCore(p, sql);
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * SESSION_DAYS });
   return userId;
 }
 
 /** Cookie-free core (testable): checks the signature, consumes the nonce once, creates/looks up the user, opens a session. */
-export async function signInCore(p: { address: string; nonce: string; issuedAt: string; signature: string }, sql: postgres.Sql = defaultSql): Promise<{ userId: string; token: string }> {
-  const message = signInMessage(p.address, p.nonce, p.issuedAt);
-  const ok = nacl.sign.detached.verify(new TextEncoder().encode(message), bs58.decode(p.signature), bs58.decode(p.address));
+export async function signInCore(p: SignIn, sql: postgres.Sql = defaultSql): Promise<{ userId: string; token: string }> {
+  const family = p.family ?? 'solana';
+  let ok: boolean;
+  let key: string;
+  if (family === 'evm') {
+    if (!isEvmAddress(p.address) || !p.chainId) throw new Error('bad address or chain');
+    key = p.address.toLowerCase();
+    ok = await evmSignatureValid(p.address, p.chainId, siweMessage(getAddress(p.address), p.chainId, p.nonce, p.issuedAt), p.signature, sql);
+  } else {
+    key = p.address;
+    try {
+      ok = nacl.sign.detached.verify(new TextEncoder().encode(signInMessage(p.address, p.nonce, p.issuedAt)), bs58.decode(p.signature), bs58.decode(p.address));
+    } catch { ok = false; }
+  }
   if (!ok) throw new Error('bad signature');
   if (Math.abs(Date.now() - Date.parse(p.issuedAt)) > NONCE_MINUTES * 60_000) throw new Error('sign-in message expired');
   const userId = await sql.begin(async (tx) => {
-    const [n] = await tx`update auth_nonces set used_at = now() where nonce = ${p.nonce} and address = ${p.address} and issued_at = ${p.issuedAt} and used_at is null and expires_at > now() returning nonce`;
+    const [n] = await tx`update auth_nonces set used_at = now()
+      where nonce = ${p.nonce} and address = ${key} and chain_family = ${family} and issued_at = ${p.issuedAt} and used_at is null and expires_at > now() returning nonce`;
     if (!n) throw new Error('nonce expired or already used');
-    const [w] = await tx<{ user_id: string }[]>`select user_id from wallets where chain_family = 'solana' and address = ${p.address}`;
+    const [w] = await tx<{ user_id: string }[]>`select user_id from wallets where chain_family = ${family} and address = ${key}`;
     if (w) return w.user_id;
     const [u] = await tx<{ id: string }[]>`insert into users default values returning id`;
-    await tx`insert into wallets (user_id, chain_family, address) values (${u.id}, 'solana', ${p.address})`;
+    await tx`insert into wallets (user_id, chain_family, address) values (${u.id}, ${family}, ${key})`;
     return u.id;
   });
   const token = randomBytes(32).toString('base64url');

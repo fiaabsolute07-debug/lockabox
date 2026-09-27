@@ -2,6 +2,7 @@ import bs58 from 'bs58';
 import nacl from 'tweetnacl';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from '@/lib/db';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createNonce, signInCore } from '@/modules/auth/session';
 
 const run = process.env.RUN_DB_INTEGRATION ? describe : describe.skip;
@@ -32,6 +33,39 @@ run('wallet sign-in (LAB-AC-003/005)', () => {
     const n3 = await createNonce(address);
     await sql`update auth_nonces set expires_at = now() - interval '1 second' where nonce = ${n3.nonce}`;
     await expect(signInCore({ address, nonce: n3.nonce, issuedAt: n3.issuedAt, signature: sign(n3.message) })).rejects.toThrow(/expired/);
+  });
+});
+
+run('EVM sign-in, EIP-4361 (LAB-AC-004)', () => {
+  beforeEach(async () => { await sql.unsafe('truncate sessions, wallets, auth_nonces, users restart identity cascade'); });
+
+  // A throwaway key made for this test only.
+  const account = privateKeyToAccount(generatePrivateKey());
+  const other = privateKeyToAccount(generatePrivateKey());
+
+  it('signs in with a SIWE message; case of the address does not matter; a nonce works once', async () => {
+    const n = await createNonce(account.address, undefined, { family: 'evm', chainId: 8453 });
+    expect(n.message).toContain(`${account.address}\n`); // checksummed in the message
+    expect(n.message).toContain('Chain ID: 8453');
+    const signature = await account.signMessage({ message: n.message });
+    const a = await signInCore({ address: account.address.toLowerCase(), nonce: n.nonce, issuedAt: n.issuedAt, signature, family: 'evm', chainId: 8453 });
+    await expect(signInCore({ address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature, family: 'evm', chainId: 8453 })).rejects.toThrow(/already used|expired/);
+    const n2 = await createNonce(account.address.toLowerCase(), undefined, { family: 'evm', chainId: 4663 });
+    const b = await signInCore({ address: account.address, nonce: n2.nonce, issuedAt: n2.issuedAt, signature: await account.signMessage({ message: n2.message }), family: 'evm', chainId: 4663 });
+    expect(b.userId).toBe(a.userId); // same wallet, any chain → same account
+    const [w] = await sql<{ chain_family: string; address: string }[]>`select chain_family, address from wallets where user_id = ${a.userId}`;
+    expect(w).toEqual({ chain_family: 'evm', address: account.address.toLowerCase() });
+  });
+
+  it('rejects another signer, a different chain id, the wrong family and unknown chains', async () => {
+    const n = await createNonce(account.address, undefined, { family: 'evm', chainId: 8453 });
+    const wrong = await other.signMessage({ message: n.message });
+    await expect(signInCore({ address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature: wrong, family: 'evm', chainId: 8453 })).rejects.toThrow(/bad signature/);
+    const good = await account.signMessage({ message: n.message });
+    await expect(signInCore({ address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature: good, family: 'evm', chainId: 1 })).rejects.toThrow(/bad signature/);
+    await expect(signInCore({ address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature: good, family: 'solana' })).rejects.toThrow();
+    await expect(createNonce(account.address, undefined, { family: 'evm', chainId: 999_999 })).rejects.toThrow(/unsupported chain/);
+    expect((await signInCore({ address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature: good, family: 'evm', chainId: 8453 })).userId).toBeTruthy();
   });
 });
 

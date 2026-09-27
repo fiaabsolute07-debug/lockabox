@@ -2,13 +2,13 @@
 
 Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 15 · SPEC 3 · VERIFIED_LOCAL 58 (of 89)
+Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 16 · SPEC 2 · VERIFIED_LOCAL 58 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
 | LAB-AC-002 | VERIFIED_LOCAL | scripts/test-db.ts recreates and migrates; no down-migrations (forward-only by design) |
 | LAB-AC-003 | BUILT | SIWS verify route; UI flow in A2 |
-| LAB-AC-004 | SPEC | EVM sign-in not built (EVM chains are View-on-DEX only) |
+| LAB-AC-004 | PARTIAL | SIWE (EIP-4361) nonce/verify, EOA + ERC-1271/6492 via RPC, one account per wallet (tests/integration/auth.db.test.ts); EVM wallet UI pending |
 | LAB-AC-005 | BUILT | nonce single-use + 5 min expiry in SQL; needs dedicated test |
 | LAB-AC-006 | VERIFIED_LOCAL | chains table flags; integration uses them |
 | LAB-AC-007 | VERIFIED_LOCAL | Astra A1 limiter/backoff tests; worker is the only caller |

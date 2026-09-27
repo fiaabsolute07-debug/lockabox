@@ -77,6 +77,9 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
   201 `{ tradeId, evm: { chainId, approval: EvmTx | null, transaction: EvmTx }, quote }` with `EvmTx = { to, data, value (hex), gasLimit (hex) | null, chainId }`.
   The wallet must be on `chainId` (ask it to switch). If `approval` is present, send it first (it approves exactly the amount), wait for it,
   then send `transaction`; then `PATCH /api/trades/:id { txHash, wallet }` as on Solana (hash `0x…64 hex`).
+- **EVM sign-in (AC-004)**: `POST /api/auth/nonce { address, family: 'evm', chainId }` (the chain the wallet is on; any enabled EVM chain) →
+  `{ nonce, issuedAt, message }` (EIP-4361); `personal_sign` the exact message; `POST /api/auth/verify { address, nonce, issuedAt, signature, family: 'evm', chainId }`.
+  Smart wallets (ERC-1271/6492) work. Same wallet on any EVM chain = same account; `/api/auth/me` lists `{ family: 'evm', address (lowercase) }`.
 - Copy under the EVM swap box: "Routed by LI.FI, an independent non-custodial service; Lockabox adds no fee."
 
 Invites: the invite link is `https://lockabox.fun/?ref=<code>`. The UI stores `ref` (localStorage `lab_ref`) and calls `POST /api/invites/accept` once right after the user signs in, then forgets it. **Share links for pulls never carry `?ref=`** (AC-046): sharing is not rewarded.
