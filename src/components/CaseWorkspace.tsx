@@ -7,8 +7,6 @@ import {
   displaySymbol,
   fetchJson,
   formatAddress,
-  formatPercent,
-  formatUsd,
   tierColor,
   tierLabel,
   TIERS,

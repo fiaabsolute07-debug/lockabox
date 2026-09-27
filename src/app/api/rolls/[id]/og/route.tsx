@@ -66,7 +66,9 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/rolls/[id]/og'>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: 70 }}>
           <div style={{ width: 230, height: 230, borderRadius: 40, border: `6px solid ${tier.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#16181F', overflow: 'hidden' }}>
-            {logo ? <img src={logo} width={218} height={218} style={{ objectFit: 'cover' }} /> : <span style={{ fontSize: 120, fontWeight: 800, color: tier.color }}>{symbol[0]}</span>}
+            {/* ImageResponse (satori) renders plain <img>; next/image does not apply here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {logo ? <img src={logo} alt="" width={218} height={218} style={{ objectFit: 'cover' }} /> : <span style={{ fontSize: 120, fontWeight: 800, color: tier.color }}>{symbol[0]}</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 56 }}>
             <span style={{ fontSize: 30, color: '#8A8F9C', letterSpacing: 4 }}>I UNBOXED</span>

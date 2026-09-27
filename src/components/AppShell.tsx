@@ -48,10 +48,10 @@ function usePersistedChain(meta: MetaResponse | null) {
     const valid = stored === 'all' || !!meta.chains.find((chain) => chain.id === stored);
     setSelected(valid && stored ? stored : meta.chains[0]?.id ?? 'all');
   }, [meta]);
-  const set = (chain: string) => {
+  const set = useCallback((chain: string) => {
     setSelected(chain);
     try { window.localStorage.setItem('lab_chain', chain); } catch { /* storage can be disabled */ }
-  };
+  }, []);
   return [selected, set] as const;
 }
 
@@ -350,7 +350,7 @@ function WalletChooser({ providers, onSolana, onEvm }: { providers: EvmProviderD
     <div className="account-divider" />
     <span className="chooser-label muted">{t('evmWallet')}</span>
     {providers.length ? providers.map((detail) => <button key={detail.info.uuid} className="account-link" role="menuitem" onClick={() => onEvm(detail)}>
-      <span className="chooser-wallet">{detail.info.icon ? <img src={detail.info.icon} alt="" width={18} height={18} /> : <i aria-hidden="true">⬡</i>}{detail.info.name}</span><span>↗</span>
+      <span className="chooser-wallet">{/* eslint-disable-line @next/next/no-img-element -- wallet icons are data: URIs announced by the wallet (EIP-6963) */}{detail.info.icon ? <img src={detail.info.icon} alt="" width={18} height={18} /> : <i aria-hidden="true">⬡</i>}{detail.info.name}</span><span>↗</span>
     </button>) : <p className="chooser-empty muted">{t('noEvmWallet')}</p>}
   </div>;
 }

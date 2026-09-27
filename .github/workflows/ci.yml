@@ -17,3 +17,9 @@ jobs:
           for i in $(seq 1 60); do grep -q "ready" /tmp/pg.log && break; sleep 1; done
           pnpm db:test:prepare
           pnpm test:integration
+      - run: pnpm lint
+      - run: pnpm build
+      - name: e2e (Playwright on the runner's Google Chrome; dev DB for the real SIWE round trip)
+        run: |
+          pnpm db:migrate
+          pnpm exec playwright test --reporter=line

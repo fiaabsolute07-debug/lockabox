@@ -1,5 +1,5 @@
-import { handleError, json, problem, readJson } from '@/lib/api';
-import { adminActor, isAdmin } from '@/modules/admin/guard';
+import { handleError, json, problem } from '@/lib/api';
+import { isAdmin } from '@/modules/admin/guard';
 import { AdminError, overview } from '@/modules/admin/service';
 
 const STATUS: Record<AdminError['code'], number> = { not_found: 404, bad_input: 400 };

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ApiError, fetchJson, type InviteSummary, type PointsResponse } from './api';
+import { fetchJson, type InviteSummary, type PointsResponse } from './api';
 import { useAppContext } from './AppShell';
 import { taskTitle, useT, translateApiError } from './i18n';
 

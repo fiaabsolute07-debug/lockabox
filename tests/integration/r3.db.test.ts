@@ -130,7 +130,7 @@ run('health and retention (LAB-AC-080)', () => {
     const u = await user();
     const a = await asset('P', 1);
     const [p1] = await sql<{ id: number }[]>`insert into case_pools (case_id, chain_scope, version, items, hash, size, created_at) values ('trending', 'all', 1, '[]', 'h1', 0, now() - interval '3 days') returning id`;
-    const [p2] = await sql<{ id: number }[]>`insert into case_pools (case_id, chain_scope, version, items, hash, size, created_at) values ('trending', 'all', 2, '[]', 'h2', 0, now() - interval '3 days') returning id`;
+    await sql`insert into case_pools (case_id, chain_scope, version, items, hash, size, created_at) values ('trending', 'all', 2, '[]', 'h2', 0, now() - interval '3 days') returning id`;
     const [p3] = await sql<{ id: number }[]>`insert into case_pools (case_id, chain_scope, version, items, hash, size, created_at) values ('trending', 'all', 3, '[]', 'h3', 0, now() - interval '2 days') returning id`;
     const seed = await activeSeed();
     await sql`insert into rolls (user_id, case_id, pool_id, server_seed_id, client_seed, nonce, items, items_hash, r_tier, r_item, tier, result_asset_id)

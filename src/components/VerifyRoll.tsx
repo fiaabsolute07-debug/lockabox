@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ApiError, displaySymbol, fetchJson, formatAddress, tierLabel, type RollRecordResponse, type Tier, type VerificationResponse } from './api';
+import { displaySymbol, fetchJson, formatAddress, tierLabel, type RollRecordResponse, type Tier, type VerificationResponse } from './api';
 import { recomputeRoll, sha256Hex } from './fairBrowser';
 import SharePullButton from './SharePullButton';
 import { useT, translateApiError } from './i18n';
