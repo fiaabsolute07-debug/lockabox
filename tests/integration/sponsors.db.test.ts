@@ -41,6 +41,16 @@ run('sponsored cases (LAB R4)', () => {
     await expect(createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', { ...campaign, description: 'Guaranteed 10x returns' })).rejects.toMatchObject({ code: 'policy' });
   });
 
+  it('bad campaign forms are refused with a reason, not a database error', async () => {
+    const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
+    const w = 'Sponsor1111111111111111111111111111111111111';
+    const bad = [
+      { projectName: 'G' }, { description: 'x'.repeat(281) }, { totalOpens: 0 }, { totalOpens: 1.5 },
+      { endsAt: campaign.startsAt }, { startsAt: 'soon' }, { startsAt: new Date(Date.now() - 172_800_000).toISOString(), endsAt: new Date(Date.now() - 86_400_000).toISOString() },
+    ];
+    for (const patch of bad) await expect(createCampaign(sponsor, w, { ...campaign, ...patch, feeTxHash: undefined, depositTxHash: undefined })).rejects.toMatchObject({ code: 'bad_input' });
+  });
+
   it('only reviewed campaigns with passed gates go live (AC-060)', async () => {
     const sponsor = await userWithWallet('Sponsor1111111111111111111111111111111111111');
     const c = await createCampaign(sponsor, 'Sponsor1111111111111111111111111111111111111', campaign);

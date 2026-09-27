@@ -78,11 +78,72 @@ test('normal motion waits for the reel to settle before revealing the pull', asy
   await expect(page.locator('.unboxed-bar')).toBeVisible();
 });
 
+test('the reel occupies the viewport while the case is opening', async ({ page }) => {
+  await fixtures(page);
+  await openCase(page);
+  const stage = page.locator('.roll-stage');
+  await expect(stage).toHaveCSS('position', 'fixed');
+  const viewport = page.viewportSize();
+  const box = await stage.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThanOrEqual((viewport?.width ?? 0) - 1);
+  expect(box!.height).toBeGreaterThanOrEqual((viewport?.height ?? 0) - 1);
+  await expect(page.getByText('OPENING CASE', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  await expect(stage).toHaveCSS('position', 'relative');
+});
+
+test('the winning coin gets a tier-specific halo without a celebration overlay', async ({ page }) => {
+  const topRoll = { ...roll, roll: { ...roll.roll, tier: 'top' }, asset: { ...roll.asset, tier: 'top' }, reel: { ...roll.reel, cards: roll.reel.cards.map((card: Record<string, unknown>, index: number) => index === roll.reel.winIndex ? { ...card, tier: 'top' } : card) } };
+  await fixtures(page, { rollBody: topRoll });
+  await openCase(page);
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  await expect(page.locator('.tier-celebration')).toHaveCount(0);
+  await expect(page.locator('.reel-card.winner')).toHaveClass(/tier-top/);
+  await expect(page.locator('.reel-card.winner .reel-art')).toHaveCSS('animation-name', /coin-halo/);
+});
+
 test('clicking a spinning reel skips to the settled pull', async ({ page }) => {
   await fixtures(page);
   await openCase(page);
   await page.locator('.spinner').click();
   await expect(page.locator('.reel-strip.settled')).toBeVisible();
+  await expect(page.locator('.unboxed-bar')).toBeVisible();
+});
+
+test('feed and hot pulls do not reveal the token while the reel is spinning', async ({ page }) => {
+  await fixtures(page);
+  let pendingFeed: Route | undefined;
+  await page.route('**/api/feed', route => { pendingFeed = route; });
+  await openCase(page);
+  await expect(page.locator('.roll-spinning')).toBeVisible();
+  await expect(page.locator('.reel-card.winner')).toHaveCount(0);
+  await expect.poll(() => !!pendingFeed).toBe(true);
+  await json(pendingFeed!, { ...feed, items: [{ kind: 'pull', ref: '42', assetId: 3, symbol: 'SPOILER', tier: 'top', at: new Date().toISOString() }] });
+  await page.waitForTimeout(150);
+  await expect(page.locator('.feed-ticker').filter({ hasText: 'SPOILER' })).toHaveCount(0);
+  await expect(page.locator('.hot-pulls')).not.toContainText('SPOILER');
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  await expect(page.locator('.feed-ticker')).toContainText('SPOILER');
+  await expect(page.locator('.hot-pulls')).toContainText('SPOILER');
+  await expect(page.locator('.reel-card.winner')).toHaveCount(1);
+});
+
+test('starting another roll clears the old winning card while the API is pending', async ({ page }) => {
+  await fixtures(page);
+  await openCase(page);
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  await expect(page.locator('.unboxed-bar')).toBeVisible();
+  let pendingRoll: Route | undefined;
+  await page.route('**/api/rolls', route => { pendingRoll = route; });
+  await page.getByRole('button', { name: /OPEN CASE/i }).click();
+  await expect.poll(() => !!pendingRoll).toBe(true);
+  await expect(page.locator('.unboxed-bar')).not.toBeVisible();
+  await expect(page.locator('.reel-card.winner')).toHaveCount(0);
+  await json(pendingRoll!, roll, 201);
+  await expect(page.locator('.roll-spinning')).toBeVisible();
+  await expect(page.locator('.reel-card.winner')).toHaveCount(0);
+  await page.getByRole('button', { name: /Skip animation/i }).click();
   await expect(page.locator('.unboxed-bar')).toBeVisible();
 });
 

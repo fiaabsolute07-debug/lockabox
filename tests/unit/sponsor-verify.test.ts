@@ -29,7 +29,7 @@ describe('sponsor transaction checks (AC-063/067)', () => {
   });
 
   it('config comes from env and is required', () => {
-    expect(sponsorConfig({})).toBeNull();
-    expect(sponsorConfig({ SPONSOR_TREASURY: 'T', SPONSOR_VAULT: 'V', SPONSOR_FEE_USDC: '499.5' })).toMatchObject({ feeUsdcRaw: 499_500_000n });
+    expect(sponsorConfig({} as NodeJS.ProcessEnv)).toBeNull();
+    expect(sponsorConfig({ SPONSOR_TREASURY: 'T', SPONSOR_VAULT: 'V', SPONSOR_FEE_USDC: '499.5' } as unknown as NodeJS.ProcessEnv)).toMatchObject({ feeUsdcRaw: 499_500_000n });
   });
 });

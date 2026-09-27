@@ -28,6 +28,7 @@ export async function health(sql: postgres.Sql = defaultSql, opts: { paprikaKey?
   const dsPerMin = ds.calls / 10;
   if (dsPerMin > BUDGETS.dsPerMinute * 0.8) alerts.push({ code: 'ds_budget', message: `DEX Screener ~${dsPerMin.toFixed(0)}/min, above 80 % of ${BUDGETS.dsPerMinute}/min` });
 
+  // worker_runs.paprika_calls holds credits: one per HTTP call, plus one per extra token in a multi-price batch.
   const [pp] = await sql<{ calls: number }[]>`select coalesce(sum(paprika_calls), 0)::int as calls from worker_runs where finished_at > now() - interval '30 days'`;
   const paprikaBudget = opts.paprikaKey ? BUDGETS.paprikaPer30dWithKey : BUDGETS.paprikaPer30d;
   if (pp.calls > paprikaBudget * 0.8) alerts.push({ code: 'paprika_budget', message: `DexPaprika ${pp.calls} calls in 30 days, above 80 % of ${paprikaBudget}` });

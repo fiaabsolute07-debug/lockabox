@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { cookies, headers } from 'next/headers';
 import { Caveat, Inter, JetBrains_Mono } from 'next/font/google';
 import WalletProviders from '@/components/WalletProviders';
 import AppShell from '@/components/AppShell';
+import { LanguageProvider } from '@/components/i18n';
+import { resolveLanguage } from '@/components/language';
 import '@/styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -13,10 +16,13 @@ export const metadata: Metadata = {
   description: 'Open a free case, inspect the pull, and decide what to do next.',
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const language = resolveLanguage(cookieStore.get('lab_lang')?.value, headerStore.get('accept-language'));
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable} ${caveat.variable}`}>
-      <body><WalletProviders><AppShell>{children}</AppShell></WalletProviders></body>
+    <html lang={language} className={`${inter.variable} ${mono.variable} ${caveat.variable}`}>
+      <body><LanguageProvider initialLanguage={language}><WalletProviders><AppShell>{children}</AppShell></WalletProviders></LanguageProvider></body>
     </html>
   );
 }

@@ -32,6 +32,15 @@ export async function createCampaign(userId: string, wallet: string, input: Camp
   if (bad.length) throw new SponsorError('policy', 'descriptions may not promise returns or price moves');
   if (input.chainId !== 'solana') throw new SponsorError('bad_input', 'sponsored drops are Solana-only for now');
   if (!/^[1-9][0-9]{0,30}$/.test(input.amountPerOpen)) throw new SponsorError('bad_input', 'amountPerOpen must be a positive integer in raw token units');
+  // Same limits as the table constraints, checked here so a bad form gets a 400 instead of a database error.
+  const name = (input.projectName ?? '').trim();
+  if (name.length < 2 || name.length > 60) throw new SponsorError('bad_input', 'projectName must be 2–60 characters');
+  if ((input.description ?? '').length > 280) throw new SponsorError('bad_input', 'description must be at most 280 characters');
+  if (!Number.isInteger(input.totalOpens) || input.totalOpens < 1 || input.totalOpens > 1_000_000) throw new SponsorError('bad_input', 'totalOpens must be between 1 and 1 000 000');
+  const starts = Date.parse(input.startsAt), ends = Date.parse(input.endsAt);
+  if (!Number.isFinite(starts) || !Number.isFinite(ends) || ends <= starts) throw new SponsorError('bad_input', 'endsAt must be a date after startsAt');
+  if (ends <= Date.now()) throw new SponsorError('bad_input', 'endsAt must be in the future');
+  input = { ...input, projectName: name };
   const [asset] = await sql<{ id: number }[]>`
     insert into assets (chain_id, address, sources) values (${input.chainId}, ${input.tokenAddress}, ${['sponsored']})
     on conflict (chain_id, address) do update set sources = (select array(select distinct unnest(assets.sources || excluded.sources)))

@@ -49,6 +49,13 @@ export const dexPaprikaPoolSchema = z.looseObject({
   tokens: z.array(dexPaprikaTokenSchema),
 });
 
+export const dexPaprikaMultiPriceSchema = z.looseObject({
+  chain: z.string(),
+  id: z.string(),
+  price_usd: nullableNumber,
+  last_updated: nullableString,
+});
+
 export const dexPaprikaSearchResponseSchema = z.looseObject({
   results: z.array(dexPaprikaPoolSchema),
   has_next_page: z.boolean(),
@@ -58,6 +65,7 @@ export const dexPaprikaSearchResponseSchema = z.looseObject({
 export type DexPaprikaNetwork = z.infer<typeof dexPaprikaNetworkSchema>;
 export type DexPaprikaToken = z.infer<typeof dexPaprikaTokenSchema>;
 export type DexPaprikaPool = z.infer<typeof dexPaprikaPoolSchema>;
+export type DexPaprikaMultiPrice = z.infer<typeof dexPaprikaMultiPriceSchema>;
 export type DexPaprikaSearchResponse = z.infer<typeof dexPaprikaSearchResponseSchema>;
 
 export interface SearchPoolsOptions {
@@ -140,6 +148,23 @@ export class DexPaprikaClient {
       hasNextPage: parsed.has_next_page,
       nextCursor: parsed.next_cursor ?? null,
     };
+  }
+
+  async multiPrices(network: string, tokens: string[]): Promise<{ address: string; priceUsd: number | null; lastUpdated: string | null }[]> {
+    if (tokens.length === 0) return [];
+    const output: { address: string; priceUsd: number | null; lastUpdated: string | null }[] = [];
+    for (let offset = 0; offset < tokens.length; offset += 10) {
+      const batch = tokens.slice(offset, offset + 10);
+      const query = batch.map((token) => encodeURIComponent(token)).join(',');
+      this._creditsUsed += 1;
+      const payload = await this.http.getJson<unknown>(
+        this.url(`/networks/${encodeURIComponent(network)}/multi/prices?tokens=${query}`),
+        { headers: this.headers(), limiter: this.limiter },
+      );
+      const parsed = z.array(dexPaprikaMultiPriceSchema).parse(payload);
+      output.push(...parsed.map((item) => ({ address: item.id, priceUsd: item.price_usd ?? null, lastUpdated: item.last_updated ?? null })));
+    }
+    return output;
   }
 }
 

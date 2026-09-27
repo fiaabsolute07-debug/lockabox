@@ -38,6 +38,7 @@ export type AssetDetail = AssetCard & {
   pairCreatedAt: string | null;
   snapshotAt: string | null;
   stale: boolean;
+  priceSource: 'dexscreener' | 'dexpaprika';
   links: {
     dexscreener: string | null;
     explorer: string | null;
@@ -246,6 +247,31 @@ export type SponsoredOpenResponse = {
   asset: AssetDetail;
 };
 
+export type SponsorCampaign = {
+  id: number;
+  projectName: string;
+  status: 'pending_review' | 'approved' | 'rejected' | 'ended' | string;
+  totalOpens: number;
+  opensUsed: number;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+};
+
+export type SponsorCampaignStats = {
+  campaign: {
+    id: number;
+    project_name: string;
+    status: string;
+    total_opens: number;
+    opens_used: number;
+    starts_at: string;
+    ends_at: string;
+    amount_per_open: string;
+  };
+  stats: { opens: number; wallets: number; sent: number; buys: number };
+};
+
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public detail?: unknown) {
     super(message);
@@ -276,25 +302,34 @@ export function formatAddress(value: string | null | undefined, size = 4) {
   return `${value.slice(0, size)}…${value.slice(-size)}`;
 }
 
-export function formatCompact(value: number | null | undefined) {
+export function formatCompact(value: number | null | undefined, locale = 'en-US') {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
-  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 2 }).format(value);
 }
 
-export function formatCompactUsd(value: number | null | undefined) {
-  const compact = formatCompact(value);
+export function formatCompactUsd(value: number | null | undefined, locale = 'en-US') {
+  const compact = formatCompact(value, locale);
   return compact === '—' ? compact : `$${compact}`;
 }
 
-export function formatUsd(value: number | null | undefined) {
+export function formatPrice(value: number | null | undefined, locale = 'en-US') {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
-  if (Math.abs(value) > 0 && Math.abs(value) < 0.01) return `$${value.toFixed(6)}`;
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
+  const absolute = Math.abs(value);
+  const formatted = absolute >= 1
+    ? new Intl.NumberFormat(locale, { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+    : new Intl.NumberFormat(locale, { useGrouping: false, maximumSignificantDigits: 4 }).format(value);
+  return `$${formatted}`;
 }
 
-export function formatPercent(value: number | null | undefined) {
+export function formatUsd(value: number | null | undefined, locale = 'en-US') {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
+}
+
+export function formatPercent(value: number | null | undefined, locale = 'en-US') {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${new Intl.NumberFormat(locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(value)}%`;
 }
 
 export function displaySymbol(asset: { symbol?: string | null; name?: string | null }) {
@@ -312,11 +347,11 @@ export function formatAge(value: string, detailed = false) {
   return detailed ? `${days}d ${Math.floor(ageHours % 24)}h ago` : `${days}d ago`;
 }
 
-export function formatRawAmount(raw: string | null | undefined, decimals: number | null | undefined) {
+export function formatRawAmount(raw: string | null | undefined, decimals: number | null | undefined, locale = 'en-US') {
   if (!raw) return '—';
   if (decimals === null || decimals === undefined) return raw;
   const amount = Number(raw) / 10 ** decimals;
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(amount);
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(amount);
 }
 
 export function tierLabel(tier: Tier | null | undefined) {

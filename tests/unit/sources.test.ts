@@ -10,6 +10,7 @@ import {
   createHttpClient,
   createLimiter,
   dexPaprikaNetworkSchema,
+  dexPaprikaMultiPriceSchema,
   dexPaprikaSearchResponseSchema,
   dexScreenerBoostSchema,
   dexScreenerCommunityTakeoverSchema,
@@ -51,6 +52,7 @@ describe("source fixture schemas", () => {
     dexPaprikaNetworkSchema.array().parse(fixture("dexpaprika/networks.json"));
     dexPaprikaSearchResponseSchema.parse(fixture("dexpaprika/pools-search-robinhood-new.json"));
     dexPaprikaSearchResponseSchema.parse(fixture("dexpaprika/pools-search-solana-new.json"));
+    dexPaprikaMultiPriceSchema.array().parse(fixture("dexpaprika/multi-prices.json"));
   });
 });
 
@@ -154,6 +156,22 @@ describe("source clients", () => {
     await new DexPaprikaClient({ fetch: keylessFetch }).networks();
     await new DexPaprikaClient({ fetch: keyedFetch, apiKey: "test-key" }).networks();
     expect(keylessFetch).toHaveBeenCalledWith(`${DEXPAPRIKA_BASE_URL}/networks`, expect.any(Object));
+  });
+
+  it("loads and maps the recorded DexPaprika multi-price response", async () => {
+    const body = fixture("dexpaprika/multi-prices.json");
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => {
+      expect(String(url)).toBe(`${DEXPAPRIKA_BASE_URL}/networks/solana/multi/prices?tokens=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263,EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm`);
+      return jsonResponse(body);
+    });
+    const result = await new DexPaprikaClient({ fetch: fetcher, sleep: async () => undefined }).multiPrices('solana', [
+      'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+    ]);
+    expect(result).toEqual([
+      { address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', priceUsd: 0.000003640729606326853, lastUpdated: '2026-09-27T01:46:30Z' },
+      { address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', priceUsd: 0.2433160654377283, lastUpdated: '2026-09-27T01:46:30Z' },
+    ]);
   });
 });
 

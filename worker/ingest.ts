@@ -201,6 +201,7 @@ export async function runCycle(deps: IngestDeps) {
     const d = await discover({ sql, ds, dp, log }, enabled, chains);
     const e = await enrich({ sql, ds, log }, enabled);
     const fb = await paprikaPriceFallback(sql, { fetchImpl: countingFetch(calls.dp), log, paprikaKey: !!process.env.DEXPAPRIKA_API_KEY });
+    calls.dp.n += fb.credits - fb.batches; // batches bill one credit per token; the counting fetch saw one call per batch
     const h = await honeypots(sql, log, countingFetch(calls.jup));
     const p = await pools(sql, chains);
     const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });

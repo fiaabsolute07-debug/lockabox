@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { VersionedTransaction } from '@solana/web3.js';
-import { ApiError, displaySymbol, fetchJson, formatRawAmount, type AssetDetail, type QuoteView } from './api';
+import { ApiError, displaySymbol, fetchJson, formatPrice, formatRawAmount, type AssetDetail, type QuoteView } from './api';
+import { useT, translateApiError } from './i18n';
 
 const QUICK_AMOUNTS = ['0.01', '0.05', '0.1', '0.5', '1'];
 
 export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rollId?: number; onRollAgain?: () => void }) {
+  const { t, locale } = useT();
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
   const { setVisible } = useWalletModal();
@@ -17,27 +19,28 @@ export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDe
   const [confirmHighSlippage, setConfirmHighSlippage] = useState(false);
   const [quote, setQuote] = useState<QuoteView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showRollAgain, setShowRollAgain] = useState(false);
   const [status, setStatus] = useState<{ kind: 'pending' | 'submitted'; signature?: string } | null>(null);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [swapAvailable, setSwapAvailable] = useState(asset.swapEnabled);
 
   useEffect(() => {
-    setSwapAvailable(asset.swapEnabled); setQuote(null); setError(null); setStatus(null);
+    setSwapAvailable(asset.swapEnabled); setQuote(null); setError(null); setShowRollAgain(false); setStatus(null);
   }, [asset.id, asset.swapEnabled]);
 
   useEffect(() => {
     const parsed = Number(amount);
     const slippageNumber = Number(slippage);
     if (!swapAvailable || !Number.isFinite(parsed) || parsed <= 0 || !Number.isFinite(slippageNumber) || slippageNumber <= 0 || slippageNumber > 49) { setQuote(null); return; }
-    setQuoteBusy(true); setError(null);
+    setQuoteBusy(true); setError(null); setShowRollAgain(false);
     const timer = window.setTimeout(() => {
       void fetchJson<QuoteView>('/api/swap/quote', { method: 'POST', body: JSON.stringify({ assetId: asset.id, amountSol: amount, slippageBps: Math.round(slippageNumber * 100) }) })
         .then(setQuote)
         .catch((reason: unknown) => {
           setQuote(null);
           if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
-          else if (reason instanceof ApiError && reason.code === 'sell_check_failed') setError(`${reason.message}.`);
-          else setError(reason instanceof ApiError ? reason.message : 'Could not fetch a quote right now.');
+          else if (reason instanceof ApiError && reason.code === 'sell_check_failed') { setError(t('sellCheckFailed')); setShowRollAgain(true); }
+          else setError(translateApiError(reason, t, 'couldNotQuote'));
         })
         .finally(() => setQuoteBusy(false));
     }, 320);
@@ -45,7 +48,7 @@ export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDe
   }, [amount, asset.id, slippage, swapAvailable]);
 
   const symbol = displaySymbol(asset);
-  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>Buy ${symbol}</h3><span>via DEX</span></div><p className="muted">In-app swap is unavailable for this chain.</p>{asset.links.dexscreener ? <a className="button button-outline full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">View on DEX Screener ↗</a> : <button className="button button-outline full-width" disabled>View on DEX Screener</button>}</section>;
+  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('inAppSwapUnavailable')}</p>{asset.links.dexscreener ? <a className="button button-outline full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('viewOnDex')}</a> : <button className="button button-outline full-width" disabled>{t('viewOnDex')}</button>}</section>;
 
   const highSlippage = Number(slippage) > 10;
   const buy = async () => {
@@ -61,24 +64,24 @@ export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDe
       setStatus({ kind: 'submitted', signature });
     } catch (reason) {
       if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
-      else if (reason instanceof ApiError && reason.code === 'sell_check_failed') setError(`${reason.message}.`);
-      else setError(reason instanceof ApiError ? reason.message : 'The wallet did not complete the swap.');
+      else if (reason instanceof ApiError && reason.code === 'sell_check_failed') { setError(t('sellCheckFailed')); setShowRollAgain(true); }
+      else setError(translateApiError(reason, t, 'walletDidNotComplete'));
     }
   };
 
   return <section className="panel swap-card">
-    <div className="card-heading"><h3>Buy ${symbol}</h3><span>via Jupiter · 0% Lockabox fee</span></div>
-    <div className="amount-box"><div className="amount-label"><span>You pay</span><span>SOL</span></div><div className="amount-line"><input aria-label="SOL amount" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ''))} /><span className="token-pill sol-pill">◎ SOL</span></div></div>
+    <div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaJupiter')} · {formatPrice(asset.priceUsd, locale)}</span></div>
+    <div className="amount-box"><div className="amount-label"><span>{t('youPay')}</span><span>SOL</span></div><div className="amount-line"><input aria-label="SOL amount" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ''))} /><span className="token-pill sol-pill">◎ SOL</span></div></div>
     <div className="quick-amounts">{QUICK_AMOUNTS.map((value) => <button key={value} className={value === amount ? 'active' : ''} onClick={() => setAmount(value)}>{value}</button>)}</div>
-    <div className="slippage-row"><label htmlFor="slippage">Slippage</label><div className="slippage-input"><input id="slippage" type="number" min="1" max="49" step="1" value={slippage} onChange={(event) => { const next = Number(event.target.value); setSlippage(event.target.value === '' ? '' : String(Math.min(49, Math.max(1, Number.isFinite(next) ? next : 3)))); }} /><span>%</span></div></div>
-    {highSlippage && <label className="confirm-row"><input type="checkbox" checked={confirmHighSlippage} onChange={(event) => setConfirmHighSlippage(event.target.checked)} /> I understand higher slippage can change the result.</label>}
-    <div className="amount-box output-box"><div className="amount-label"><span>You get (at least)</span><span>{quote ? `slippage ${quote.slippageBps / 100}%` : 'quote loading'}</span></div><div className="amount-line"><b>{quote ? formatRawAmount(quote.outAmountMin, quote.decimals) : '—'}</b><span className="token-pill token-out">{symbol.toUpperCase()}</span></div></div>
-    <div className="quote-details"><div><span>Route</span><b>{quote?.route.length ? `SOL → ${quote.route.join(' → ')} → ${symbol}` : '—'}</b></div><div><span>Lockabox fee</span><b className="up-text">0</b></div><div><span>Sell check</span><b className="up-text">{quote ? '✓ passed' : '—'}</b></div></div>
-    {quoteBusy && <p className="quote-status">Updating quote…</p>}
-    {error && <div className="inline-error" role="alert">{error} {error.includes('pre-trade') && onRollAgain && <button onClick={onRollAgain}>Roll again</button>}</div>}
-    {status && <div className="trade-status" role="status">{status.kind === 'submitted' ? 'Swap submitted' : 'Swap pending'} · <a href={`https://solscan.io/tx/${status.signature}`} target="_blank" rel="noreferrer">View on Solscan ↗</a></div>}
-    <button className="button button-buy full-width" onClick={() => void buy()} disabled={!quote || quoteBusy || (highSlippage && !confirmHighSlippage)}>{publicKey ? `Buy ${symbol.toUpperCase()} · review in wallet` : 'Connect wallet to buy'}</button>
-    <p className="disclaimer">You sign in your own wallet. Lockabox never holds your funds. Random pick, not advice. Memecoins can go to zero.</p>
+    <div className="slippage-row"><label htmlFor="slippage">{t('slippage')}</label><div className="slippage-input"><input id="slippage" type="number" min="1" max="49" step="1" value={slippage} onChange={(event) => { const next = Number(event.target.value); setSlippage(event.target.value === '' ? '' : String(Math.min(49, Math.max(1, Number.isFinite(next) ? next : 3)))); }} /><span>%</span></div></div>
+    {highSlippage && <label className="confirm-row"><input type="checkbox" checked={confirmHighSlippage} onChange={(event) => setConfirmHighSlippage(event.target.checked)} /> {t('higherSlippage')}</label>}
+    <div className="amount-box output-box"><div className="amount-label"><span>{t('youGetAtLeast')}</span><span>{quote ? `${t('slippage')} ${quote.slippageBps / 100}%` : t('quoteLoading')}</span></div><div className="amount-line"><b>{quote ? formatRawAmount(quote.outAmountMin, quote.decimals, locale) : '—'}</b><span className="token-pill token-out">{symbol.toUpperCase()}</span></div></div>
+    <div className="quote-details"><div><span>{t('route')}</span><b>{quote?.route.length ? `SOL → ${quote.route.join(' → ')} → ${symbol}` : '—'}</b></div><div><span>{t('lockaboxFee')}</span><b className="up-text">0</b></div><div><span>{t('sellCheck')}</span><b className="up-text">{quote ? t('passed') : '—'}</b></div></div>
+    {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
+    {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
+    {status && <div className="trade-status" role="status">{status.kind === 'submitted' ? t('swapSubmitted') : t('swapPending')} · <a href={`https://solscan.io/tx/${status.signature}`} target="_blank" rel="noreferrer">{t('viewOnSolscan')}</a></div>}
+    <button className="button button-buy full-width" onClick={() => void buy()} disabled={!quote || quoteBusy || (highSlippage && !confirmHighSlippage)}>{publicKey ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectToBuy')}</button>
+    <p className="disclaimer">{t('ownWalletDisclaimer')}</p>
   </section>;
 }
 

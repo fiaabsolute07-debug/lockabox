@@ -45,7 +45,7 @@ run('DexPaprika price fallback (LAB-AC-022)', () => {
     const [bonk] = await seed(12);
     const calls: string[] = [];
     const out = await paprikaPriceFallback(sql, { fetchImpl: fakeFetch(calls) });
-    expect(out).toEqual({ used: true, updated: 2 });
+    expect(out).toEqual({ used: true, updated: 2, credits: 2, batches: 1 }); // 1 credit per token, even in one batch
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain('/networks/solana/multi/prices?tokens=');
     const d = (await assetDetail(bonk))!;
@@ -69,7 +69,7 @@ run('DexPaprika price fallback (LAB-AC-022)', () => {
   it('both sources down: coins older than 15 min leave the pool and their price is hidden', async () => {
     const [bonk] = await seed(20);
     const failing = (async () => new Response('down', { status: 503 })) as unknown as typeof fetch;
-    expect(await paprikaPriceFallback(sql, { fetchImpl: failing })).toEqual({ used: true, updated: 0 });
+    expect(await paprikaPriceFallback(sql, { fetchImpl: failing })).toMatchObject({ used: true, updated: 0 });
     expect(await eligibleItems((await getCase('trending'))!, CHAIN_SCOPE_ALL)).toHaveLength(0);
     const d = (await assetDetail(bonk))!;
     expect(d.stale).toBe(true);

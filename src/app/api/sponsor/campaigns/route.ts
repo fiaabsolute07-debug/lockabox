@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     const tooMany = await limited('sponsor-campaign', userId, 5);
     if (tooMany) return tooMany;
     const [w] = await sql<{ address: string }[]>`select address from wallets where user_id = ${userId} and chain_family = 'solana' limit 1`;
+    if (!w) return problem(401, 'needs_wallet', 'sign in with the Solana wallet that funds the drop');
     const b = await readJson<Partial<CampaignInput>>(req);
     if (!b.projectName || !b.tokenAddress || !isSolanaAddress(b.tokenAddress) || !b.amountPerOpen || !Number.isInteger(b.totalOpens) || !b.startsAt || !b.endsAt) {
       return problem(400, 'missing_fields', 'projectName, tokenAddress, amountPerOpen, totalOpens, startsAt, endsAt are required');

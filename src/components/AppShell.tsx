@@ -16,6 +16,7 @@ import {
   type MetaResponse,
 } from './api';
 import { LockyLogo } from './LockyLogo';
+import { useT, translateApiError } from './i18n';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -25,6 +26,7 @@ type AppContextValue = {
   setSelectedChain: (chain: string) => void;
   refreshUser: () => Promise<void>;
   showToast: (message: string) => void;
+  setRevealPending: (pending: boolean) => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -52,12 +54,22 @@ function usePersistedChain(meta: MetaResponse | null) {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useT();
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [user, setUser] = useState<MeResponse['user']>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedChain, setSelectedChain] = usePersistedChain(meta);
   const inviteAttempt = useRef<string | null>(null);
+  const revealPending = useRef(false);
+  const queuedFeed = useRef<FeedResponse | null>(null);
+  const setRevealPending = useCallback((pending: boolean) => {
+    revealPending.current = pending;
+    if (!pending && queuedFeed.current) {
+      setFeed(queuedFeed.current);
+      queuedFeed.current = null;
+    }
+  }, []);
 
   const refreshUser = useCallback(async () => {
     try { setUser((await fetchJson<MeResponse>('/api/auth/me')).user); } catch { setUser(null); }
@@ -81,7 +93,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     let active = true;
     void fetchJson<MetaResponse>('/api/meta').then((value) => { if (active) setMeta(value); }).catch(() => undefined);
     void refreshUser();
-    const loadFeed = () => void fetchJson<FeedResponse>('/api/feed').then((value) => { if (active) setFeed(value); }).catch(() => undefined);
+    const loadFeed = () => void fetchJson<FeedResponse>('/api/feed').then((value) => {
+      if (!active) return;
+      if (revealPending.current) queuedFeed.current = value;
+      else setFeed(value);
+    }).catch(() => undefined);
     loadFeed();
     const timer = window.setInterval(loadFeed, 15_000);
     return () => { active = false; window.clearInterval(timer); };
@@ -98,7 +114,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     void fetchJson<{ ok: true }>('/api/invites/accept', { method: 'POST', body: JSON.stringify({ code: code.toLowerCase() }) })
       .then(() => {
         try { window.localStorage.removeItem('lab_ref'); } catch { /* storage can be disabled */ }
-        showToast('Invite linked');
+        showToast(t('inviteLinked'));
       })
       .catch((error: unknown) => {
         // An HTTP response, including a contract error, consumes the stored code.
@@ -106,9 +122,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           try { window.localStorage.removeItem('lab_ref'); } catch { /* storage can be disabled */ }
         }
       });
-  }, [showToast, user]);
+  }, [showToast, t, user]);
 
-  const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser, showToast }), [meta, feed, user, selectedChain, refreshUser, showToast]);
+  const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser, showToast, setRevealPending }), [meta, feed, user, selectedChain, refreshUser, showToast, setRevealPending]);
   return (
     <AppContext.Provider value={context}>
       <AgeGate />
@@ -122,6 +138,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function AgeGate() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   useEffect(() => {
     try { setOpen(window.localStorage.getItem('lab_age_confirmed') !== '1'); } catch { setOpen(true); }
@@ -130,20 +147,21 @@ function AgeGate() {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="age-title">
       <div className="age-modal panel">
-        <span className="eyebrow">LOCKABOX · ENTRY</span>
-        <h1 id="age-title">Are you 18 or older?</h1>
-        <p>Lockabox is a random discovery app for digital assets. Please confirm your age before entering.</p>
+        <span className="eyebrow">{t('entry')}</span>
+        <h1 id="age-title">{t('ageTitle')}</h1>
+        <p>{t('ageDescription')}</p>
         <button className="button button-primary age-confirm" onClick={() => {
           try { window.localStorage.setItem('lab_age_confirmed', '1'); } catch { /* continue for this visit */ }
           setOpen(false);
-        }}>I am 18 or older</button>
-        <p className="fine-print">You can leave at any time. Nothing here is investment advice.</p>
+        }}>{t('ageConfirm')}</button>
+        <p className="fine-print">{t('ageFine')}</p>
       </div>
     </div>
   );
 }
 
 function Header() {
+  const { t, lang, locale, setLanguage } = useT();
   const { meta, selectedChain, setSelectedChain, user, refreshUser } = useAppContext();
   const { connected, publicKey, signMessage, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
@@ -170,7 +188,7 @@ function Header() {
     return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
   }, [accountOpen]);
 
-  const chainName = selectedChain === 'all' ? 'All chains' : meta?.chains.find((chain) => chain.id === selectedChain)?.name ?? 'Solana';
+  const chainName = selectedChain === 'all' ? t('allChains') : meta?.chains.find((chain) => chain.id === selectedChain)?.name ?? 'Solana';
   const signIn = async () => {
     if (!publicKey || !signMessage) return;
     setAuthBusy(true); setAuthError(null);
@@ -181,7 +199,7 @@ function Header() {
       await fetchJson<{ userId: string }>('/api/auth/verify', { method: 'POST', body: JSON.stringify({ address, nonce: nonce.nonce, issuedAt: nonce.issuedAt, signature: bs58.encode(signature) }) });
       await refreshUser();
     } catch (error) {
-      setAuthError(error instanceof ApiError ? error.message : 'Sign in was not completed');
+      setAuthError(translateApiError(error, t, 'signInNotCompleted'));
     } finally { setAuthBusy(false); }
   };
 
@@ -192,7 +210,7 @@ function Header() {
       await fetchJson<{ hideFromBoard: boolean }>('/api/me/privacy', { method: 'POST', body: JSON.stringify({ hideFromBoard: next }) });
     } catch (error) {
       setHideFromBoard(user?.hideFromBoard ?? false);
-      setAuthError(error instanceof ApiError ? error.message : 'Could not update privacy settings');
+      setAuthError(translateApiError(error, t, 'couldNotUpdatePrivacy'));
     } finally { setPrivacyBusy(false); }
   };
 
@@ -204,28 +222,29 @@ function Header() {
       await disconnect();
       setAccountOpen(false);
     } catch (error) {
-      setAuthError(error instanceof ApiError ? error.message : 'Could not sign out');
+      setAuthError(translateApiError(error, t, 'couldNotSignOut'));
     } finally { setAuthBusy(false); }
   };
 
   return (
     <header className="topbar">
-      <Link href="/" className="brand" aria-label="Lockabox home"><LockyLogo /><span>lockabox<span className="brand-dot">.</span></span></Link>
-      <div className="search-box"><span className="search-icon" aria-hidden="true">⌕</span><input aria-label="Search coming soon" disabled placeholder="Search coming soon" /><kbd>/</kbd></div>
+      <Link href="/" className="brand" aria-label={t('brandHome')}><LockyLogo /><span>lockabox<span className="brand-dot">.</span></span></Link>
+      <div className="search-box"><span className="search-icon" aria-hidden="true">⌕</span><input aria-label={t('searchComingSoon')} disabled placeholder={t('searchComingSoon')} /><kbd>/</kbd></div>
       <div className="top-actions">
+        <div className="language-switch" role="group" aria-label={t('language')}><button className={lang === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>EN</button><button className={lang === 'vi' ? 'active' : ''} onClick={() => setLanguage('vi')}>VI</button></div>
         <div className="chain-select-wrap">
           <button className="chip-button" onClick={() => setChainOpen((value) => !value)} aria-expanded={chainOpen}>
             <span className={`chain-dot ${selectedChain === 'all' ? 'all' : selectedChain}`} />{chainName}<span className="chevron">⌄</span>
           </button>
           {chainOpen && (
             <div className="chain-menu panel">
-              <button className={selectedChain === 'all' ? 'selected' : ''} onClick={() => { setSelectedChain('all'); setChainOpen(false); }}>All chains</button>
+              <button className={selectedChain === 'all' ? 'selected' : ''} onClick={() => { setSelectedChain('all'); setChainOpen(false); }}>{t('allChains')}</button>
               {(meta?.chains ?? []).map((chain) => <button key={chain.id} className={selectedChain === chain.id ? 'selected' : ''} onClick={() => { setSelectedChain(chain.id); setChainOpen(false); }}><span className={`chain-dot ${chain.id}`} />{chain.name}</button>)}
             </div>
           )}
         </div>
-        {user && <span className="points-pill mono">{user.points.toLocaleString('en-US')} pts</span>}
-        {user ? <div className="account-menu-wrap" ref={accountMenuRef}><button className="chip-button wallet-button mono" title={publicKey?.toBase58() ?? user.wallets?.[0]?.address} aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((value) => !value)}>{formatAddress(publicKey?.toBase58() ?? user.wallets?.[0]?.address)}<span className="chevron">⌄</span></button>{accountOpen && <div className="account-menu panel" role="menu"><div className="account-summary"><span className="muted">POINTS</span><strong>{user.points.toLocaleString('en-US')} pts</strong></div><Link className="account-link" role="menuitem" href="/earn" onClick={() => setAccountOpen(false)}>Invite friends <span>↗</span></Link><label className="privacy-toggle" role="menuitem"><input type="checkbox" checked={hideFromBoard} disabled={privacyBusy} onChange={(event) => void updatePrivacy(event.target.checked)} /><span><strong>Hide my wallet</strong><small>from Best pulls, feed and buys</small></span></label><div className="account-divider" /><button className="account-signout" role="menuitem" onClick={() => void signOut()} disabled={authBusy}>{authBusy ? 'Signing out…' : 'Sign out'}</button></div>}</div> : !connected ? <button className="chip-button wallet-button" onClick={() => setVisible(true)}>Connect wallet</button> : <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? 'Signing…' : 'Sign in'}</button>}
+        {user && <span className="points-pill mono">{new Intl.NumberFormat(locale).format(user.points)} {t('points')}</span>}
+        {user ? <div className="account-menu-wrap" ref={accountMenuRef}><button className="chip-button wallet-button mono" title={publicKey?.toBase58() ?? user.wallets?.[0]?.address} aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((value) => !value)}>{formatAddress(publicKey?.toBase58() ?? user.wallets?.[0]?.address)}<span className="chevron">⌄</span></button>{accountOpen && <div className="account-menu panel" role="menu"><div className="account-summary"><span className="muted">{t('pointsLabel')}</span><strong>{new Intl.NumberFormat(locale).format(user.points)} {t('points')}</strong></div><Link className="account-link" role="menuitem" href="/earn" onClick={() => setAccountOpen(false)}>{t('inviteFriends')} <span>↗</span></Link><label className="privacy-toggle" role="menuitem"><input type="checkbox" checked={hideFromBoard} disabled={privacyBusy} onChange={(event) => void updatePrivacy(event.target.checked)} /><span><strong>{t('hideWallet')}</strong><small>{t('hideWalletHelp')}</small></span></label><div className="account-divider" /><button className="account-signout" role="menuitem" onClick={() => void signOut()} disabled={authBusy}>{authBusy ? t('signingOut') : t('signOut')}</button></div>}</div> : !connected ? <button className="chip-button wallet-button" onClick={() => setVisible(true)}>{t('connectWallet')}</button> : <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? t('signingIn') : t('signIn')}</button>}
       </div>
       {authError && <span className="header-error" role="status">{authError}</span>}
     </header>
@@ -233,36 +252,39 @@ function Header() {
 }
 
 function FeedTicker() {
+  const { t, time } = useT();
   const { feed } = useAppContext();
   if (!feed?.items.length) return null;
-  return <div className="feed-ticker" aria-label="Live Lockabox feed">{feed.items.slice(0, 8).map((item) => { const symbol = item.symbol ? `$${displaySymbol(item)}` : 'a token'; return <span key={`${item.kind}-${item.ref}`}><i className={item.kind === 'buy' ? 'feed-buy' : 'feed-pull'} />{item.kind === 'buy' ? `${item.who ?? 'A wallet'} bought ${symbol}` : `${symbol === 'a token' ? 'A token' : symbol} was pulled`}<small>{new Date(item.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></span>; })}</div>;
+  return <div className="feed-ticker" aria-label={t('liveFeed')}>{feed.items.slice(0, 8).map((item) => { const symbol = item.symbol ? `$${displaySymbol(item)}` : t('aToken'); const who = item.who ?? t('aWallet'); return <span key={`${item.kind}-${item.ref}`}><i className={item.kind === 'buy' ? 'feed-buy' : 'feed-pull'} />{item.kind === 'buy' ? t('walletBought', { who, symbol }) : t('tokenPulled', { symbol })}<small>{time(item.at)}</small></span>; })}</div>;
 }
 
 export function Sidebar() {
+  const { t } = useT();
   const { meta, feed, selectedChain, setSelectedChain } = useAppContext();
   const pathname = usePathname();
   const pulls = feed?.items.filter((item) => item.kind === 'pull').slice(0, 5) ?? [];
   return (
     <aside className="sidebar">
-      <nav className="side-nav" aria-label="Primary navigation">
-        <Link className={`nav-item ${pathname === '/' ? 'active' : ''}`} href="/"><span>▣</span>Roll</Link>
-        <Link className={`nav-item ${pathname === '/leaderboard' ? 'active' : ''}`} href="/leaderboard"><span>↗</span>Best pulls</Link>
-        <Link className={`nav-item ${pathname === '/earn' ? 'active' : ''}`} href="/earn"><span>◎</span>Earn points</Link>
-        <Link className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`} href="/verify"><span>✓</span>Verify rolls</Link>
+      <nav className="side-nav" aria-label={t('primaryNavigation')}>
+        <Link className={`nav-item ${pathname === '/' ? 'active' : ''}`} href="/"><span>▣</span>{t('roll')}</Link>
+        <Link className={`nav-item ${pathname === '/leaderboard' ? 'active' : ''}`} href="/leaderboard"><span>↗</span>{t('bestPulls')}</Link>
+        <Link className={`nav-item ${pathname === '/earn' ? 'active' : ''}`} href="/earn"><span>◎</span>{t('earnPoints')}</Link>
+        <Link className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`} href="/verify"><span>✓</span>{t('verifyRolls')}</Link>
       </nav>
-      <div className="side-section">CHAINS</div>
+      <div className="side-section">{t('chains')}</div>
       <div className="chain-list">
-        <button className={`chain-row ${selectedChain === 'all' ? 'active' : ''}`} onClick={() => setSelectedChain('all')}><span className="chain-dot all" />All chains</button>
+        <button className={`chain-row ${selectedChain === 'all' ? 'active' : ''}`} onClick={() => setSelectedChain('all')}><span className="chain-dot all" />{t('allChains')}</button>
         {(meta?.chains ?? []).map((chain) => <button key={chain.id} className={`chain-row ${selectedChain === chain.id ? 'active' : ''}`} onClick={() => setSelectedChain(chain.id)}><span className={`chain-dot ${chain.id}`} />{chain.name}</button>)}
       </div>
-      <div className="side-section">HOT PULLS · 24H</div>
+      <div className="side-section">{t('hotPulls')}</div>
       <div className="hot-pulls">
-        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: `var(--r-${item.tier ?? 'micro'})` }}>{symbol[0]}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? 'pull'}</span></Link>; }) : <p className="side-empty">No pulls yet</p>}
+        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: `var(--r-${item.tier ?? 'micro'})` }}>{symbol[0]}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
       </div>
     </aside>
   );
 }
 
 function Footer() {
-  return <footer className="footer"><span>18+ · Not investment advice · Random pick, not advice. Memecoins can go to zero.</span><span><Link href="/verify">Verify rolls</Link><Link href="/earn">Earn points</Link><Link href="/legal/terms">Terms</Link><Link href="/legal/privacy">Privacy</Link><Link href="/legal/disclaimer">Disclaimer</Link><Link href="/legal/sponsored">Sponsored policy</Link></span></footer>;
+  const { t } = useT();
+  return <footer className="footer"><span>{t('footerDisclaimer')}</span><span><Link href="/verify">{t('verifyRolls')}</Link><Link href="/earn">{t('earnPoints')}</Link><Link href="/sponsor">{t('forProjects')}</Link><Link href="/legal/terms">{t('terms')}</Link><Link href="/legal/privacy">{t('privacy')}</Link><Link href="/legal/disclaimer">{t('disclaimer')}</Link><Link href="/legal/sponsored">{t('sponsoredPolicy')}</Link></span></footer>;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from './i18n';
 
 type SharePullButtonProps = {
   rollId: number | string;
@@ -8,12 +9,13 @@ type SharePullButtonProps = {
 };
 
 export default function SharePullButton({ rollId, symbol }: SharePullButtonProps) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
 
   const share = async () => {
     const url = `${window.location.origin}/verify/${encodeURIComponent(String(rollId))}`;
-    const text = `I unboxed $${symbol} on Lockabox`;
+    const text = t('shareText', { symbol: `$${symbol}` });
     setShareFailed(false);
     if (typeof navigator.share === 'function') {
       try {
@@ -38,8 +40,8 @@ export default function SharePullButton({ rollId, symbol }: SharePullButtonProps
   };
 
   const url = typeof window === 'undefined' ? '' : `${window.location.origin}/verify/${encodeURIComponent(String(rollId))}`;
-  const text = `I unboxed $${symbol} on Lockabox`;
+  const text = t('shareText', { symbol: `$${symbol}` });
   const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
 
-  return <span className="share-control"><button className="button button-outline" onClick={() => void share()}>{copied ? 'Copied' : 'Share'}</button>{(copied || shareFailed) && <a className="share-x" href={xUrl} target="_blank" rel="noreferrer">Post on X ↗</a>}</span>;
+  return <span className="share-control"><button className="button button-outline" onClick={() => void share()}>{copied ? t('copied') : t('share')}</button>{(copied || shareFailed) && <a className="share-x" href={xUrl} target="_blank" rel="noreferrer">{t('postOnX')}</a>}</span>;
 }
