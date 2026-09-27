@@ -3,7 +3,7 @@ import { limited } from '@/lib/ratelimit';
 import { sql } from '@/lib/db';
 import { currentUserId, isSolanaAddress } from '@/modules/auth/session';
 import { sponsorProblem } from '@/modules/sponsors/errors';
-import { createCampaign, SponsorError, type CampaignInput } from '@/modules/sponsors/service';
+import { createCampaign, listCampaigns, SponsorError, type CampaignInput } from '@/modules/sponsors/service';
 
 /** A project submits a sponsored drop for review (signed in with the sponsor wallet). */
 export async function POST(req: Request) {
@@ -22,4 +22,15 @@ export async function POST(req: Request) {
     if (e instanceof SponsorError) return sponsorProblem(e);
     return handleError(e);
   }
+}
+
+export const dynamic = 'force-dynamic';
+
+/** The signed-in sponsor's own campaigns (dashboard list, AC-068). */
+export async function GET() {
+  try {
+    const userId = await currentUserId();
+    if (!userId) return problem(401, 'sign_in_required', 'sign in with the sponsor wallet');
+    return json({ items: await listCampaigns(userId) });
+  } catch (e) { return handleError(e); }
 }

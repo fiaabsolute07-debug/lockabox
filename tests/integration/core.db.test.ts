@@ -63,6 +63,18 @@ run('rolls (LAB-AC-028/030/031/032)', () => {
     await buildPool((await getCase('trending'))!, CHAIN_SCOPE_ALL);
   });
 
+  it('no roll ever uses a seed that was already revealed, even when a rotation races the rolls', async () => {
+    const rolls = Array.from({ length: 30 }, (_, i) => roll({ deviceId: `device-race-${String(i).padStart(6, '0')}`, caseId: 'trending', chainScope: CHAIN_SCOPE_ALL }));
+    const rotation = new Promise((r) => setTimeout(r, 5)).then(() => rotateSeed());
+    const out = await Promise.all([...rolls, rotation]);
+    expect(out).toHaveLength(31);
+    const rows = await sql<{ roll: number; seed: number; created_at: Date; revealed_at: Date | null }[]>`
+      select r.id as roll, s.id as seed, r.created_at, s.revealed_at from rolls r join server_seeds s on s.id = r.server_seed_id order by r.id`;
+    const bad = rows.filter((x) => x.revealed_at && x.revealed_at <= x.created_at);
+    if (bad.length) console.log(JSON.stringify(rows.slice(0, 5)), JSON.stringify(await sql`select id, active_from, revealed_at from server_seeds`));
+    expect(bad).toHaveLength(0);
+  });
+
   it('a guest rolls for free, nonce increments, the result is in the pool', async () => {
     const r1 = await roll({ deviceId: 'device-aaaaaaaaaaaa', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL });
     const pool = await latestPool('trending', CHAIN_SCOPE_ALL);

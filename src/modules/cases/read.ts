@@ -13,12 +13,14 @@ export type AssetCard = {
 export type AssetDetail = AssetCard & {
   fdv: number | null; volume24h: number | null; change: { m5: number | null; h1: number | null; h6: number | null; h24: number | null };
   pairAddress: string | null; dexId: string | null; pairCreatedAt: string | null; snapshotAt: string | null; stale: boolean;
+  priceSource: 'dexscreener' | 'dexpaprika';
   links: { dexscreener: string | null; explorer: string | null; websites: string[]; socials: { platform: string; handle: string }[] };
   chart: { dexscreenerEmbed: string | null; geckoterminalEmbed: string | null };
   swapEnabled: boolean; lockaboxBuys24h: number;
 };
 
 type SnapRow = {
+  price_source?: string | null; buys_24h?: number; killed?: boolean;
   id: number; chain_id: string; address: string; symbol: string | null; name: string | null; image_url: string | null;
   price_usd: number | null; market_cap: number | null; fdv: number | null; liquidity_usd: number | null; volume_24h: number | null;
   change_m5: number | null; change_h1: number | null; change_h6: number | null; change_h24: number | null; pair_address: string | null;
@@ -81,11 +83,12 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
   const [r] = await sql<SnapRow[]>`
     select a.id, a.chain_id, a.address, a.symbol, a.name, a.image_url, s.price_usd, s.market_cap, s.fdv, s.liquidity_usd, s.volume_24h,
            s.change_m5, s.change_h1, s.change_h6, s.change_h24, s.pair_address, s.dex_id, s.pair_created_at, s.taken_at,
-           s.dexscreener_url, s.websites, s.socials, ch.swap_enabled, ch.explorer_token_url, ch.family
+           s.price_source, s.dexscreener_url, s.websites, s.socials, ch.swap_enabled, ch.explorer_token_url, ch.family,
+           (select count(*)::int from trades t where t.asset_id = a.id and t.status = 'confirmed' and t.created_at > now() - interval '24 hours') as buys_24h,
+           exists (select 1 from moderation m where m.asset_id = a.id) as killed
     from assets a join chains ch on ch.id = a.chain_id left join asset_snapshots s on s.asset_id = a.id where a.id = ${id}`;
   if (!r) return undefined;
-  const [buys] = await sql<{ n: number }[]>`select count(*)::int as n from trades where asset_id = ${id} and status = 'confirmed' and created_at > now() - interval '24 hours'`;
-  const [killed] = await sql`select 1 from moderation where asset_id = ${id}`;
+  const killed = r.killed;
   const stale = !r.taken_at || Date.now() - r.taken_at.getTime() > SNAPSHOT_MAX_AGE_MINUTES * 60_000;
   const pair = r.pair_address;
   return {
@@ -93,6 +96,7 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
     priceUsd: stale ? null : r.price_usd, marketCap: r.market_cap, liquidityUsd: r.liquidity_usd, fdv: r.fdv, volume24h: r.volume_24h,
     change: { m5: r.change_m5, h1: r.change_h1, h6: r.change_h6, h24: r.change_h24 },
     pairAddress: pair, dexId: r.dex_id, pairCreatedAt: r.pair_created_at?.toISOString() ?? null, snapshotAt: r.taken_at?.toISOString() ?? null, stale,
+    priceSource: (r.price_source ?? 'dexscreener') as 'dexscreener' | 'dexpaprika',
     links: {
       dexscreener: r.dexscreener_url, explorer: r.explorer_token_url?.replace('{address}', r.address) ?? null,
       websites: Array.isArray(r.websites) ? (r.websites as string[]) : [], socials: Array.isArray(r.socials) ? (r.socials as { platform: string; handle: string }[]) : [],
@@ -103,7 +107,7 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
       geckoterminalEmbed: pair ? `https://www.geckoterminal.com/${r.chain_id === 'bsc' ? 'bsc' : r.chain_id === 'ethereum' ? 'eth' : r.chain_id}/pools/${pair}?embed=1&info=0&swaps=0&grayscale=0&light_chart=0` : null,
     },
     swapEnabled: r.swap_enabled && !killed && !stale,
-    lockaboxBuys24h: buys?.n ?? 0,
+    lockaboxBuys24h: r.buys_24h ?? 0,
   };
 }
 

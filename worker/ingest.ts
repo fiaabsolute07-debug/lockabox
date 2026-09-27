@@ -3,6 +3,7 @@ import { buildPool, CHAIN_SCOPE_ALL, listCases } from '@/modules/cases/pools';
 import { liquidityGate, recordGate, solanaHoneypotGate } from '@/modules/gates';
 import { activeSeed, rotateSeed } from '@/modules/rolls/service';
 import { confirmSubmitted } from '@/modules/swap/service';
+import { paprikaPriceFallback } from './fallback';
 import {
   createDexPaprikaClient, createDexScreenerClient, pairsToAssets, paprikaPoolsToCandidates,
   type AssetSnapshot, type DexPaprikaClient, type DexScreenerClient,
@@ -50,15 +51,15 @@ export async function saveSnapshots(sql: postgres.Sql, snaps: AssetSnapshot[], e
       returning id`;
     await sql`
       insert into asset_snapshots (asset_id, taken_at, price_usd, market_cap, fdv, liquidity_usd, volume_24h, change_m5, change_h1, change_h6, change_h24,
-                                   pair_address, dex_id, pair_created_at, boosts_active, dexscreener_url, websites, socials)
+                                   pair_address, dex_id, pair_created_at, boosts_active, dexscreener_url, websites, socials, price_source)
       values (${a.id}, now(), ${s.priceUsd}, ${s.marketCap}, ${s.fdv}, ${s.liquidityUsd}, ${s.volume24h}, ${s.priceChange.m5}, ${s.priceChange.h1},
               ${s.priceChange.h6}, ${s.priceChange.h24}, ${s.pairAddress}, ${s.dexId}, ${s.pairCreatedAt}, ${s.boostsActive}, ${s.dexscreenerUrl},
-              ${sql.json(s.websites)}, ${sql.json(s.socials as never)})
+              ${sql.json(s.websites)}, ${sql.json(s.socials as never)}, 'dexscreener')
       on conflict (asset_id) do update set taken_at = excluded.taken_at, price_usd = excluded.price_usd, market_cap = excluded.market_cap, fdv = excluded.fdv,
         liquidity_usd = excluded.liquidity_usd, volume_24h = excluded.volume_24h, change_m5 = excluded.change_m5, change_h1 = excluded.change_h1,
         change_h6 = excluded.change_h6, change_h24 = excluded.change_h24, pair_address = excluded.pair_address, dex_id = excluded.dex_id,
         pair_created_at = excluded.pair_created_at, boosts_active = excluded.boosts_active, dexscreener_url = excluded.dexscreener_url,
-        websites = excluded.websites, socials = excluded.socials`;
+        websites = excluded.websites, socials = excluded.socials, price_source = 'dexscreener'`;
     await recordGate(Number(a.id), 'liquidity', liquidityGate(s.liquidityUsd), sql);
     n++;
   }
@@ -192,6 +193,7 @@ export async function runCycle(deps: IngestDeps) {
     const t0 = Date.now();
     const d = await discover({ sql, ds, dp, log }, enabled, chains);
     const e = await enrich({ sql, ds, log }, enabled);
+    const fb = await paprikaPriceFallback(sql, { fetchImpl: countingFetch(calls.dp), log, paprikaKey: !!process.env.DEXPAPRIKA_API_KEY });
     const h = await honeypots(sql, log, countingFetch(calls.jup));
     const p = await pools(sql, chains);
     const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });
@@ -199,9 +201,9 @@ export async function runCycle(deps: IngestDeps) {
     const [{ old }] = await sql<{ old: boolean }[]>`select active_from < now() - interval '24 hours' as old from server_seeds where id = ${seed.id}`;
     if (old) { const r = await rotateSeed(sql); log(`seed rotated; revealed ${r.revealedHash?.slice(0, 12)}…`); }
     const pruned = await prunePools(sql);
-    log(`cycle ${Date.now() - t0} ms · discovered ${d.upserted} (+${d.paprika} paprika, ${d.metaSnaps} meta snaps) · enriched ${e.saved}/${e.due} · honeypot ${h.checked} (${h.failed} failed) · confirmed ${confirmed} · pruned ${pruned} · calls ds ${calls.ds.n} dp ${calls.dp.n} jup ${calls.jup.n} · pools ${p.join(' ')}`);
+    log(`cycle ${Date.now() - t0} ms · discovered ${d.upserted} (+${d.paprika} paprika, ${d.metaSnaps} meta snaps) · enriched ${e.saved}/${e.due} · honeypot ${h.checked} (${h.failed} failed) · confirmed ${confirmed} · pruned ${pruned}${fb.used ? ` · paprika fallback ${fb.updated}` : ''} · calls ds ${calls.ds.n} dp ${calls.dp.n} jup ${calls.jup.n} · pools ${p.join(' ')}`);
     await recordRun(sql, started, true, calls);
-    return { d, e, h, p, confirmed, pruned, calls: { ds: calls.ds.n, dp: calls.dp.n, jup: calls.jup.n } };
+    return { d, e, fb, h, p, confirmed, pruned, calls: { ds: calls.ds.n, dp: calls.dp.n, jup: calls.jup.n } };
   } catch (err) {
     await recordRun(sql, started, false, calls, (err as Error).message).catch(() => undefined);
     throw err;

@@ -22,6 +22,7 @@ are signed in the user's wallet; the UI never sees a key. Demo/fixture data must
 
 `AssetDetail = AssetCard & { fdv, volume24h, change:{m5,h1,h6,h24}, pairAddress, dexId, pairCreatedAt, snapshotAt, stale, links:{dexscreener, explorer, websites[], socials[{platform,handle}]}, chart:{dexscreenerEmbed, geckoterminalEmbed}, swapEnabled, lockaboxBuys24h }`
 - `stale:true` → price shown as "—" and swap disabled.
+- `priceSource: 'dexscreener' | 'dexpaprika'`: when `dexpaprika`, DEX Screener has been down > 10 min; show a small "price via DexPaprika" note next to the price (AC-022).
 - Chart: iframe `chart.dexscreenerEmbed`; if it fails to load within 8 s or is null, use `chart.geckoterminalEmbed` (LAB §3.4, AC-089). Never draw our own chart from DEX Screener data. Keep their "Tracked by DEX Screener" footer; no DEX Screener logo of ours.
 - No risk labels anywhere (LAB D3). Tiers are market-cap buckets (LAB option A): Micro < $100K · Small $100K–1M · Mid $1M–10M · Large $10M–100M · ★ Top > $100M.
 
@@ -57,5 +58,13 @@ Every write endpoint is rate limited: 429 `rate_limited` → "too many requests,
 | `GET /api/health` | — | 200 `{status:'ok', …}` or 503 `{status:'degraded', alerts:[{code,message}], …}`. Ops only; the UI doesn't call it. |
 | `GET /api/sponsored/live` | — | live sponsored drops (see route). Every item is labelled **Sponsored** (vi: **Quảng cáo · Sponsored**). |
 | `POST /api/sponsored/open` (signed in) | — | 201 `{ rollId, redemptionId, campaignId, assetId, tier, amount, cost, serverSeedHash, nonce, sponsored: true, label: 'Sponsored', asset }`; 402-style errors via `error.code`: `insufficient_points` (also for accounts < 24 h), `empty`, `needs_wallet`. |
+
+### Sponsor dashboard (AC-068), signed in with the sponsor's Solana wallet
+
+| Method & path | Body | Result |
+|---|---|---|
+| `GET /api/sponsor/campaigns` | — | `{ items: [{id, projectName, status: 'pending_review'|'approved'|'rejected'|'ended', totalOpens, opensUsed, startsAt, endsAt, createdAt}] }` (own campaigns only) |
+| `GET /api/sponsor/campaigns/:id` | — | `{ campaign: {id, project_name, status, total_opens, opens_used, starts_at, ends_at, amount_per_open}, stats: {opens, wallets, sent, buys} }`; 404 for someone else's campaign. CSV export is built client-side from this. |
+| `POST /api/sponsor/campaigns` | `{ projectName (2–60), description (≤ 280), tokenAddress (Solana mint), amountPerOpen (raw integer string), totalOpens, startsAt, endsAt, feeTxHash?, depositTxHash? }` | 201 `{ id, status: 'pending_review' }`; 422 `policy` when the text promises returns/price moves; 400 `bad_input`. Copy on the form: "Reviewed before it goes live. Your token always shows as Sponsored and at its real market-cap tier." |
 
 Invites: the invite link is `https://lockabox.fun/?ref=<code>`. The UI stores `ref` (localStorage `lab_ref`) and calls `POST /api/invites/accept` once right after the user signs in, then forgets it. **Share links for pulls never carry `?ref=`** (AC-046): sharing is not rewarded.

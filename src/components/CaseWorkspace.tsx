@@ -17,6 +17,8 @@ import {
   type CaseResponse,
   type RollFilters,
   type RollResponse,
+  type SponsoredLiveItem,
+  type SponsoredOpenResponse,
   type Tier,
 } from './api';
 import { useAppContext, Sidebar } from './AppShell';
@@ -25,13 +27,14 @@ import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
 import SwapBox from './SwapBox';
 import ProofBox from './ProofBox';
+import SharePullButton from './SharePullButton';
 
 type FilterDraft = { tiers: Tier[]; minLiquidityUsd: string; minVolume24h: string; maxAgeHours: string; change24h: '' | 'up' | 'down' };
 
 const DEFAULT_FILTERS: FilterDraft = { tiers: [], minLiquidityUsd: '', minVolume24h: '', maxAgeHours: '', change24h: '' };
 
 export default function CaseWorkspace() {
-  const { meta, feed, selectedChain } = useAppContext();
+  const { meta, feed, selectedChain, user, refreshUser } = useAppContext();
   const [caseId, setCaseId] = useState('trending');
   const [summary, setSummary] = useState<CaseResponse | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -41,6 +44,11 @@ export default function CaseWorkspace() {
   const [reelSettled, setReelSettled] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
+  const [sponsoredLive, setSponsoredLive] = useState<SponsoredLiveItem[]>([]);
+  const [sponsoredSelected, setSponsoredSelected] = useState(false);
+  const [sponsoredResult, setSponsoredResult] = useState<SponsoredOpenResponse | null>(null);
+  const [sponsoredBusy, setSponsoredBusy] = useState(false);
+  const [sponsoredError, setSponsoredError] = useState<string | null>(null);
 
   useEffect(() => {
     const first = meta?.cases[0]?.id;
@@ -54,6 +62,14 @@ export default function CaseWorkspace() {
     void fetchJson<CaseResponse>(`/api/cases/${encodeURIComponent(caseId)}?chain=${encodeURIComponent(selectedChain)}`).then((value) => { if (active) setSummary(value); }).catch((error: unknown) => { if (active) setSummaryError(error instanceof ApiError ? error.message : 'Could not load this case.'); });
     return () => { active = false; };
   }, [caseId, meta, selectedChain]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchJson<{ items?: SponsoredLiveItem[] }>('/api/sponsored/live').then((value) => {
+      if (active) setSponsoredLive(value.items ?? []);
+    }).catch(() => { if (active) setSponsoredLive([]); });
+    return () => { active = false; };
+  }, []);
 
   const filterPayload = useMemo<RollFilters>(() => {
     const payload: RollFilters = {};
@@ -84,6 +100,23 @@ export default function CaseWorkspace() {
 
   const handleReelSettled = useCallback(() => setReelSettled(true), []);
 
+  const handleSponsoredOpen = useCallback(async () => {
+    if (!user) { setSponsoredError('Sign in to open'); return; }
+    if (sponsoredBusy) return;
+    setSponsoredBusy(true); setSponsoredError(null);
+    try {
+      const opened = await fetchJson<SponsoredOpenResponse>('/api/sponsored/open', { method: 'POST' });
+      setSponsoredResult(opened);
+      await refreshUser();
+      void fetchJson<{ items?: SponsoredLiveItem[] }>('/api/sponsored/live').then((value) => setSponsoredLive(value.items ?? [])).catch(() => undefined);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'empty') setSponsoredError('No sponsored drops are live right now');
+      else if (error instanceof ApiError && error.code === 'needs_wallet') setSponsoredError('Sign in with a Solana wallet first');
+      else if (error instanceof ApiError && error.code === 'insufficient_points') setSponsoredError(error.message);
+      else setSponsoredError(error instanceof ApiError ? error.message : 'Could not open this sponsored drop.');
+    } finally { setSponsoredBusy(false); }
+  }, [refreshUser, sponsoredBusy, user]);
+
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -97,27 +130,30 @@ export default function CaseWorkspace() {
 
   const selectedCase = meta?.cases.find((item) => item.id === caseId);
   const chainName = selectedChain === 'all' ? 'ALL CHAINS' : meta?.chains.find((chain) => chain.id === selectedChain)?.name.toUpperCase() ?? 'SOLANA';
+  const liveCost = sponsoredLive.reduce((max, item) => Math.max(max, item.costPoints), 0);
 
-  return <div className="workspace-grid">
+  return <div className={`workspace-grid ${sponsoredSelected ? 'workspace-sponsored' : ''}`}>
     <Sidebar />
     <main className="main-column">
       <section className="panel case-panel">
         <div className="case-hero">
           <div className="case-art"><div className="case-glow" /><LockyLogo size={150} /></div>
-          <div className="case-copy"><span className="eyebrow">CASE · {chainName}</span><h1>{selectedCase?.title ?? 'Trending Case'}</h1><p>{summary?.pool ? `${summary.pool.size} tokens in this pool · #${formatAddress(summary.pool.hash, 5)} · refreshed ${formatAge(summary.pool.createdAt)}` : summary ? 'This case is filling up, try All chains' : summaryError ?? 'Loading the current pool…'}</p>
-            <div className="case-tabs">{(meta?.cases ?? []).map((item) => <button key={item.id} className={item.id === caseId ? 'active' : ''} onClick={() => setCaseId(item.id)}>{item.title}</button>)}<button className={filterOpen ? 'active filter-button' : 'filter-button'} onClick={() => setFilterOpen((value) => !value)}>Filters <span>⌄</span></button></div>
+          <div className="case-copy"><span className="eyebrow">{sponsoredSelected ? 'SPONSORED DROPS' : `CASE · ${chainName}`}</span><h1>{sponsoredSelected ? 'Sponsored drops' : selectedCase?.title ?? 'Trending Case'}</h1><p>{sponsoredSelected ? 'Points-only openings from reviewed live campaigns.' : summary?.pool ? `${summary.pool.size} tokens in this pool · #${formatAddress(summary.pool.hash, 5)} · refreshed ${formatAge(summary.pool.createdAt)}` : summary ? 'This case is filling up, try All chains' : summaryError ?? 'Loading the current pool…'}</p>
+            <div className="case-tabs">{(meta?.cases ?? []).map((item) => <button key={item.id} className={!sponsoredSelected && item.id === caseId ? 'active' : ''} onClick={() => { setCaseId(item.id); setSponsoredSelected(false); }}>{item.title}</button>)}{sponsoredLive.length > 0 && <button className={sponsoredSelected ? 'active sponsored-tab' : 'sponsored-tab'} onClick={() => { setSponsoredSelected(true); setSponsoredError(null); }}>Sponsored</button>}<button className={!sponsoredSelected && filterOpen ? 'active filter-button' : 'filter-button'} onClick={() => setFilterOpen((value) => !value)} disabled={sponsoredSelected}>Filters <span>⌄</span></button></div>
             {filterOpen && <FilterPopover filters={filters} setFilters={setFilters} onClose={() => setFilterOpen(false)} />}
           </div>
-          <div className="open-area"><button className="open-button" onClick={() => void handleRoll()} disabled={rolling || !summary?.pool || (result !== null && !reelSettled)}>{rolling ? <><strong>OPENING…</strong><small>finding your pull</small></> : result && !reelSettled ? <><strong>REVEALING…</strong><small>watch the reel</small></> : <><strong>OPEN CASE</strong><small>free · unlimited · SPACE</small></> }</button>{feed?.stats && (feed.stats.rolls1h > 0 || feed.stats.buysToday > 0 || feed.stats.lastTopPullAt) && <div className="case-stats"><span>● {feed.stats.rolls1h.toLocaleString()} opened / 1h</span>{feed.stats.buysToday > 0 && <span>{feed.stats.buysToday.toLocaleString()} buys today</span>}{feed.stats.lastTopPullAt && <span>last ★ top {formatAge(feed.stats.lastTopPullAt)}</span>}</div>}</div>
+          {!sponsoredSelected && <div className="open-area"><button className="open-button" onClick={() => void handleRoll()} disabled={rolling || !summary?.pool || (result !== null && !reelSettled)}>{rolling ? <><strong>OPENING…</strong><small>finding your pull</small></> : result && !reelSettled ? <><strong>REVEALING…</strong><small>watch the reel</small></> : <><strong>OPEN CASE</strong><small>free · unlimited <span className="space-hint">· SPACE</span></small></> }</button>{feed?.stats && (feed.stats.rolls1h > 0 || feed.stats.buysToday > 0 || feed.stats.lastTopPullAt) && <div className="case-stats"><span>● {feed.stats.rolls1h.toLocaleString()} opened / 1h</span>{feed.stats.buysToday > 0 && <span>{feed.stats.buysToday.toLocaleString()} buys today</span>}{feed.stats.lastTopPullAt && <span>last ★ top {formatAge(feed.stats.lastTopPullAt)}</span>}</div>}</div>}
         </div>
-        {rollError && <div className="roll-error" role="alert">{rollError}</div>}
-        {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} onSettled={handleReelSettled} /> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>Open the case to reveal a token</strong><small>Your first pull is waiting.</small></div></div>}
-        {result && reelSettled && !rolling && <UnboxedBar result={result} onRollAgain={() => void handleRoll()} onBuy={() => document.getElementById('swap-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
-        <CaseContents summary={summary} />
+        {sponsoredSelected ? <SponsoredDrops items={sponsoredLive} user={!!user} cost={liveCost} busy={sponsoredBusy} error={sponsoredError} result={sponsoredResult} onOpen={() => void handleSponsoredOpen()} /> : <>
+          {rollError && <div className="roll-error" role="alert">{rollError}</div>}
+          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} onSettled={handleReelSettled} /> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>Open the case to reveal a token</strong><small>Your first pull is waiting.</small></div></div>}
+          {result && reelSettled && !rolling && <UnboxedBar result={result} onRollAgain={() => void handleRoll()} onBuy={() => document.getElementById('swap-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
+          <CaseContents summary={summary} />
+        </>}
       </section>
-      {result && reelSettled && !rolling ? <><TokenHeader asset={result.asset} tier={result.roll.tier} rollId={result.roll.rollId} /><ChartEmbed asset={result.asset} /><TradesTable asset={result.asset} /></> : <section className="panel pre-roll-card"><span className="eyebrow">NEXT UP</span><h2>Roll first, then inspect the market view.</h2><p>The chart, buys, and swap panel appear here after your pull.</p></section>}
+      {!sponsoredSelected && (result && reelSettled && !rolling ? <><TokenHeader asset={result.asset} tier={result.roll.tier} rollId={result.roll.rollId} /><ChartEmbed asset={result.asset} /><TradesTable asset={result.asset} /></> : <section className="panel pre-roll-card"><span className="eyebrow">NEXT UP</span><h2>Roll first, then inspect the market view.</h2><p>The chart, buys, and swap panel appear here after your pull.</p></section>)}
     </main>
-    <aside className="right-rail">{result && reelSettled && !rolling ? <><TokenInfo asset={result.asset} /><div id="swap-box"><SwapBox asset={result.asset} rollId={result.roll.rollId} onRollAgain={() => void handleRoll()} /></div><ProofBox result={result} /></> : <section className="panel rail-empty"><span className="empty-icon">◎</span><h3>Your pull will land here</h3><p>Open a case to unlock the token panel, chart, and proof.</p></section>}</aside>
+    {!sponsoredSelected && <aside className="right-rail">{result && reelSettled && !rolling ? <><TokenInfo asset={result.asset} /><div id="swap-box"><SwapBox asset={result.asset} rollId={result.roll.rollId} onRollAgain={() => void handleRoll()} /></div><ProofBox result={result} /></> : <section className="panel rail-empty"><span className="empty-icon">◎</span><h3>Your pull will land here</h3><p>Open a case to unlock the token panel, chart, and proof.</p></section>}</aside>}
   </div>;
 }
 
@@ -134,5 +170,9 @@ function CaseContents({ summary }: { summary: CaseResponse | null }) {
 
 function UnboxedBar({ result, onRollAgain, onBuy }: { result: RollResponse; onRollAgain: () => void; onBuy: () => void }) {
   const symbol = displaySymbol(result.asset);
-  return <div className="unboxed-bar" style={{ '--rarity': tierColor(result.roll.tier) } as React.CSSProperties}><div className="unboxed-art">{symbol[0]}</div><div><span>YOU UNBOXED · {tierLabel(result.roll.tier)}</span><strong>${symbol}</strong></div><span className="seed-badge mono">seed {formatAddress(result.roll.serverSeedHash, 5)} · nonce {result.roll.nonce}</span><Link className="unboxed-verify" href={`/verify/${result.roll.rollId}`}>Verify ↗</Link><div className="unboxed-actions"><button className="button button-outline" onClick={onRollAgain}>Open again</button><button className="button button-buy" onClick={onBuy}>Buy ${symbol}</button></div></div>;
+  return <div className="unboxed-bar" style={{ '--rarity': tierColor(result.roll.tier) } as React.CSSProperties}><div className="unboxed-art">{symbol[0]}</div><div><span>YOU UNBOXED · {tierLabel(result.roll.tier)}</span><strong>${symbol}</strong></div><span className="seed-badge mono">seed {formatAddress(result.roll.serverSeedHash, 5)} · nonce {result.roll.nonce}</span><Link className="unboxed-verify" href={`/verify/${result.roll.rollId}`}>Verify ↗</Link><div className="unboxed-actions"><SharePullButton rollId={result.roll.rollId} symbol={symbol} /><button className="button button-outline" onClick={onRollAgain}>Open again</button><button className="button button-buy" onClick={onBuy}>Buy ${symbol}</button></div></div>;
+}
+
+function SponsoredDrops({ items, user, cost, busy, error, result, onOpen }: { items: SponsoredLiveItem[]; user: boolean; cost: number; busy: boolean; error: string | null; result: SponsoredOpenResponse | null; onOpen: () => void }) {
+  return <div className="sponsored-panel"><div className="sponsored-intro"><div><span className="eyebrow">POINTS CASE</span><h2>Live sponsored drops</h2><p>Open with points. The token keeps its real market-cap tier.</p></div><span className="sponsored-badge">Sponsored</span></div>{items.length ? <div className="sponsored-list">{items.map((item) => { const symbol = displaySymbol(item); return <article className="sponsored-item" key={item.id}><div className="sponsored-art" style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : undefined}>{item.imageUrl ? null : symbol[0]}</div><div className="sponsored-copy"><div className="sponsored-meta"><strong>{item.projectName}</strong><span className="sponsored-badge">Sponsored</span></div><h3>${symbol}</h3><p>{item.description}</p><div className="sponsored-stats"><span>{item.remaining.toLocaleString()} opens remaining</span><span>Ends {new Date(item.endsAt).toLocaleDateString()}</span></div></div></article>})}</div> : <p className="sponsored-empty">No sponsored drops are live right now</p>}{error && <p className="inline-error sponsored-error" role="alert">{error}</p>}{result ? <div className="sponsored-result"><div className="sponsored-meta"><span className="sponsored-badge">Sponsored</span><strong>${displaySymbol(result.asset)}</strong></div><p><strong>{tierLabel(result.tier)}</strong> · Drop status: pending — sent to your wallet after the project's vault is verified</p><Link className="verify-link" href={`/verify/${result.rollId}`}>Verify ↗</Link></div> : <button className="button button-primary sponsored-open" onClick={onOpen} disabled={busy}>{user ? `Open for ${cost} pts` : 'Sign in to open'}</button>}</div>;
 }

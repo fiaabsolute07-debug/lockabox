@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { sql } from '@/lib/db';
 import { claim } from '@/modules/points/service';
-import { createCampaign, openSponsored, policyViolations, reviewCampaign, SponsorError } from '@/modules/sponsors/service';
+import { createCampaign, listCampaigns, openSponsored, policyViolations, reviewCampaign, SponsorError } from '@/modules/sponsors/service';
 
 const run = process.env.RUN_DB_INTEGRATION ? describe : describe.skip;
 
@@ -45,6 +45,10 @@ run('sponsored cases (LAB R4)', () => {
     await passGates();
     expect((await reviewCampaign(c.id, 'approve', 'admin', 'ok')).status).toBe('approved');
     await expect(reviewCampaign(c.id, 'approve', 'admin', '')).rejects.toMatchObject({ code: 'not_reviewable' });
+    // The dashboard lists only the sponsor's own campaigns.
+    expect((await listCampaigns(sponsor)).map((x) => [x.id, x.status])).toEqual([[c.id, 'approved']]);
+    const other = await userWithWallet('Other11111111111111111111111111111111111111');
+    expect(await listCampaigns(other)).toEqual([]);
   });
 
   it('opening spends points, reserves one open, stops when the budget is used (AC-062/064/065)', async () => {

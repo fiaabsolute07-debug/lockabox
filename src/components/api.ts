@@ -81,6 +81,8 @@ export type MeUser = {
   clientSeed: string;
   nonce: number;
   points: number;
+  inviteCode: string;
+  hideFromBoard: boolean;
   wallets: { family: string; address: string }[];
 };
 
@@ -179,6 +181,69 @@ export type QuoteView = {
 export type PointsResponse = {
   balance: number;
   tasks: { id: string; title: string; points: number; goal: number; daily: boolean; progress: number | null; claimed: boolean }[];
+};
+
+export type LeaderboardItem = {
+  rollId: number;
+  at: string;
+  assetId: number;
+  chainId: string;
+  symbol: string | null;
+  imageUrl: string | null;
+  tier: Tier | null;
+  priceAtPull: number | null;
+  priceNow: number | null;
+  changePct: number | null;
+  who: string;
+};
+
+export type LeaderboardResponse = {
+  window: '24h' | '7d';
+  items: LeaderboardItem[];
+};
+
+export type InviteSummary = {
+  code: string;
+  path: string;
+  invited: number;
+  rewarded: number;
+  claimable: number;
+  rewardedToday: number;
+  dailyCap: number;
+  daysRequired: number;
+};
+
+export type SponsoredLiveItem = {
+  id: number;
+  projectName: string;
+  description: string;
+  symbol: string | null;
+  address: string;
+  imageUrl: string | null;
+  amountPerOpen: string;
+  remaining: number;
+  costPoints: number;
+  endsAt: string;
+};
+
+export type SponsoredLiveResponse = {
+  label: 'Sponsored';
+  items: SponsoredLiveItem[];
+};
+
+export type SponsoredOpenResponse = {
+  rollId: number;
+  redemptionId: number;
+  campaignId: number;
+  assetId: number;
+  tier: Tier;
+  amount: string;
+  cost: number;
+  serverSeedHash: string;
+  nonce: number;
+  sponsored: true;
+  label: 'Sponsored';
+  asset: AssetDetail;
 };
 
 export class ApiError extends Error {

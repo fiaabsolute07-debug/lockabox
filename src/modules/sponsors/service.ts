@@ -1,7 +1,7 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
 import { canonicalPool, DEFAULT_ODDS, poolHash, resolveRoll, type PoolItem, type Tier } from '@/modules/rolls/fair';
-import { activeSeed } from '@/modules/rolls/service';
+import { activeSeed, lockedActiveSeed } from '@/modules/rolls/service';
 import { marketCapTier } from '@/modules/sources/tier';
 
 /**
@@ -79,8 +79,10 @@ export async function liveSponsoredItems(sql: postgres.Sql = defaultSql): Promis
 export async function openSponsored(userId: string, sql: postgres.Sql = defaultSql) {
   const [wallet] = await sql<{ address: string }[]>`select address from wallets where user_id = ${userId} and chain_family = 'solana' limit 1`;
   if (!wallet) throw new SponsorError('needs_wallet', 'sign in with a Solana wallet first');
-  const seed = await activeSeed(sql);
+  await activeSeed(sql); // makes sure one exists
   return sql.begin(async (tx) => {
+    const seed = await lockedActiveSeed(tx);
+    if (!seed) throw new SponsorError('empty', 'the fairness seed is rotating, try again');
     const [age] = await tx<{ young: boolean }[]>`select created_at > now() - interval '24 hours' as young from users where id = ${userId} for update`;
     if (age?.young) throw new SponsorError('insufficient_points', 'new accounts can spend points after 24 hours'); // LAB-AC-055 anti-sybil
     const { items, rows } = await liveSponsoredItems(tx as unknown as postgres.Sql);
@@ -109,6 +111,15 @@ export async function openSponsored(userId: string, sql: postgres.Sql = defaultS
       insert into redemptions (campaign_id, roll_id, user_id, wallet, amount) values (${campaign.campaign_id}, ${r.id}, ${userId}, ${wallet.address}, ${campaign.amount_per_open}) returning id`;
     return { rollId: Number(r.id), redemptionId: Number(red.id), campaignId: Number(campaign.campaign_id), assetId: out.assetId, tier: out.tier, amount: campaign.amount_per_open, cost, serverSeedHash: seed.hash, nonce: actor.nonce };
   });
+}
+
+/** The signed-in sponsor's campaigns, newest first (dashboard list). */
+export async function listCampaigns(sponsorUserId: string, sql: postgres.Sql = defaultSql) {
+  const rows = await sql<{ id: number; project_name: string; status: string; total_opens: number; opens_used: number; starts_at: Date; ends_at: Date; created_at: Date }[]>`
+    select id, project_name, status, total_opens, opens_used, starts_at, ends_at, created_at from sponsor_campaigns
+    where sponsor_user_id = ${sponsorUserId} order by created_at desc limit 100`;
+  return rows.map((r) => ({ id: Number(r.id), projectName: r.project_name, status: r.status, totalOpens: r.total_opens, opensUsed: r.opens_used,
+    startsAt: r.starts_at.toISOString(), endsAt: r.ends_at.toISOString(), createdAt: r.created_at.toISOString() }));
 }
 
 /** Sponsor dashboard (LAB-AC-068). */

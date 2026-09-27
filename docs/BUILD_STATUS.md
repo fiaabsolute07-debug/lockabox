@@ -2,7 +2,7 @@
 
 Updated 2026-09-27 by Claude. Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (of 89)
+Totals: BUILT 9 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 4 · VERIFIED_LOCAL 58 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | PARTIAL | unit+integration+tsc+build+e2e green locally; CI workflow in .github/workflows/ci.yml, not run on a remote yet |
@@ -26,7 +26,7 @@ Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (
 | LAB-AC-019 | VERIFIED_LOCAL | no risk fields in read models; e2e "no prohibited risk-label language" (tests/e2e/case.spec.ts) |
 | LAB-AC-020 | VERIFIED_LOCAL | marketCapTier tests |
 | LAB-AC-021 | VERIFIED_LOCAL | core.db.test: immutable trigger |
-| LAB-AC-022 | PARTIAL | stale → price hidden + pool excluded; DexPaprika price fallback not implemented |
+| LAB-AC-022 | VERIFIED_LOCAL | DEX Screener > 10 min stale → DexPaprika multi-price every 5 min within 80 % credit budget; both down → pool drops coins, price hidden (tests/integration/fallback.db.test.ts); UI note in A4 |
 | LAB-AC-023 | VERIFIED_LOCAL | read models return only LAB fields |
 | LAB-AC-024 | VERIFIED_LOCAL | filters in roll service + test |
 | LAB-AC-025 | VERIFIED_LOCAL | pool_too_small test |
@@ -50,7 +50,7 @@ Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (
 | LAB-AC-043 | VERIFIED_LOCAL | no fee param + fee guard tests |
 | LAB-AC-044 | BUILT | clamp in service; UI confirm in A2 |
 | LAB-AC-045 | VERIFIED_LOCAL | swap_disabled for non-Solana chains |
-| LAB-AC-046 | PARTIAL | GET /api/rolls/:id/og renders (Inter, no referral link, no price/gain); share button + og meta in A3 |
+| LAB-AC-046 | VERIFIED_LOCAL | OG image route (no referral link, no price/gain) + Share button (URL /verify/:id, no ref) + og:image meta; e2e a3.spec.ts |
 | LAB-AC-047 | VERIFIED_LOCAL | 375×812: no horizontal overflow, OPEN CASE first (claude-review-A2.md) |
 | LAB-AC-048 | VERIFIED_LOCAL | GEO_BLOCK_SWAP flag, off by default |
 | LAB-AC-049 | VERIFIED_LOCAL | ledger tests |
@@ -58,14 +58,14 @@ Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (
 | LAB-AC-051 | VERIFIED_LOCAL | no points on swap (no code path) |
 | LAB-AC-052 | VERIFIED_LOCAL | check constraint test |
 | LAB-AC-053 | BUILT | getTokenAccountsByOwner on claim; needs a real wallet |
-| LAB-AC-054 | PARTIAL | invites + invite-friend task, 3 distinct days + wallet, cap 10/day (tests/integration/r3.db.test.ts); UI in A3 |
+| LAB-AC-054 | VERIFIED_LOCAL | invites + repeatable invite task, wallet + 3 distinct days, cap 10/day (r3.db.test) + ref capture/accept/invite card (e2e a3.spec.ts) |
 | LAB-AC-055 | VERIFIED_LOCAL | unique wallet; accounts < 24 h cannot spend points (sponsors.db.test); invites accepted only by accounts < 24 h (r3.db.test) |
 | LAB-AC-056 | VERIFIED_LOCAL | concurrent claim test |
-| LAB-AC-057 | PARTIAL | GET /api/leaderboard: % since pull, real rolls, one per coin, opt-out anon (r3.db.test); UI in A3 |
+| LAB-AC-057 | VERIFIED_LOCAL | % since pull, real rolls, one per coin, opt-out anon (r3.db.test) + /leaderboard page + hide toggle (e2e a3.spec.ts, live local) |
 | LAB-AC-058 | VERIFIED_LOCAL | per-route limiter on every write endpoint (src/lib/ratelimit.ts; limiter test in r3.db.test) |
 | LAB-AC-059 | VERIFIED_LOCAL | sponsor create |
 | LAB-AC-060 | VERIFIED_LOCAL | review requires txs + gates |
-| LAB-AC-061 | BUILT | label in API; UI in A2 |
+| LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts); vi label in A4 |
 | LAB-AC-062 | VERIFIED_LOCAL | sponsored only with points |
 | LAB-AC-063 | PARTIAL | tx hash recorded; on-chain deposit verification by admin |
 | LAB-AC-064 | VERIFIED_LOCAL | one open per roll, unique redemption |
@@ -81,13 +81,13 @@ Totals: BUILT 10 · NEEDS_OWNER 4 · PARTIAL 14 · SPEC 8 · VERIFIED_LOCAL 53 (
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |
 | LAB-AC-076 | SPEC | en only for now |
-| LAB-AC-077 | SPEC | not measured |
-| LAB-AC-078 | PARTIAL | Terms/Privacy/Disclaimer/Sponsored policy drafted en+vi in src/content/legal.ts (DRAFT); pages in A3; lawyer review NEEDS_OWNER |
+| LAB-AC-077 | PARTIAL | server-side roll ~24 ms sequential on next start (claude-ops-drills.md); LCP on 4G not measured yet |
+| LAB-AC-078 | PARTIAL | 4 pages at /legal/[slug] from src/content/legal.ts, draft notice, footer links (e2e); en only until A4; lawyer review NEEDS_OWNER |
 | LAB-AC-079 | NEEDS_OWNER | lawyer sign-off |
 | LAB-AC-080 | PARTIAL | /api/health: worker late >10 min, DS/DexPaprika budget >80 %, swap failures >5 % (r3.db.test); owner must point an uptime checker at it |
-| LAB-AC-081 | SPEC | runbooks not written |
-| LAB-AC-082 | SPEC | no backups (local only) |
-| LAB-AC-083 | SPEC | load test not run |
+| LAB-AC-081 | PARTIAL | docs/RUNBOOKS.md (kill switch, sources, abuse, sponsor dispute, seed, backup, deploy) with local drills; staging drills NEEDS_OWNER |
+| LAB-AC-082 | PARTIAL | scripts/backup.ts dump/restore; local drill: 23 tables/9 866 rows restored, hashes match, 28 FKs re-checked (claude-ops-drills.md); prod daily backups + PITR NEEDS_OWNER |
+| LAB-AC-083 | PARTIAL | 1 000 concurrent: 0 errors; p95 507–658 ms with 2 instances on one laptop (target 500); re-run on staging (claude-ops-drills.md) |
 | LAB-AC-084 | PARTIAL | CSP + nosniff + frame-ancestors none + X-Frame-Options; no keys in code; pnpm audit: 2 moderate transitive via @solana/web3.js (uuid, stream-json), not reachable from our code; full review before LIVE |
 | LAB-AC-085 | NEEDS_OWNER | wallet domain verification: owner |
 | LAB-AC-086 | PARTIAL | most prohibitions covered, see mapping |

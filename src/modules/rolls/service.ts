@@ -25,6 +25,44 @@ export class RollError extends Error {
 
 type Actor = { userId?: string | null; deviceId?: string | null };
 
+/**
+ * Pools change at most once a minute (worker), so a roll may read one from a 3 s in-process cache (the roll still records the
+ * exact pool id and items it used). Never the seed: it is read under a lock inside the roll transaction.
+ */
+const POOL_CACHE_MS = Number(process.env.POOL_CACHE_MS ?? (process.env.NODE_ENV === 'test' ? 0 : 3000));
+const poolCache = new Map<string, { at: number; pool: Awaited<ReturnType<typeof latestPool>> }>();
+async function cachedLatestPool(caseId: string, chainScope: string, sql: postgres.Sql) {
+  if (!POOL_CACHE_MS || sql !== defaultSql) return latestPool(caseId, chainScope, sql);
+  const key = `${caseId}:${chainScope}`;
+  const hit = poolCache.get(key);
+  if (hit && Date.now() - hit.at < POOL_CACHE_MS) return hit.pool;
+  const pool = await latestPool(caseId, chainScope, sql);
+  if (pool) poolCache.set(key, { at: Date.now(), pool });
+  return pool;
+}
+
+const caseCache = new Map<string, { at: number; c: Awaited<ReturnType<typeof getCase>> }>();
+async function cachedCase(id: string, sql: postgres.Sql) {
+  if (!POOL_CACHE_MS || sql !== defaultSql) return getCase(id, sql);
+  const hit = caseCache.get(id);
+  if (hit && Date.now() - hit.at < 10 * POOL_CACHE_MS) return hit.c;
+  const c = await getCase(id, sql);
+  caseCache.set(id, { at: Date.now(), c });
+  return c;
+}
+
+/**
+ * postgres.js 3.4.9 can raise UNSAFE_TRANSACTION when a pool is saturated and a pipelined BEGIN loses its reservation
+ * (seen at 1 000 concurrent rolls). The transaction never started, so it is safe to try again.
+ */
+async function beginWithRetry<T>(sql: postgres.Sql, fn: (tx: postgres.TransactionSql) => Promise<T>, attempts = 3): Promise<T> {
+  for (let i = 1; ; i++) {
+    try { return (await sql.begin(fn)) as T; } catch (e) {
+      if ((e as { code?: string }).code !== 'UNSAFE_TRANSACTION' || i >= attempts) throw e;
+    }
+  }
+}
+
 export function sanitizeFilters(input: unknown): RollFilters {
   const f = (input ?? {}) as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined);
@@ -82,18 +120,31 @@ export async function activeSeed(sql: postgres.Sql = defaultSql): Promise<{ id: 
   return created ? { ...created, id: Number(created.id) } : activeSeed(sql);
 }
 
+/**
+ * The active seed, read under a share lock inside a roll transaction. A rotation that wins the race makes the first read
+ * come back empty (the row no longer matches); a second statement sees the new seed.
+ */
+export async function lockedActiveSeed(tx: postgres.TransactionSql): Promise<{ id: number; hash: string; seed: string } | undefined> {
+  for (let i = 0; i < 2; i++) {
+    const [row] = await tx<{ id: number; hash: string; seed: string }[]>`select id, hash, seed from server_seeds where revealed_at is null for share`;
+    if (row) return { ...row, id: Number(row.id) };
+  }
+  return undefined;
+}
+
 /** Reveals the current seed (so every roll made with it becomes verifiable) and commits a new one. */
 export async function rotateSeed(sql: postgres.Sql = defaultSql): Promise<{ revealedHash: string | null; newHash: string }> {
   return sql.begin(async (tx) => {
-    const [old] = await tx<{ hash: string }[]>`update server_seeds set revealed_at = now() where revealed_at is null returning hash`;
+    // Rolls read the seed FOR SHARE. Take the row lock first (waits until every roll holding it has committed), then stamp the
+    // reveal with clock_timestamp(): an UPDATE computes its values before waiting, which would record a too-early time.
+    const [cur] = await tx<{ id: number }[]>`select id from server_seeds where revealed_at is null for update`;
+    const [old] = cur
+      ? await tx<{ hash: string }[]>`update server_seeds set revealed_at = clock_timestamp() where id = ${cur.id} returning hash`
+      : [];
     const s = newServerSeed();
     await tx`insert into server_seeds (seed, hash) values (${s.seed}, ${s.hash})`;
     return { revealedHash: old?.hash ?? null, newHash: s.hash };
   });
-}
-
-export async function ensureDevice(deviceId: string, sql: postgres.Sql = defaultSql) {
-  await sql`insert into devices (id) values (${deviceId}) on conflict do nothing`;
 }
 
 export type RollResult = {
@@ -103,31 +154,39 @@ export type RollResult = {
 };
 
 export async function roll(input: Actor & { caseId: string; chainScope: string; filters?: unknown }, sql: postgres.Sql = defaultSql): Promise<RollResult> {
+  return (await rollDetailed(input, sql)).result;
+}
+
+/** Same as `roll`, plus the filtered pool items the roll used (for the cosmetic reel), without another query. */
+export async function rollDetailed(input: Actor & { caseId: string; chainScope: string; filters?: unknown }, sql: postgres.Sql = defaultSql): Promise<{ result: RollResult; items: PoolItem[] }> {
   if (!input.userId && !input.deviceId) throw new RollError('no_actor', 'a user or a device is required');
-  const c = await getCase(input.caseId, sql);
+  const c = await cachedCase(input.caseId, sql);
   if (!c || !c.active) throw new RollError('case_not_found', 'unknown case');
   if (c.cost_points) throw new RollError('case_needs_points', 'this case opens with points'); // sponsored cases: R4
-  const pool = await latestPool(c.id, input.chainScope, sql);
+  const pool = await cachedLatestPool(c.id, input.chainScope, sql);
   if (!pool) throw new RollError('no_pool', 'this case has no coins yet');
   const filters = sanitizeFilters(input.filters);
   const items = await filterPool(pool.items, filters, sql);
   if (items.length < MIN_POOL) throw new RollError('pool_too_small', `only ${items.length} coins match these filters; loosen them`, { size: items.length, min: MIN_POOL });
-  if (input.deviceId) await ensureDevice(input.deviceId, sql);
-  const seed = await activeSeed(sql);
 
-  return sql.begin(async (tx) => {
-    // Lock the actor row first so concurrent rolls from one device/user serialise before the pacing check.
-    if (input.userId) await tx`select 1 from users where id = ${input.userId} for update`;
-    else await tx`select 1 from devices where id = ${input.deviceId!} for update`;
+  return beginWithRetry(sql, async (tx) => {
+    // Read the seed under a share lock: a rotation (which reveals it) waits until this roll commits, so no roll ever uses a revealed seed.
+    let seed = await lockedActiveSeed(tx);
+    if (!seed) { await activeSeed(sql); seed = await lockedActiveSeed(tx); } // first roll ever
+    if (!seed) throw new RollError('no_pool', 'the fairness seed is rotating, try again');
+    // One statement creates the device if needed, takes its row lock (so concurrent rolls from one device/user serialise before
+    // the pacing check) and draws the next nonce. If the pacing check fails, the transaction rolls all of it back.
+    const [actor] = input.userId
+      ? await tx<{ client_seed: string; nonce: number }[]>`update users set nonce = nonce + 1 where id = ${input.userId} returning client_seed, nonce`
+      : await tx<{ client_seed: string; nonce: number }[]>`
+          insert into devices (id, nonce) values (${input.deviceId!}, 1)
+          on conflict (id) do update set nonce = devices.nonce + 1 returning client_seed, nonce`;
+    if (!actor) throw new RollError('no_actor', 'unknown user or device');
     // Anti-bot pacing (not a limit on the number of rolls).
     const [last] = input.userId
       ? await tx<{ created_at: Date }[]>`select created_at from rolls where user_id = ${input.userId} order by created_at desc limit 1`
       : await tx<{ created_at: Date }[]>`select created_at from rolls where device_id = ${input.deviceId!} order by created_at desc limit 1`;
     if (last && Date.now() - last.created_at.getTime() < MIN_MS_BETWEEN_ROLLS) throw new RollError('rate_limited', 'slow down a little');
-    const [actor] = input.userId
-      ? await tx<{ client_seed: string; nonce: number }[]>`update users set nonce = nonce + 1 where id = ${input.userId} returning client_seed, nonce`
-      : await tx<{ client_seed: string; nonce: number }[]>`update devices set nonce = nonce + 1 where id = ${input.deviceId!} returning client_seed, nonce`;
-    if (!actor) throw new RollError('no_actor', 'unknown user or device');
     const odds = (c.tier_odds ?? DEFAULT_ODDS) as TierOdds;
     const out = resolveRoll({ serverSeed: seed.seed, clientSeed: actor.client_seed, nonce: actor.nonce, items, odds });
     const [snap] = await tx<{ price_usd: number | null }[]>`select price_usd from asset_snapshots where asset_id = ${out.assetId}`;
@@ -139,11 +198,12 @@ export async function roll(input: Actor & { caseId: string; chainScope: string; 
               ${actor.client_seed}, ${actor.nonce}, ${tx.json(items)}, ${itemsHash}, ${out.rTier}, ${out.rItem}, ${out.tier},
               ${out.assetId}, ${snap?.price_usd ?? null})
       returning id, created_at`;
-    return {
+    const result: RollResult = {
       rollId: Number(row.id), caseId: c.id, chainScope: input.chainScope, poolId: pool.id, poolVersion: pool.version, poolHash: pool.hash,
       itemsHash, poolSize: items.length, tier: out.tier, assetId: out.assetId, serverSeedHash: seed.hash, clientSeed: actor.client_seed,
       nonce: actor.nonce, odds: out.odds, createdAt: row.created_at.toISOString(),
     };
+    return { result, items };
   });
 }
 

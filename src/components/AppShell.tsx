@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import bs58 from 'bs58';
@@ -23,6 +24,7 @@ type AppContextValue = {
   selectedChain: string;
   setSelectedChain: (chain: string) => void;
   refreshUser: () => Promise<void>;
+  showToast: (message: string) => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -53,11 +55,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [feed, setFeed] = useState<FeedResponse | null>(null);
   const [user, setUser] = useState<MeResponse['user']>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [selectedChain, setSelectedChain] = usePersistedChain(meta);
+  const inviteAttempt = useRef<string | null>(null);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try { setUser((await fetchJson<MeResponse>('/api/auth/me')).user); } catch { setUser(null); }
-  };
+  }, []);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast((current) => current === message ? null : current), 3200);
+  }, []);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('ref');
+    if (!code || !/^[0-9a-f]{10}$/i.test(code)) return;
+    try { window.localStorage.setItem('lab_ref', code.toLowerCase()); } catch { /* storage can be disabled */ }
+    url.searchParams.delete('ref');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -67,9 +85,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     loadFeed();
     const timer = window.setInterval(loadFeed, 15_000);
     return () => { active = false; window.clearInterval(timer); };
-  }, []);
+  }, [refreshUser]);
 
-  const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser }), [meta, feed, user, selectedChain]);
+  useEffect(() => {
+    if (!user) return;
+    let code: string | null = null;
+    try { code = window.localStorage.getItem('lab_ref'); } catch { /* storage can be disabled */ }
+    if (!code || !/^[0-9a-f]{10}$/i.test(code)) return;
+    const attemptKey = `${user.id}:${code.toLowerCase()}`;
+    if (inviteAttempt.current === attemptKey) return;
+    inviteAttempt.current = attemptKey;
+    void fetchJson<{ ok: true }>('/api/invites/accept', { method: 'POST', body: JSON.stringify({ code: code.toLowerCase() }) })
+      .then(() => {
+        try { window.localStorage.removeItem('lab_ref'); } catch { /* storage can be disabled */ }
+        showToast('Invite linked');
+      })
+      .catch((error: unknown) => {
+        // An HTTP response, including a contract error, consumes the stored code.
+        if (error instanceof ApiError) {
+          try { window.localStorage.removeItem('lab_ref'); } catch { /* storage can be disabled */ }
+        }
+      });
+  }, [showToast, user]);
+
+  const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser, showToast }), [meta, feed, user, selectedChain, refreshUser, showToast]);
   return (
     <AppContext.Provider value={context}>
       <AgeGate />
@@ -77,6 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <FeedTicker />
       {children}
       <Footer />
+      {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
     </AppContext.Provider>
   );
 }
@@ -105,11 +145,30 @@ function AgeGate() {
 
 function Header() {
   const { meta, selectedChain, setSelectedChain, user, refreshUser } = useAppContext();
-  const { connected, publicKey, signMessage } = useWallet();
+  const { connected, publicKey, signMessage, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const [chainOpen, setChainOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [privacyBusy, setPrivacyBusy] = useState(false);
+  const [hideFromBoard, setHideFromBoard] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setHideFromBoard(user?.hideFromBoard ?? false), [user]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAccountOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+  }, [accountOpen]);
 
   const chainName = selectedChain === 'all' ? 'All chains' : meta?.chains.find((chain) => chain.id === selectedChain)?.name ?? 'Solana';
   const signIn = async () => {
@@ -123,6 +182,29 @@ function Header() {
       await refreshUser();
     } catch (error) {
       setAuthError(error instanceof ApiError ? error.message : 'Sign in was not completed');
+    } finally { setAuthBusy(false); }
+  };
+
+  const updatePrivacy = async (next: boolean) => {
+    if (privacyBusy) return;
+    setPrivacyBusy(true); setHideFromBoard(next);
+    try {
+      await fetchJson<{ hideFromBoard: boolean }>('/api/me/privacy', { method: 'POST', body: JSON.stringify({ hideFromBoard: next }) });
+    } catch (error) {
+      setHideFromBoard(user?.hideFromBoard ?? false);
+      setAuthError(error instanceof ApiError ? error.message : 'Could not update privacy settings');
+    } finally { setPrivacyBusy(false); }
+  };
+
+  const signOut = async () => {
+    setAuthBusy(true); setAuthError(null);
+    try {
+      await fetchJson<{ ok: true }>('/api/auth/logout', { method: 'POST' });
+      await refreshUser();
+      await disconnect();
+      setAccountOpen(false);
+    } catch (error) {
+      setAuthError(error instanceof ApiError ? error.message : 'Could not sign out');
     } finally { setAuthBusy(false); }
   };
 
@@ -143,7 +225,7 @@ function Header() {
           )}
         </div>
         {user && <span className="points-pill mono">{user.points.toLocaleString('en-US')} pts</span>}
-        {!connected ? <button className="chip-button wallet-button" onClick={() => setVisible(true)}>Connect wallet</button> : user ? <button className="chip-button wallet-button mono" title={publicKey?.toBase58()}>{formatAddress(publicKey?.toBase58())}</button> : <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? 'Signing…' : 'Sign in'}</button>}
+        {user ? <div className="account-menu-wrap" ref={accountMenuRef}><button className="chip-button wallet-button mono" title={publicKey?.toBase58() ?? user.wallets?.[0]?.address} aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((value) => !value)}>{formatAddress(publicKey?.toBase58() ?? user.wallets?.[0]?.address)}<span className="chevron">⌄</span></button>{accountOpen && <div className="account-menu panel" role="menu"><div className="account-summary"><span className="muted">POINTS</span><strong>{user.points.toLocaleString('en-US')} pts</strong></div><Link className="account-link" role="menuitem" href="/earn" onClick={() => setAccountOpen(false)}>Invite friends <span>↗</span></Link><label className="privacy-toggle" role="menuitem"><input type="checkbox" checked={hideFromBoard} disabled={privacyBusy} onChange={(event) => void updatePrivacy(event.target.checked)} /><span><strong>Hide my wallet</strong><small>from Best pulls, feed and buys</small></span></label><div className="account-divider" /><button className="account-signout" role="menuitem" onClick={() => void signOut()} disabled={authBusy}>{authBusy ? 'Signing out…' : 'Sign out'}</button></div>}</div> : !connected ? <button className="chip-button wallet-button" onClick={() => setVisible(true)}>Connect wallet</button> : <button className="chip-button wallet-button" onClick={() => void signIn()} disabled={authBusy}>{authBusy ? 'Signing…' : 'Sign in'}</button>}
       </div>
       {authError && <span className="header-error" role="status">{authError}</span>}
     </header>
@@ -158,13 +240,15 @@ function FeedTicker() {
 
 export function Sidebar() {
   const { meta, feed, selectedChain, setSelectedChain } = useAppContext();
+  const pathname = usePathname();
   const pulls = feed?.items.filter((item) => item.kind === 'pull').slice(0, 5) ?? [];
   return (
     <aside className="sidebar">
       <nav className="side-nav" aria-label="Primary navigation">
-        <Link className="nav-item active" href="/"><span>▣</span>Roll</Link>
-        <Link className="nav-item" href="/earn"><span>◎</span>Earn points</Link>
-        <Link className="nav-item" href="/verify"><span>✓</span>Verify rolls</Link>
+        <Link className={`nav-item ${pathname === '/' ? 'active' : ''}`} href="/"><span>▣</span>Roll</Link>
+        <Link className={`nav-item ${pathname === '/leaderboard' ? 'active' : ''}`} href="/leaderboard"><span>↗</span>Best pulls</Link>
+        <Link className={`nav-item ${pathname === '/earn' ? 'active' : ''}`} href="/earn"><span>◎</span>Earn points</Link>
+        <Link className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`} href="/verify"><span>✓</span>Verify rolls</Link>
       </nav>
       <div className="side-section">CHAINS</div>
       <div className="chain-list">
@@ -180,5 +264,5 @@ export function Sidebar() {
 }
 
 function Footer() {
-  return <footer className="footer"><span>18+ · Not investment advice · Random pick, not advice. Memecoins can go to zero.</span><span><Link href="/verify">Verify rolls</Link><Link href="/earn">Earn points</Link></span></footer>;
+  return <footer className="footer"><span>18+ · Not investment advice · Random pick, not advice. Memecoins can go to zero.</span><span><Link href="/verify">Verify rolls</Link><Link href="/earn">Earn points</Link><Link href="/legal/terms">Terms</Link><Link href="/legal/privacy">Privacy</Link><Link href="/legal/disclaimer">Disclaimer</Link><Link href="/legal/sponsored">Sponsored policy</Link></span></footer>;
 }

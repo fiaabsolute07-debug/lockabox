@@ -35,4 +35,6 @@ second engineer. Claude assigns tasks on this board, integrates, runs DB/E2E sui
 | C3 | Claude | Wallet auth (SIWS), Jupiter swap build endpoint, trade recording, points + tasks, FOMO feed from real events | C2 | DONE (backend); UI in A2 |
 | R* | both | Cross-review each other's tasks; findings in evidence files | — | ongoing |
 | C4 | Claude | Verify payload for browser recompute, invites + invite task, Best pulls API + opt-out, share image, health/alerts + worker_runs, pool pruning, write rate limits, CSP, legal copy (en/vi, draft) | C3 | DONE |
-| A3 | Astra | UI for C4: Best pulls page, settings (hide wallet, sign out), invite link + `?ref=` accept, share button + og meta on `/verify/:id`, sponsored case UI, legal pages + footer, en/vi switch | C4 contract | TODO |
+| A3 | Astra | UI for C4: Best pulls page, settings (hide wallet, sign out), invite link + `?ref=` accept, share button + og meta on `/verify/:id`, sponsored case UI, legal pages + footer | C4 contract | DONE (claude-review-A3.md) |
+| C5 | Claude | DexPaprika price fallback (AC-022), backup/restore script + drill, runbooks, load test + roll-path optimisation, seed lock vs rotation, sponsor campaign list | C4 | DONE (claude-ops-drills.md) |
+| A4 | Astra | en/vi UI (AC-076) incl. legal + "Quảng cáo · Sponsored"; significant-digit prices; "price via DexPaprika" note; sponsor dashboard page + CSV + submit form (AC-068); `multiPrices` in the DexPaprika client | C5 contract | TODO |
