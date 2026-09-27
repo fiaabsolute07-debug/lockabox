@@ -6,6 +6,7 @@ import { ChainIcon } from './ChainIcon';
 import { useT } from './i18n';
 import SharePullButton from './SharePullButton';
 import SwapBox from './SwapBox';
+import { ChartEmbed } from './MarketView';
 
 /**
  * The coin card shown in the middle of the screen right after a pull (owner request, modelled on a "you got …" reward card).
@@ -36,6 +37,8 @@ export default function PullCard({ asset, tier, chance, rollId, chain, againRef,
     </section>
     <section className="pull-details">
       <div className="pull-stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><b>{value}</b></div>)}</div>
+      {/* Owner request: the chart right on the card (official embed, GeckoTerminal fallback; LAB §3.4). */}
+      <div className="pull-chart"><ChartEmbed asset={asset} /></div>
       {asset.lockaboxBuys24h > 0 && <p className="pull-proof">{t('pullBuysToday', { count: asset.lockaboxBuys24h })}</p>}
       <div className="pull-links">
         {asset.links.dexscreener && <a href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('pullChart')}</a>}
