@@ -1,8 +1,8 @@
 # BUILD_STATUS
 
-Updated 2026-09-27 by Claude (cloud session). Statuses: SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
+Updated 2026-09-27 by Claude (cloud session). Statuses: DROPPED (removed by the owner) · SPEC · BUILT (code, no acceptance evidence) · PARTIAL · VERIFIED_LOCAL (test or live-local evidence) · NEEDS_OWNER (a human must act).
 
-Totals: BUILT 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED_LOCAL 74 (of 89)
+Totals: BUILT 1 · DROPPED 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED_LOCAL 73 (of 89)
 | Case | Status | Evidence / note |
 |---|---|---|
 | LAB-AC-001 | VERIFIED_LOCAL | GitHub Actions ci.yml on every push/PR (macOS): typecheck, unit, DB integration, lint, next build, Playwright e2e; green on this branch, e.g. run 36302762147 (e2e 39/39); lint config added (DECISIONS #11) |
@@ -65,7 +65,7 @@ Totals: BUILT 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED_LOCAL 74 (of
 | LAB-AC-058 | VERIFIED_LOCAL | per-route limiter on every write endpoint (src/lib/ratelimit.ts; limiter test in r3.db.test) |
 | LAB-AC-059 | VERIFIED_LOCAL | sponsor create |
 | LAB-AC-060 | VERIFIED_LOCAL | review requires txs + gates |
-| LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts); vi shows "Quảng cáo · Sponsored" on tab, badges and result (e2e a4.spec.ts) |
+| LAB-AC-061 | VERIFIED_LOCAL | Sponsored label in API and on every sponsored item in the UI (e2e a3.spec.ts, a4.spec.ts); Vietnamese "Quảng cáo · Sponsored" dropped with the vi UI (DECISIONS #13, lawyer to confirm) |
 | LAB-AC-062 | VERIFIED_LOCAL | sponsored only with points |
 | LAB-AC-063 | PARTIAL | approval checks the deposit tx on-chain: campaign token into SPONSOR_VAULT ≥ amount × opens; one tx per campaign (unit sponsor-verify with a real mainnet tx, sponsors.db.test); M: first real deposit by the owner |
 | LAB-AC-064 | VERIFIED_LOCAL | one open per roll, unique redemption |
@@ -80,7 +80,7 @@ Totals: BUILT 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED_LOCAL 74 (of
 | LAB-AC-073 | VERIFIED_LOCAL | meta cases live |
 | LAB-AC-074 | VERIFIED_LOCAL | cto case live |
 | LAB-AC-075 | VERIFIED_LOCAL | new<24h case live |
-| LAB-AC-076 | VERIFIED_LOCAL | en/vi dictionary for every UI string incl. legal pages, case/task titles and API error codes; server picks the language from cookie/Accept-Language (e2e a4.spec.ts, 6 tests; claude-review-A4.md) |
+| LAB-AC-076 | DROPPED | owner decision 2026-09-27: English only (DECISIONS #13); the en/vi build was VERIFIED_LOCAL before (claude-review-A4.md) |
 | LAB-AC-077 | VERIFIED_LOCAL | production build, emulated Slow 4G + 4× CPU, mobile: LCP median 1.76 s returning / 1.77 s first visit (was 4.76 s before the 18+ gate moved server-side); Fast 4G 0.74–0.78 s; roll service p95 4.3 ms sequential, 18 ms at 10 concurrent (claude-lcp-4g.md, scripts/lcp.ts, core.db.test); re-run on staging with live data |
 | LAB-AC-078 | VERIFIED_LOCAL | Terms, Privacy, Disclaimer, Sponsored policy at /legal/[slug] in en + vi, draft notice, footer links (e2e a3/a4); lawyer sign-off is AC-079 |
 | LAB-AC-079 | NEEDS_OWNER | lawyer sign-off |

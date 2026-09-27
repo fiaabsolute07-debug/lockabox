@@ -90,17 +90,27 @@ test('the reel occupies the viewport while the case is opening', async ({ page }
   expect(box!.height).toBeGreaterThanOrEqual((viewport?.height ?? 0) - 1);
   await expect(page.getByText('OPENING CASE', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Skip animation/i }).click();
+  // The pull is then presented in the middle of the screen until the user closes it.
+  await expect(stage).toHaveCSS('position', 'fixed');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'See the coin' }).click();
   await expect(stage).toHaveCSS('position', 'relative');
 });
 
-test('the winning coin gets a tier-specific halo without a celebration overlay', async ({ page }) => {
+test('a ★ Top pull is presented full screen with rays, confetti and a halo, then closes back into the page', async ({ page }) => {
   const topRoll = { ...roll, roll: { ...roll.roll, tier: 'top' }, asset: { ...roll.asset, tier: 'top' }, reel: { ...roll.reel, cards: roll.reel.cards.map((card: Record<string, unknown>, index: number) => index === roll.reel.winIndex ? { ...card, tier: 'top' } : card) } };
   await fixtures(page, { rollBody: topRoll });
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
-  // No overlay stays on top after the reveal: the stage drops back into the page and the glow layer never takes clicks.
-  await expect(page.locator('.roll-stage')).toHaveCSS('position', 'relative');
+  const dialog = page.getByRole('dialog', { name: '★ TOP PULL!' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.reveal-rays')).toHaveCount(1);
+  expect(await dialog.locator('.confetti i').count()).toBeGreaterThan(100);
+  await expect(dialog).toContainText('$GLORP');
   await expect(page.locator('.reveal-burst')).toHaveCSS('pointer-events', 'none');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.roll-stage')).toHaveCSS('position', 'relative');
   await expect(page.locator('.unboxed-bar')).toBeVisible();
   await expect(page.locator('.reel-card.winner')).toHaveClass(/tier-top/);
   await expect(page.locator('.reel-card.winner .reel-art')).toHaveCSS('animation-name', /coin-halo/);
@@ -137,6 +147,7 @@ test('starting another roll clears the old winning card while the API is pending
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
   await expect(page.locator('.unboxed-bar')).toBeVisible();
+  await page.getByRole('button', { name: 'See the coin' }).click();
   let pendingRoll: Route | undefined;
   await page.route('**/api/rolls', route => { pendingRoll = route; });
   await page.getByRole('button', { name: /OPEN CASE/i }).click();
@@ -208,4 +219,20 @@ test('case page contains no prohibited risk-label language', async ({ page }) =>
   await fixtures(page);
   await page.goto('/');
   await expect(page.locator('body')).not.toHaveText(/risk|safe|scam|rug/i);
+});
+
+test('a Micro pull gets the "womp" reveal without confetti, and Open again rolls from the reveal screen', async ({ page }) => {
+  const microRoll = { ...roll, roll: { ...roll.roll, tier: 'micro', odds: { micro: 3500, small: 3000, mid: 2000, large: 1200, top: 300 } } };
+  const state = await fixtures(page, { rollBody: microRoll });
+  await openCase(page);
+  await page.getByRole('button', { name: /Skip animation/i }).click();
+  const dialog = page.getByRole('dialog', { name: 'Womp womp…' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('35% chance');
+  await expect(dialog.locator('.confetti')).toHaveCount(0);
+  await expect(dialog.locator('.reveal-rays')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open again' }).first()).toBeFocused();
+  await page.getByRole('button', { name: 'Open again' }).first().click();
+  await expect.poll(state.rollPosts).toBe(2);
+  await expect(page.locator('.roll-spinning, .roll-charging').first()).toBeVisible();
 });

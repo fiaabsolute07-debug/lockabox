@@ -209,8 +209,6 @@ test('EVM buy: route fees on their own lines, exact approval mined before the sw
   // AC-042: the box follows the trade until the worker confirms it on-chain.
   await expect(box.getByRole('status')).toContainText('Buy confirmed on-chain ✓', { timeout: 15_000 });
   await expect(box.getByRole('link', { name: /View on explorer/ })).toHaveAttribute('href', `https://basescan.org/tx/0x${'2'.padStart(64, '0')}`);
-  await page.getByRole('button', { name: 'VI', exact: true }).click();
-  await expect(box.getByText('Định tuyến bởi LI.FI', { exact: false })).toBeVisible();
 });
 
 test('an EVM coin on a chain with swap off keeps View on DEX only', async ({ page }) => {

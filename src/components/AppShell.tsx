@@ -170,7 +170,7 @@ function AgeGate({ initiallyConfirmed }: { initiallyConfirmed: boolean }) {
 }
 
 function Header() {
-  const { t, lang, locale, setLanguage } = useT();
+  const { t, locale } = useT();
   const { meta, selectedChain, setSelectedChain, user, refreshUser } = useAppContext();
   const { connected, publicKey, signMessage, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
@@ -283,7 +283,6 @@ function Header() {
       <Link href="/" className="brand" aria-label={t('brandHome')}><LockyLogo /><span>lockabox<span className="brand-dot">.</span></span></Link>
       <div className="search-box"><span className="search-icon" aria-hidden="true">⌕</span><input aria-label={t('searchComingSoon')} disabled placeholder={t('searchComingSoon')} /><kbd>/</kbd></div>
       <div className="top-actions">
-        <div className="language-switch" role="group" aria-label={t('language')}><button className={lang === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>EN</button><button className={lang === 'vi' ? 'active' : ''} onClick={() => setLanguage('vi')}>VI</button></div>
         <div className="chain-select-wrap">
           <button className="chip-button" onClick={() => setChainOpen((value) => !value)} aria-expanded={chainOpen}>
             <span className={`chain-dot ${selectedChain === 'all' ? 'all' : selectedChain}`} />{chainName}<span className="chevron">⌄</span>
