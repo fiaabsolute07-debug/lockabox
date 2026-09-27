@@ -37,6 +37,7 @@ are signed in the user's wallet; the UI never sees a key. Demo/fixture data must
 | `POST /api/swap/quote` | `{ assetId, amountSol: "0.05", slippageBps? }` | `QuoteView = { assetId, symbol, inputSymbol:'SOL', inputAmount, outAmount, outAmountMin, decimals|null, priceImpactPct, slippageBps, route: string[], lockaboxFee: 0, sellCheck:'passed' }`. 409 `swap_disabled` → show "View on DEX" only; 409 `sell_check_failed` → coin removed, tell the user and offer Roll again. |
 | `POST /api/swap/build` | `{ assetId, amountSol, slippageBps?, userPublicKey, rollId? }` | 201 `{ tradeId, swapTransaction (base64 unsigned VersionedTransaction), lastValidBlockHeight, quote: QuoteView }` → deserialize with `VersionedTransaction.deserialize`, `wallet.sendTransaction(tx, connection)`, then PATCH the trade. |
 | `PATCH /api/trades/:id` | `{ txHash, wallet }` | `{ ok, status:'submitted' }`; the worker marks it confirmed/failed on-chain. |
+| `GET /api/trades/:id` | — | `{ id, status: 'built'|'submitted'|'confirmed'|'failed', txHash, chainId }` (AC-042). The buy box polls it every 4 s after submitting until confirmed/failed (max 15 min). |
 | `POST /api/tasks/:id/claim` | — | `{ taskId, points, balance }`; 409 `not_done` / `already_claimed` |
 
 Amounts: `outAmount`/`outAmountMin` are raw integer strings; divide by `10**decimals` when `decimals` is not null.
