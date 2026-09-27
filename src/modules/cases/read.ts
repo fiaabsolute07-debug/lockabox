@@ -33,11 +33,13 @@ function tierFor(items: PoolItem[] | undefined, id: number): Tier | null {
 }
 
 export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
-  const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean }[]>`select id, name, family, swap_enabled from chains where enabled order by sort`;
+  const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
+    select id, name, family, swap_enabled, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
   const cases = await listCases(sql);
   const [seed] = await sql<{ hash: string; active_from: Date }[]>`select hash, active_from from server_seeds where revealed_at is null`;
   return {
-    chains: chains.map((c) => ({ id: c.id, name: c.name, family: c.family, swapEnabled: c.swap_enabled })),
+    chains: chains.map((c) => ({ id: c.id, name: c.name, family: c.family, swapEnabled: c.swap_enabled, evmChainId: c.evm_chain_id,
+      nativeSymbol: c.native_symbol, explorerTxUrl: c.explorer_tx_url })),
     cases: cases.filter((c) => !c.cost_points).map((c) => ({ id: c.id, title: c.title, kind: c.kind })),
     activeSeedHash: seed?.hash ?? null,
   };

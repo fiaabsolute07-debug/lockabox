@@ -8,7 +8,7 @@ are signed in the user's wallet; the UI never sees a key. Demo/fixture data must
 
 | Method & path | Returns |
 |---|---|
-| `GET /api/meta` | `{ chains: [{id,name,family,swapEnabled}], cases: [{id,title,kind}], activeSeedHash }` |
+| `GET /api/meta` | `{ chains: [{id,name,family,swapEnabled,evmChainId|null,nativeSymbol,explorerTxUrl|null ('…/tx/{tx}')}], cases: [{id,title,kind}], activeSeedHash }` |
 | `GET /api/cases/:id?chain=<chainId|all>` | `{ case:{id,title,kind}, chainScope, pool:{id,version,hash,size,createdAt}|null, tierCounts:{micro,small,mid,large,top}, odds:{tier: basisPoints}, contents: AssetCard[] (≤32, rarest first) }`. `odds` is in basis points (10 000 = 100 %) and already renormalised over non-empty tiers. `pool:null` → show "this case is filling up". |
 | `GET /api/assets/:id` | `AssetDetail` (below) |
 | `GET /api/assets/:id/buys` | `{ items: [{at, maker, inputAmount, inputSymbol, outAmountMin, txHash, txUrl}] }`: confirmed buys made through Lockabox only (default tab "Buys via Lockabox") |
