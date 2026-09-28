@@ -12,7 +12,6 @@ import {
   tierColor,
   tierLabel,
   TIERS,
-  type AssetDetail,
   type CaseResponse,
   type RollFilters,
   type RollResponse,
@@ -113,9 +112,8 @@ export default function CaseWorkspace() {
     setRolling(true); setRollError(null);
     try {
       const value = await fetchJson<RollResponse>('/api/rolls', { method: 'POST', body: JSON.stringify({ caseId, chain: selectedChain, filters: filterPayload }) });
-      const currentAsset = await fetchJson<AssetDetail>(`/api/assets/${value.roll.assetId}`);
       setReelSettled(false);
-      setResult({ ...value, asset: currentAsset });
+      setResult(value);
     } catch (error) {
       setRevealPending(false);
       if (error instanceof ApiError && error.code === 'pool_too_small') {
