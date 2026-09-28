@@ -1,7 +1,7 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
 import { disabledGates, getCase, latestPool, SNAPSHOT_MAX_AGE_MINUTES } from '@/modules/cases/pools';
-import { canonicalPool, DEFAULT_ODDS, newServerSeed, poolHash, resolveRoll, TIERS, type PoolItem, type Tier, type TierOdds } from './fair';
+import { canonicalPool, DEFAULT_ODDS, newServerSeed, poolHash, resolveRoll, TIERS, type PoolItem, type Tier, type TierOdds, type OddsMode } from './fair';
 
 /** Below this many items after filters, rolling is refused so a filter can't turn the roll into a hand pick (LAB §2.2). */
 export const MIN_POOL = 20;
@@ -191,15 +191,15 @@ export async function rollDetailed(input: Actor & { caseId: string; chainScope: 
       : await tx<{ created_at: Date }[]>`select created_at from rolls where device_id = ${input.deviceId!} order by created_at desc limit 1`;
     if (last && Date.now() - last.created_at.getTime() < MIN_MS_BETWEEN_ROLLS) throw new RollError('rate_limited', 'slow down a little');
     const odds = (c.tier_odds ?? DEFAULT_ODDS) as TierOdds;
-    const out = resolveRoll({ serverSeed: seed.seed, clientSeed: actor.client_seed, nonce: actor.nonce, items, odds });
+    const out = resolveRoll({ serverSeed: seed.seed, clientSeed: actor.client_seed, nonce: actor.nonce, items, odds, mode: 'uniform' });
     const [snap] = await tx<{ price_usd: number | null }[]>`select price_usd from asset_snapshots where asset_id = ${out.assetId}`;
     const itemsHash = poolHash(items);
     const [row] = await tx<{ id: number; created_at: Date }[]>`
       insert into rolls (user_id, device_id, case_id, pool_id, filters, server_seed_id, client_seed, nonce, items, items_hash,
-                         r_tier, r_item, tier, result_asset_id, price_usd_at_roll)
+                         r_tier, r_item, tier, result_asset_id, price_usd_at_roll, odds_mode)
       values (${input.userId ?? null}, ${input.deviceId ?? null}, ${c.id}, ${pool.id}, ${tx.json(filters)}, ${seed.id},
               ${actor.client_seed}, ${actor.nonce}, ${tx.json(items)}, ${itemsHash}, ${out.rTier}, ${out.rItem}, ${out.tier},
-              ${out.assetId}, ${snap?.price_usd ?? null})
+              ${out.assetId}, ${snap?.price_usd ?? null}, 'uniform')
       returning id, created_at`;
     const result: RollResult = {
       rollId: Number(row.id), caseId: c.id, chainScope: input.chainScope, poolId: pool.id, poolVersion: pool.version, poolHash: pool.hash,
@@ -213,16 +213,16 @@ export async function rollDetailed(input: Actor & { caseId: string; chainScope: 
 export type Verification =
   | { status: 'pending'; serverSeedHash: string; message: string }
   | { status: 'verified' | 'mismatch'; serverSeed: string; serverSeedHash: string; hashMatches: boolean; recomputed: { tier: Tier; assetId: number }; recorded: { tier: Tier; assetId: number };
-      clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds };
+      clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds; oddsMode: OddsMode };
 
 /** LAB-AC-030: after the seed is revealed anyone can recompute the roll; before that we only show the committed hash. */
 export async function verifyRoll(rollId: number, sql: postgres.Sql = defaultSql): Promise<Verification | undefined> {
-  const [r] = await sql<{ items: PoolItem[]; client_seed: string; nonce: number; tier: Tier; result_asset_id: number; seed: string; hash: string; revealed_at: Date | null; tier_odds: TierOdds }[]>`
-    select r.items, r.client_seed, r.nonce, r.tier, r.result_asset_id, s.seed, s.hash, s.revealed_at, c.tier_odds
+  const [r] = await sql<{ items: PoolItem[]; client_seed: string; nonce: number; tier: Tier; result_asset_id: number; seed: string; hash: string; revealed_at: Date | null; tier_odds: TierOdds; odds_mode: OddsMode }[]>`
+    select r.items, r.client_seed, r.nonce, r.tier, r.result_asset_id, s.seed, s.hash, s.revealed_at, c.tier_odds, r.odds_mode
     from rolls r join server_seeds s on s.id = r.server_seed_id join cases c on c.id = r.case_id where r.id = ${rollId}`;
   if (!r) return undefined;
   if (!r.revealed_at) return { status: 'pending', serverSeedHash: r.hash, message: 'The server seed for this roll is revealed at the next rotation.' };
-  const out = resolveRoll({ serverSeed: r.seed, clientSeed: r.client_seed, nonce: r.nonce, items: r.items, odds: r.tier_odds });
+  const out = resolveRoll({ serverSeed: r.seed, clientSeed: r.client_seed, nonce: r.nonce, items: r.items, odds: r.tier_odds, mode: r.odds_mode });
   const { sha256Hex } = await import('./fair');
   const hashMatches = sha256Hex(r.seed) === r.hash;
   const recorded = { tier: r.tier, assetId: Number(r.result_asset_id) };
@@ -230,6 +230,6 @@ export async function verifyRoll(rollId: number, sql: postgres.Sql = defaultSql)
   // Everything a browser needs to redo the roll without trusting us (the filtered canonical pool and the case odds).
   return {
     status: ok ? 'verified' : 'mismatch', serverSeed: r.seed, serverSeedHash: r.hash, hashMatches, recomputed: { tier: out.tier, assetId: out.assetId }, recorded,
-    clientSeed: r.client_seed, nonce: Number(r.nonce), items: canonicalPool(r.items), odds: r.tier_odds,
+    clientSeed: r.client_seed, nonce: Number(r.nonce), items: canonicalPool(r.items), odds: r.tier_odds, oddsMode: r.odds_mode,
   };
 }

@@ -117,7 +117,7 @@ export async function openSponsored(userId: string, sql: postgres.Sql = defaultS
     const [{ bal }] = await tx<{ bal: number }[]>`select coalesce(sum(delta), 0)::int as bal from points_ledger where user_id = ${userId}`;
     if (bal < cost) throw new SponsorError('insufficient_points', `this case costs ${cost} points; you have ${bal}`);
     const [actor] = await tx<{ client_seed: string; nonce: number }[]>`update users set nonce = nonce + 1 where id = ${userId} returning client_seed, nonce`;
-    const out = resolveRoll({ serverSeed: seed.seed, clientSeed: actor.client_seed, nonce: actor.nonce, items, odds: DEFAULT_ODDS });
+    const out = resolveRoll({ serverSeed: seed.seed, clientSeed: actor.client_seed, nonce: actor.nonce, items, odds: DEFAULT_ODDS, mode: 'uniform' });
     const campaign = rows.filter((r) => Number(r.asset_id) === out.assetId).sort((a, b) => Number(a.campaign_id) - Number(b.campaign_id))[0];
     const [used] = await tx`update sponsor_campaigns set opens_used = opens_used + 1 where id = ${campaign.campaign_id} and opens_used < total_opens returning id`;
     if (!used) throw new SponsorError('empty', 'that drop just ran out; try again');
@@ -129,8 +129,8 @@ export async function openSponsored(userId: string, sql: postgres.Sql = defaultS
       [pool] = await tx<{ id: number }[]>`insert into case_pools (case_id, chain_scope, version, items, hash, size) values ('sponsored', 'solana', ${v}, ${tx.json(items)}, ${hash}, ${items.length}) returning id`;
     }
     const [r] = await tx<{ id: number }[]>`
-      insert into rolls (user_id, case_id, pool_id, filters, server_seed_id, client_seed, nonce, items, items_hash, r_tier, r_item, tier, result_asset_id)
-      values (${userId}, 'sponsored', ${pool.id}, '{}', ${seed.id}, ${actor.client_seed}, ${actor.nonce}, ${tx.json(items)}, ${hash}, ${out.rTier}, ${out.rItem}, ${out.tier}, ${out.assetId})
+      insert into rolls (user_id, case_id, pool_id, filters, server_seed_id, client_seed, nonce, items, items_hash, r_tier, r_item, tier, result_asset_id, odds_mode)
+      values (${userId}, 'sponsored', ${pool.id}, '{}', ${seed.id}, ${actor.client_seed}, ${actor.nonce}, ${tx.json(items)}, ${hash}, ${out.rTier}, ${out.rItem}, ${out.tier}, ${out.assetId}, 'uniform')
       returning id`;
     await tx`insert into points_ledger (user_id, delta, reason, ref) values (${userId}, ${-cost}, 'case:sponsored', ${String(r.id)})`;
     const [red] = await tx<{ id: number }[]>`

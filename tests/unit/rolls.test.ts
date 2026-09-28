@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ODDS, effectiveOdds, fairFloat, poolHash, resolveRoll, sha256Hex, type PoolItem, type Tier } from '@/modules/rolls/fair';
+import { DEFAULT_ODDS, effectiveOdds, fairFloat, poolHash, resolveRoll, sha256Hex, uniformOdds, type PoolItem, type Tier } from '@/modules/rolls/fair';
 
 const pool: PoolItem[] = [];
 const sizes: Record<Tier, number> = { micro: 40, small: 30, mid: 20, large: 8, top: 2 };
@@ -44,5 +44,27 @@ describe('provably fair roll (LAB-AC-030, 031)', () => {
   it('the published hash commits to the seed', () => {
     expect(sha256Hex('8f3a')).toMatch(/^[0-9a-f]{64}$/);
     expect(() => resolveRoll({ serverSeed: 's', clientSeed: 'c', nonce: 0, items: [], odds: DEFAULT_ODDS })).toThrow('empty pool');
+  });
+});
+
+describe('uniform odds (owner decision 2026-09-28)', () => {
+  it('every coin comes up about 1/N of the time, whatever its tier', () => {
+    // 3 Top coins and 37 Micro coins: with tier odds a Top coin would be ~1 %, uniformly it is 1/40 = 2.5 % like every other coin.
+    const pool: PoolItem[] = [...Array.from({ length: 3 }, (_, i) => ({ a: 1 + i, t: 'top' as Tier })), ...Array.from({ length: 37 }, (_, i) => ({ a: 100 + i, t: 'micro' as Tier }))];
+    const counts = new Map<number, number>();
+    const rolls = 20_000;
+    for (let n = 0; n < rolls; n++) {
+      const r = resolveRoll({ serverSeed: 'uniform-seed', clientSeed: 'c', nonce: n, items: pool, odds: DEFAULT_ODDS, mode: 'uniform' });
+      counts.set(r.assetId, (counts.get(r.assetId) ?? 0) + 1);
+    }
+    for (const item of pool) expect(Math.abs((counts.get(item.a) ?? 0) / rolls - 1 / 40)).toBeLessThan(0.006);
+    expect(uniformOdds(pool)).toEqual({ micro: 9250, top: 750 });
+  });
+
+  it('is deterministic and order-independent, and old tier-mode rolls still resolve the same', () => {
+    const pool: PoolItem[] = [{ a: 5, t: 'mid' }, { a: 2, t: 'micro' }, { a: 9, t: 'top' }];
+    const input = { serverSeed: 's', clientSeed: 'c', nonce: 7, items: pool, odds: DEFAULT_ODDS, mode: 'uniform' as const };
+    expect(resolveRoll(input)).toEqual(resolveRoll({ ...input, items: [...pool].reverse() }));
+    expect(resolveRoll({ ...input, mode: 'tiers' })).toEqual(resolveRoll({ serverSeed: 's', clientSeed: 'c', nonce: 7, items: pool, odds: DEFAULT_ODDS }));
   });
 });

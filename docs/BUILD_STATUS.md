@@ -35,7 +35,7 @@ Totals: BUILT 1 · DROPPED 1 · NEEDS_OWNER 4 · PARTIAL 9 · SPEC 1 · VERIFIED
 | LAB-AC-028 | VERIFIED_LOCAL | guest roll test, no signature |
 | LAB-AC-029 | VERIFIED_LOCAL | no payment route exists |
 | LAB-AC-030 | VERIFIED_LOCAL | verify test after rotation |
-| LAB-AC-031 | VERIFIED_LOCAL | 10 000-roll odds test |
+| LAB-AC-031 | VERIFIED_LOCAL | same inputs → same result; uniform mode: 20 000 rolls, every coin within 0.6 pt of 1/N; old tier mode: 10 000 rolls within 1 pt of the odds (tests/unit/rolls.test.ts; DECISIONS #18) |
 | LAB-AC-032 | VERIFIED_LOCAL | pacing + concurrency tests |
 | LAB-AC-033 | VERIFIED_LOCAL | result card fields: token header + rail + DEX Screener/explorer links, live-local on real data + e2e (claude-review-A2.md) |
 | LAB-AC-034 | VERIFIED_LOCAL | disclaimer "Random pick, not investment advice. Memecoins can go to zero." in the footer of the roll screen and under the swap box (e2e ac.spec.ts) |

@@ -1,6 +1,6 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
-import { effectiveOdds, TIERS, type PoolItem, type Tier, type TierOdds } from '@/modules/rolls/fair';
+import { uniformOdds, TIERS, type PoolItem, type Tier, type TierOdds } from '@/modules/rolls/fair';
 import { getCase, latestPool, listCases, SNAPSHOT_MAX_AGE_MINUTES } from './pools';
 
 /** Read models for the UI (documented in docs/UI_CONTRACT.md). Only fields Lockabox needs, never raw provider payloads (LAB-AC-023). */
@@ -72,7 +72,7 @@ export async function caseSummary(caseId: string, chainScope: string, opts: { co
     chainScope,
     pool: pool ? { id: pool.id, version: pool.version, hash: pool.hash, size: pool.size, createdAt: pool.created_at.toISOString() } : null,
     tierCounts: counts,
-    odds: effectiveOdds(c.tier_odds as TierOdds, items),
+    odds: uniformOdds(items), // every coin 1/N: the tier shares are the real chances (DECISIONS #18)
     contents: cards,
   };
 }

@@ -39,8 +39,14 @@ export async function recomputeRoll(input: {
   nonce: number;
   items: BrowserPoolItem[];
   odds: Partial<Record<Tier, number>>;
+  /** 'uniform' (every coin 1/N) for rolls since 2026-09-28; 'tiers' for older ones. */
+  oddsMode?: 'tiers' | 'uniform';
 }) {
   const pool = canonicalPool(input.items);
+  if (input.oddsMode === 'uniform') {
+    const pick = pool[Math.floor((await hmacFloat(input.serverSeed, input.clientSeed, input.nonce, 0)) * pool.length)];
+    return { tier: pick?.t ?? 'micro', assetId: pick?.a ?? 0 };
+  }
   const odds = effectiveOdds(input.odds, pool);
   const tierPoint = (await hmacFloat(input.serverSeed, input.clientSeed, input.nonce, 0)) * 10_000;
   const itemPoint = await hmacFloat(input.serverSeed, input.clientSeed, input.nonce, 1);

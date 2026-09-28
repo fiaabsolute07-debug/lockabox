@@ -59,13 +59,36 @@ export function effectiveOdds(odds: TierOdds, items: PoolItem[]): Partial<Record
   return out;
 }
 
-export type RollInput = { serverSeed: string; clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds };
+/** 'uniform': every coin in the pool has the same chance, 1/N (owner decision 2026-09-28). 'tiers': the older two-step roll
+ * (tier by the case's tier odds, then a coin inside that tier), kept so earlier rolls still verify. */
+export type OddsMode = 'tiers' | 'uniform';
+
+/** Share of the pool in each tier, in basis points summing to 10 000: the real chance of each tier when every coin is equal. */
+export function uniformOdds(items: PoolItem[]): Partial<Record<Tier, number>> {
+  const out: Partial<Record<Tier, number>> = {};
+  const present = TIERS.filter((t) => items.some((i) => i.t === t));
+  let assigned = 0;
+  present.forEach((t, i) => {
+    const bp = i === present.length - 1 ? 10_000 - assigned : Math.round((items.filter((x) => x.t === t).length / items.length) * 10_000);
+    out[t] = bp;
+    assigned += bp;
+  });
+  return out;
+}
+
+export type RollInput = { serverSeed: string; clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds; mode?: OddsMode };
 export type RollOutcome = { tier: Tier; assetId: number; rTier: number; rItem: number; odds: Partial<Record<Tier, number>> };
 
 /** Deterministic: same input, same outcome. `items` must already be the filtered pool. */
-export function resolveRoll({ serverSeed, clientSeed, nonce, items, odds }: RollInput): RollOutcome {
+export function resolveRoll({ serverSeed, clientSeed, nonce, items, odds, mode = 'tiers' }: RollInput): RollOutcome {
   if (!items.length) throw new Error('empty pool');
   const pool = canonicalPool(items);
+  if (mode === 'uniform') {
+    // One draw over the canonical pool: coin i wins when floor(r × N) = i, so each coin has exactly 1/N.
+    const rTier = fairFloat(serverSeed, clientSeed, nonce, 0);
+    const pick = pool[Math.floor(rTier * pool.length)];
+    return { tier: pick.t, assetId: pick.a, rTier, rItem: rTier, odds: uniformOdds(pool) };
+  }
   const eff = effectiveOdds(odds, pool);
   const rTier = fairFloat(serverSeed, clientSeed, nonce, 0);
   const rItem = fairFloat(serverSeed, clientSeed, nonce, 1);

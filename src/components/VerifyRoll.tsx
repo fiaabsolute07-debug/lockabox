@@ -23,7 +23,7 @@ export default function VerifyRoll({ id }: { id: string }) {
         const hashMatches = (await sha256Hex(proof.serverSeed)) === proof.serverSeedHash;
         // The pool the server hands back must be the one it recorded at roll time.
         const poolMatches = (await sha256Hex(JSON.stringify(proof.items))) === roll.roll.itemsHash;
-        const recomputed = await recomputeRoll({ serverSeed: proof.serverSeed, clientSeed: roll.roll.clientSeed, nonce: roll.roll.nonce, items: proof.items, odds: proof.odds });
+        const recomputed = await recomputeRoll({ serverSeed: proof.serverSeed, clientSeed: roll.roll.clientSeed, nonce: roll.roll.nonce, items: proof.items, odds: proof.odds, oddsMode: proof.oddsMode });
         if (active) setBrowser({ hashMatches, poolMatches, recomputed });
       }
     }).catch((reason: unknown) => { if (active) setError(translateApiError(reason, t, 'couldNotLoad')); });

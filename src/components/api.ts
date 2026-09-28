@@ -160,6 +160,7 @@ export type VerificationResponse =
       nonce: number;
       items: { a: number; t: Tier }[];
       odds: Partial<Record<Tier, number>>;
+      oddsMode?: 'tiers' | 'uniform';
     };
 
 export type BuyItem = {
