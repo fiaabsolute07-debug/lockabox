@@ -20,4 +20,9 @@ describe('token images', () => {
     expect([...result]).toEqual([['0xabc','https://example.com/a.png']]);
     expect(() => geckoImages({},'base')).toThrow();
   });
+  it('looks up Arc and Robinhood tokens under their GeckoTerminal network ids', () => {
+    const row = (id: string,address: string) => ({ id,type:'token',attributes:{address,image_url:'https://example.com/a.png'} });
+    expect([...geckoImages({data:[row('arc_0xaa','0xaa')]},'arc')]).toEqual([['0xaa','https://example.com/a.png']]);
+    expect([...geckoImages({data:[row('robinhood_0xbb','0xbb')]},'robinhood')]).toEqual([['0xbb','https://example.com/a.png']]);
+  });
 });

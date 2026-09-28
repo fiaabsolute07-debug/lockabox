@@ -3,7 +3,7 @@ import { tokenImageUrl } from '@/modules/sources/images';
 import { normalizeAssetAddress } from '@/modules/sources/normalize';
 
 // Explicit provider network mapping; unknown networks are not guessed.
-// Verified against /api/v2/networks pages 1–2 (2026-09-28). Unknown IDs stay excluded.
+// Verified against /api/v2/networks pages 1–2 (2026-09-28); arc and robinhood verified on later pages (2026-09-28). Unknown IDs stay excluded.
 const NETWORKS: Record<string, string> = {
   solana:'solana',ethereum:'eth',base:'base',bsc:'bsc',arbitrum:'arbitrum',polygon:'polygon_pos',avalanche:'avax',optimism:'optimism',
   cronos:'cro',fantom:'ftm',metis:'metis',celo:'celo',gnosischain:'xdai',moonbeam:'glmr',kaia:'kaia',flare:'flare',aptos:'aptos',core:'core',
@@ -11,6 +11,7 @@ const NETWORKS: Record<string, string> = {
   hedera:'hedera-hashgraph',scroll:'scroll',ton:'ton',mode:'mode',blast:'blast',zora:'zora-network',xlayer:'x-layer',bob:'bob-network',
   taiko:'taiko',seiv2:'sei-evm',tron:'tron',worldchain:'world-chain',apechain:'apechain',cardano:'cardano',sonic:'sonic',ink:'ink',soneium:'soneium',
   abstract:'abstract',berachain:'berachain',unichain:'unichain',hyperevm:'hyperevm',katana:'katana',near:'near',plasma:'plasma',injective:'injective',monad:'monad',megaeth:'megaeth',
+  arc:'arc',robinhood:'robinhood',
 };
 
 export function geckoImages(payload: unknown, chain: string): Map<string, string> {
