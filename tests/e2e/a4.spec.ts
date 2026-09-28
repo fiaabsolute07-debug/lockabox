@@ -26,7 +26,7 @@ async function setup(page: Page, options: { user?: boolean; asset?: Record<strin
     if (url.pathname === '/api/cases/trending') return json(route, caseSummary);
     if (url.pathname === '/api/assets/3') return json(route, options.asset ?? baseAsset);
     if (url.pathname === '/api/assets/3/buys') return json(route, { items: [] });
-    if (url.pathname === '/api/rolls' && request.method() === 'POST') return json(route, roll, 201);
+    if (url.pathname === '/api/rolls' && request.method() === 'POST') return json(route, { ...roll, asset: options.asset ?? baseAsset }, 201);
     if (url.pathname === '/api/sponsor/campaigns' && request.method() === 'GET') return json(route, options.campaigns ?? { items: [] });
     if (url.pathname === '/api/sponsor/campaigns' && request.method() === 'POST') return json(route, { error: { code: 'policy', message: 'descriptions may not promise returns or price moves' } }, 422);
     if (url.pathname === '/api/sponsor/campaigns/12') return json(route, { campaign: { id: 12, project_name: 'Fixture Project', status: 'approved', total_opens: 100, opens_used: 12, starts_at: '2026-09-27T00:00:00.000Z', ends_at: '2026-10-01T00:00:00.000Z', amount_per_open: '1' }, stats: { opens: 12, wallets: 9, sent: 10, buys: 3 } });

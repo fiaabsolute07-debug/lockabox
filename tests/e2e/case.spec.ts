@@ -32,7 +32,7 @@ async function fixtures(page: Page, options: { discover?: boolean; poolTooSmall?
     if (url.pathname === '/api/rolls' && request.method() === 'POST') {
       rollPosts += 1;
       if (options.poolTooSmall) return json(route, { error: { code: 'pool_too_small', message: 'only 5 coins match these filters; loosen them', detail: { size: 5, min: 20 } } }, 422);
-      return json(route, options.rollBody ?? roll, 201);
+      return json(route, options.rollBody ?? { ...roll, asset: options.assetBody ?? asset }, 201); // the real API returns the full asset detail with the roll
     }
     if (url.pathname === '/api/rolls/42' && request.method() === 'GET') return json(route, rollRecord);
     if (url.pathname === '/api/rolls/42/verify') return json(route, verification);
@@ -107,6 +107,11 @@ test('pair age presets and All reach the next roll without resetting other filte
   await page.getByRole('button', { name: /Filters/ }).click();
   await page.getByLabel('Min liquidity', { exact: true }).fill('2500');
   await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+  // Closing without Apply discards the draft.
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await expect(page.getByLabel('Min liquidity', { exact: true })).toHaveValue('');
+  await page.getByLabel('Min liquidity', { exact: true }).fill('2500');
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
   for (const [label, hours] of [['<1h', 1], ['<6h', 6], ['<24h', 24], ['<3d', 72], ['<7d', 168], ['<14d', 336], ['<30d', 720], ['All', null]] as const) {
     await page.getByRole('button', { name: /Filters/ }).click();
     const group = page.getByRole('group', { name: 'PAIR AGE', exact: true });
@@ -114,7 +119,7 @@ test('pair age presets and All reach the next roll without resetting other filte
     await expect(group.locator('[aria-pressed="true"]')).toHaveCount(1);
     await expect(group.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByLabel('Max pair age (hours)', { exact: true })).toHaveValue(hours === null ? '' : String(hours));
-    await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(page.locator('.filter-summary')).toHaveText(`Next roll · pair age: ${label}`);
     const sent = page.waitForRequest(request => new URL(request.url()).pathname === '/api/rolls' && request.method() === 'POST');
     await page.getByRole('button', { name: /OPEN CASE/i }).click();
@@ -137,7 +142,7 @@ test('pair age controls fit mobile and keep custom hours available', async ({ pa
   }
   await page.getByLabel('Max pair age (hours)', { exact: true }).fill('48');
   await expect(group.locator('[aria-pressed="true"]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.locator('.filter-summary')).toHaveText('Next roll · pair age: <48h');
   const sent = page.waitForRequest(request => new URL(request.url()).pathname === '/api/rolls' && request.method() === 'POST');
   await page.getByRole('button', { name: /OPEN CASE/i }).click();

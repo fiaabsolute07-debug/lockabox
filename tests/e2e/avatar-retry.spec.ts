@@ -18,7 +18,7 @@ for (const recover of [true, false]) test(`avatar retry ${recover ? 'recovers' :
   });
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
-    const data = path === '/api/meta' ? meta : path === '/api/auth/me' ? {user:null} : path === '/api/feed' ? {items:[],stats:{rolls1h:0,buysToday:0,lastTopPullAt:null}} : path.startsWith('/api/cases/') ? summary : path === '/api/rolls' ? {...roll,asset:{...roll.asset,imageUrl:null}} : path === '/api/assets/3' ? {...asset,imageUrl} : {items:[]};
+    const data = path === '/api/meta' ? meta : path === '/api/auth/me' ? {user:null} : path === '/api/feed' ? {items:[],stats:{rolls1h:0,buysToday:0,lastTopPullAt:null}} : path.startsWith('/api/cases/') ? summary : path === '/api/rolls' ? {...roll,asset:{...asset,imageUrl}} : path === '/api/assets/3' ? {...asset,imageUrl} : {items:[]};
     return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await page.goto('/');

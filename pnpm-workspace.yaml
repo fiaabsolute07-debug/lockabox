@@ -11,3 +11,5 @@ allowBuilds:
   protobufjs: false
   bufferutil: false
   utf-8-validate: false
+  '@reown/appkit': false # Optional version-check postinstall; shipped JS works without it.
+  bigint-buffer: false # Use the portable JS fallback rather than compiling a native addon.

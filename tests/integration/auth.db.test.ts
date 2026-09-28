@@ -42,6 +42,14 @@ run('EVM sign-in, EIP-4361 (LAB-AC-004)', () => {
   // A throwaway key made for this test only.
   const account = privateKeyToAccount(generatePrivateKey());
   const other = privateKeyToAccount(generatePrivateKey());
+  it('binds SIWE to its origin and rejects cross-origin replay', async () => {
+    const origin = 'http://127.0.0.1:4310';
+    const n = await createNonce(account.address, undefined, { family: 'evm', chainId: 8453, origin });
+    expect(n.message).toContain(`URI: ${origin}`);
+    const payload = { address: account.address, nonce: n.nonce, issuedAt: n.issuedAt, signature: await account.signMessage({ message: n.message }), family: 'evm' as const, chainId: 8453 };
+    await expect(signInCore({ ...payload, origin: 'https://lockabox.fun' })).rejects.toThrow(/bad signature/);
+    expect((await signInCore({ ...payload, origin })).userId).toBeTruthy();
+  });
 
   it('signs in with a SIWE message; case of the address does not matter; a nonce works once', async () => {
     const n = await createNonce(account.address, undefined, { family: 'evm', chainId: 8453 });

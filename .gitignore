@@ -12,3 +12,4 @@ design/*.png
 .DS_Store
 .local-*.log
 docs/evidence/*.last.md
+.pnpm-store/

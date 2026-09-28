@@ -5,6 +5,7 @@ import { ApiError, displaySymbol, explorerTxLink, fetchJson, formatPrice, format
 import { isUserRejection, useEvmWallet } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
 import { useTradeStatus } from './useTradeStatus';
+import { useAppContext } from './AppShell';
 
 /**
  * EVM buy through LI.FI (AC-038, DECISIONS #10). Rendered only when the coin's chain has swap switched on. Every route fee is shown
@@ -19,6 +20,7 @@ type Status = { kind: 'approve' | 'approvalPending' | 'confirm' | 'pending' | 's
 export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asset: AssetDetail; chain: Chain; rollId?: number; onRollAgain?: () => void }) {
   const { t, locale, number } = useT();
   const evm = useEvmWallet();
+  const { openWallet } = useAppContext();
   const inputSymbol = chain.nativeSymbol ?? 'ETH';
   const quick = QUICK_AMOUNTS[inputSymbol] ?? QUICK_AMOUNTS.ETH;
   const [amount, setAmount] = useState(quick[1]);
@@ -31,7 +33,6 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const [swapAvailable, setSwapAvailable] = useState(true);
-  const [pickWallet, setPickWallet] = useState(false);
   const final = useTradeStatus(status?.kind === 'submitted' ? status.tradeId ?? null : null);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const connection = evm.connection;
 
   const buy = async () => {
-    if (!connection) { setPickWallet(true); return; }
+    if (!connection) { openWallet('evm'); return; }
     if (!quote || busy || (highSlippage && !confirmHighSlippage)) return;
     setBusy(true); setError(null); setStatus(null);
     try {
@@ -118,7 +119,6 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
     {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
     {statusText && <div className="trade-status" role="status">{statusText}{link && <> · <a href={link} target="_blank" rel="noreferrer">{t('viewOnExplorer')}</a></>}</div>}
-    {!connection && pickWallet && <div className="evm-wallet-pick">{evm.providers.length ? evm.providers.map((detail) => <button key={detail.info.uuid} className="button button-outline full-width" onClick={() => void evm.connect(detail).then(() => setPickWallet(false)).catch((reason: unknown) => { if (!isUserRejection(reason)) setError(t('evmConnectFailed')); })}>{/* eslint-disable-line @next/next/no-img-element -- data: URI announced by the wallet (EIP-6963) */}{detail.info.icon ? <img src={detail.info.icon} alt="" width={16} height={16} /> : null} {detail.info.name}</button>) : <p className="muted">{t('noEvmWallet')}</p>}</div>}
     <button className="button button-buy full-width" onClick={() => void buy()} disabled={busy || (!!connection && (!quote || quoteBusy || (highSlippage && !confirmHighSlippage)))}>{connection ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectEvmToBuy')}</button>
     <p className="disclaimer">{t('lifiNote')} {t('ownWalletDisclaimer')}</p>
   </section>;

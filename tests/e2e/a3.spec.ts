@@ -75,11 +75,12 @@ test('Best pulls renders rows, empty state, and switches windows', async ({ page
 test('account privacy toggle posts and sign out logs out', async ({ page }) => {
   const state = await setup(page, { signedIn: true });
   await page.goto('/');
-  await page.getByRole('button', { name: /Fixt.*⌄/ }).click();
+  // The account button opens the wallet dialog, which holds privacy and sign out.
+  await page.getByRole('button', { name: /^Fixt…/ }).click();
   const toggle = page.getByRole('checkbox', { name: /Hide my wallet/ });
-  await toggle.check();
+  await toggle.click();
   await expect.poll(() => state.privacyBody).toEqual({ hideFromBoard: true });
-  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Sign out / Disconnect' }).click();
   await expect.poll(() => state.logoutCalls).toBe(1);
 });
 

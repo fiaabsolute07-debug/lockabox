@@ -51,8 +51,7 @@ async function standardWallet(page: Page) {
 
 async function connectSolana(page: Page) {
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await page.getByRole('menuitem', { name: 'Solana wallet' }).click();
-  await page.locator('.wallet-adapter-modal').getByRole('button', { name: /Fixture Solana Wallet/ }).click();
+  await page.locator('w3m-modal').getByRole('button', { name: /Fixture Solana Wallet/ }).click();
 }
 
 test('AC-003: real SIWS round trip against the local API and database; same wallet → same account', async ({ page, request }) => {
@@ -62,16 +61,16 @@ test('AC-003: real SIWS round trip against the local API and database; same wall
   await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
   await page.goto('/');
   await connectSolana(page);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click({ timeout: 20_000 });
   const short = `${address.slice(0, 4)}…${address.slice(-4)}`;
-  await expect(page.getByRole('button', { name: short })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: short, exact: true })).toBeVisible({ timeout: 20_000 });
   const me = await page.evaluate(() => fetch('/api/auth/me').then((response) => response.json()));
   expect(me.user.wallets).toEqual([{ family: 'solana', address }]);
-  await page.getByRole('button', { name: short }).click();
-  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: short, exact: true }).click();
+  await page.getByRole('button', { name: 'Sign out / Disconnect' }).click();
   await connectSolana(page);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('button', { name: short })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
+  await expect(page.getByRole('button', { name: short, exact: true })).toBeVisible({ timeout: 20_000 });
   const again = await page.evaluate(() => fetch('/api/auth/me').then((response) => response.json()));
   expect(again.user.id).toBe(me.user.id);
 });
@@ -106,6 +105,7 @@ test('AC-040/042: a Solana buy is built only on the click, sent through the wall
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await connectSolana(page);
+  await page.getByRole('button', { name: 'Continue without signing' }).click();
   await page.getByRole('button', { name: /OPEN CASE/ }).click();
   const box = page.locator('.swap-card');
   await expect(box.getByRole('button', { name: /Buy GLORP · review in wallet/ })).toBeEnabled();

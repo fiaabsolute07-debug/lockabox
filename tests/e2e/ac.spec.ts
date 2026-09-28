@@ -56,7 +56,7 @@ test('AC-040: rolling and quoting never build a swap; the Buy click without a wa
   await page.waitForTimeout(800);
   expect(state.builds).toBe(0);
   await page.locator('.swap-card').getByRole('button', { name: 'Connect wallet to buy' }).click();
-  await expect(page.locator('.wallet-adapter-modal')).toBeVisible();
+  await expect(page.locator('w3m-modal')).toBeVisible();
   expect(state.builds).toBe(0);
 });
 
@@ -71,7 +71,12 @@ test('AC-044: slippage defaults to 3 %, needs a confirmation above 10 % and stop
   await expect.poll(() => state.quotes.at(-1)?.slippageBps).toBe(4900);
   const confirm = page.getByLabel('I understand higher slippage can change the result.');
   await expect(confirm).toBeVisible();
-  await expect(buy).toBeDisabled();
+  // With no wallet the button only opens the wallet picker; the high-slippage gate guards the buy itself.
+  await buy.click();
+  await expect(page.locator('w3m-modal')).toHaveClass(/open/);
+  expect(state.builds).toBe(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('w3m-modal')).not.toHaveClass(/open/);
   await confirm.check();
   await expect(buy).toBeEnabled();
   await page.getByRole('spinbutton', { name: 'Slippage' }).fill('10');

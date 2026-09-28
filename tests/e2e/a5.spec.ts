@@ -40,6 +40,9 @@ async function mockWallet(page: Page, options: { chainId?: number; rejectSign?: 
     const state = { calls: [] as { method: string; params?: unknown[] }[], chainId, sent: 0 };
     (window as unknown as { __wallet: typeof state }).__wallet = state;
     const listeners: Record<string, ((value: unknown) => void)[]> = {};
+    (window as unknown as { __changeWallet: (address: string) => void }).__changeWallet = (next) => {
+      for (const listener of listeners.accountsChanged ?? []) listener([next]);
+    };
     const provider = {
       async request({ method, params }: { method: string; params?: unknown[] }) {
         state.calls.push({ method, params });
@@ -109,9 +112,11 @@ test('EVM sign-in: EIP-6963 wallet, SIWE nonce/verify bodies, personal_sign of t
   const state = await setup(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Solana wallet' })).toBeVisible();
-  await page.getByRole('menuitem', { name: /Fixture Wallet/ }).click();
-  await page.getByRole('button', { name: 'Sign in · 0xab…ffee' }).click();
+  await expect(page.locator('w3m-modal')).toBeVisible();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await expect(page.getByRole('button', { name: 'Sign in to Lockabox', exact: true })).toBeVisible();
+  expect((await walletCalls(page)).filter(c => c.method === 'personal_sign')).toHaveLength(0);
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
   await expect(page.getByRole('button', { name: /0xab…ffee/ }).first()).toBeVisible();
   await expect.poll(() => state.verifyBody).not.toBeNull();
   expect(state.nonceBody).toEqual({ address: ADDRESS, family: 'evm', chainId: 8453 });
@@ -121,8 +126,34 @@ test('EVM sign-in: EIP-6963 wallet, SIWE nonce/verify bodies, personal_sign of t
   expect(sign.params).toEqual([`0x${Buffer.from(message).toString('hex')}`, ADDRESS]);
   // Sign out works for EVM too.
   await page.getByRole('button', { name: /0xab…ffee/ }).first().click();
-  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Sign out / Disconnect' }).click();
   await expect(page.getByRole('button', { name: 'Connect wallet' })).toBeVisible();
+});
+
+test('changing the connected account revokes the previous session', async ({ page }) => {
+  await mockWallet(page);
+  const state = await setup(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
+  await expect.poll(() => state.signedIn).toBe(true);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { __changeWallet: (address: string) => void }).__changeWallet('0x1111111111111111111111111111111111111111'));
+  await expect.poll(() => state.signedIn).toBe(false);
+  await expect(page.getByRole('button', { name: /Sign in · 0x11/ })).toBeVisible();
+});
+
+test('no extension offers WalletConnect in a dismissible mobile catalog', async ({ page }) => {
+  await setup(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await expect(page.locator('w3m-modal').getByText('WalletConnect', { exact: true })).toBeVisible();
+  const bounds = await page.locator('w3m-modal wui-card').first().boundingBox();
+  expect(bounds!.width).toBeLessThanOrEqual(390);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('w3m-modal')).not.toHaveClass(/open/);
 });
 
 test('real SIWE round trip against the local API and database (throwaway key, no chain access)', async ({ page, request }) => {
@@ -135,20 +166,20 @@ test('real SIWE round trip against the local API and database (throwaway key, no
   await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await page.getByRole('menuitem', { name: /Fixture Wallet/ }).click();
-  await page.getByRole('button', { name: /^Sign in · / }).click();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
   const short = `${address.slice(0, 4)}…${address.slice(-4)}`;
   // Real routes: on a cold `next dev` the first nonce/verify/me requests compile on demand and can take several seconds.
-  await expect(page.getByRole('button', { name: short })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: short, exact: true })).toBeVisible({ timeout: 20_000 });
   const me = await page.evaluate(() => fetch('/api/auth/me').then((response) => response.json()));
   expect(me.user.wallets).toEqual([{ family: 'evm', address }]);
   // Signing in again with the same wallet lands on the same account (AC-004).
-  await page.getByRole('button', { name: short }).click();
-  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: short, exact: true }).click();
+  await page.getByRole('button', { name: 'Sign out / Disconnect' }).click();
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await page.getByRole('menuitem', { name: /Fixture Wallet/ }).click();
-  await page.getByRole('button', { name: /^Sign in · / }).click();
-  await expect(page.getByRole('button', { name: short })).toBeVisible();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
+  await expect(page.getByRole('button', { name: short, exact: true })).toBeVisible();
   const again = await page.evaluate(() => fetch('/api/auth/me').then((response) => response.json()));
   expect(again.user.id).toBe(me.user.id);
 });
@@ -158,12 +189,12 @@ test('EVM sign-in from an unsupported network asks the wallet to switch to Base 
   const state = await setup(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await page.getByRole('menuitem', { name: /Fixture Wallet/ }).click();
-  await page.getByRole('button', { name: /^Sign in · / }).click();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
   await expect.poll(() => state.verifyBody).not.toBeNull();
   const methods = (await walletCalls(page)).map((call) => call.method);
   expect(methods.indexOf('wallet_switchEthereumChain')).toBeLessThan(methods.indexOf('personal_sign'));
-  expect((await walletCalls(page)).find((call) => call.method === 'wallet_switchEthereumChain')!.params).toEqual([{ chainId: '0x2105' }]);
+  expect((await walletCalls(page)).filter((call) => call.method === 'wallet_switchEthereumChain').at(-1)!.params).toEqual([{ chainId: '0x2105' }]);
   expect(state.nonceBody).toMatchObject({ chainId: 8453 });
 });
 
@@ -172,10 +203,11 @@ test('a rejected signature is handled quietly', async ({ page }) => {
   const state = await setup(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await page.getByRole('menuitem', { name: /Fixture Wallet/ }).click();
-  await page.getByRole('button', { name: /^Sign in · / }).click();
-  await expect(page.getByRole('button', { name: /^Sign in · / })).toBeEnabled();
+  await page.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sign in to Lockabox', exact: true })).toBeEnabled();
   await expect(page.locator('.header-error')).toHaveCount(0);
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Signature cancelled');
   expect(state.verifyBody).toBeNull();
 });
 
@@ -195,13 +227,15 @@ test('EVM buy: route fees on their own lines, exact approval mined before the sw
   // Rolling and quoting never send anything to the wallet (AC-040).
   expect((await walletCalls(page)).filter((call) => call.method === 'eth_sendTransaction')).toHaveLength(0);
   await box.getByRole('button', { name: 'Connect an EVM wallet to buy' }).click();
-  await box.getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.locator('w3m-modal').getByRole('button', { name: /Fixture Wallet/ }).click();
+  await page.getByRole('button', { name: 'Continue without signing' }).click();
   await box.getByRole('button', { name: /Buy GLORP · review in wallet/ }).click();
   await expect(box.getByRole('status')).toContainText('Swap submitted');
   await expect(box.getByRole('link', { name: /View on explorer/ })).toHaveAttribute('href', `https://basescan.org/tx/0x${'2'.padStart(64, '0')}`);
   expect(state.buildBody).toEqual({ assetId: 3, amount: '0.005', slippageBps: 300, userAddress: ADDRESS, rollId: 42 });
   const calls = (await walletCalls(page)).filter((call) => ['wallet_switchEthereumChain', 'eth_sendTransaction', 'eth_getTransactionReceipt'].includes(call.method));
-  expect(calls.map((call) => call.method)).toEqual(['wallet_switchEthereumChain', 'eth_sendTransaction', 'eth_getTransactionReceipt', 'eth_sendTransaction']);
+  expect(calls.filter(call => call.method !== 'wallet_switchEthereumChain').map(call => call.method)).toEqual(['eth_sendTransaction', 'eth_getTransactionReceipt', 'eth_sendTransaction']);
+  expect(calls.filter(call => call.method === 'wallet_switchEthereumChain').at(-1)?.params).toEqual([{ chainId: '0x2105' }]);
   const [approval, swap] = calls.filter((call) => call.method === 'eth_sendTransaction').map((call) => call.params![0] as Record<string, string>);
   expect(approval).toMatchObject({ from: ADDRESS, to: USDC, data: '0x095ea7b3' });
   expect(swap).toMatchObject({ from: ADDRESS, to: LIFI_DIAMOND, data: '0xabcdef', value: '0x11c37937e08000', gas: '0x7a120' });

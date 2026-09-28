@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { useSolanaWallet } from './useSolanaWallet';
 import { VersionedTransaction } from '@solana/web3.js';
 import { ApiError, displaySymbol, fetchJson, formatPrice, formatRawAmount, type AssetDetail, type QuoteView } from './api';
 import { useT, translateApiError } from './i18n';
@@ -23,8 +23,8 @@ export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDe
 function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rollId?: number; onRollAgain?: () => void }) {
   const { t, locale } = useT();
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { publicKey, sendTransaction } = useSolanaWallet();
+  const { openWallet } = useAppContext();
   const [amount, setAmount] = useState('0.05');
   const [slippage, setSlippage] = useState('3');
   const [confirmHighSlippage, setConfirmHighSlippage] = useState(false);
@@ -64,7 +64,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
 
   const highSlippage = Number(slippage) > 10;
   const buy = async () => {
-    if (!publicKey || !sendTransaction) { setVisible(true); return; }
+    if (!publicKey || !sendTransaction) { openWallet('solana'); return; }
     if (!quote || (highSlippage && !confirmHighSlippage)) return;
     setError(null); setStatus(null);
     try {
@@ -92,7 +92,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
     {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
     {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
     {status && <div className="trade-status" role="status">{status.kind === 'submitted' ? (final === 'confirmed' ? t('swapConfirmed') : final === 'failed' ? t('swapFailed') : t('swapSubmitted')) : t('swapPending')} · <a href={`https://solscan.io/tx/${status.signature}`} target="_blank" rel="noreferrer">{t('viewOnSolscan')}</a></div>}
-    <button className="button button-buy full-width" onClick={() => void buy()} disabled={!quote || quoteBusy || (highSlippage && !confirmHighSlippage)}>{publicKey ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectToBuy')}</button>
+    <button className="button button-buy full-width" onClick={() => void buy()} disabled={!!publicKey && (!quote || quoteBusy || (highSlippage && !confirmHighSlippage))}>{publicKey ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectToBuy')}</button>
     <p className="disclaimer">{t('ownWalletDisclaimer')}</p>
   </section>;
 }
