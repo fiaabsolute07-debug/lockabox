@@ -174,6 +174,9 @@ a:hover { color: var(--tx); }
 .direction-buttons { display: flex; gap: 5px; }
 .direction-buttons button { padding: 6px 10px; color: var(--mu); background: var(--bg); border: 1px solid var(--ln); border-radius: 5px; font-size: 11px; }
 .direction-buttons button.active { color: var(--tx); border-color: var(--acc); }
+.filter-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.filter-apply { min-height: 34px; padding: 0 18px; color: #fff; background: var(--acc, #FF5B1F); border: 0; border-radius: 6px; font: 700 12px var(--font-mono-family); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.filter-apply:disabled { opacity: .45; cursor: default; }
 .filter-foot { margin: 12px 0 0; color: #5E6270; font-size: 10px; }
 .open-area { display: flex; flex-direction: column; gap: 8px; }
 .open-button { height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; background: linear-gradient(180deg, #FF7A45, #FF5B1F); border: 0; border-radius: 10px; box-shadow: 0 4px 0 #A8360B, 0 0 30px #ff5b1f59; text-transform: uppercase; }
