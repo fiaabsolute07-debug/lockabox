@@ -1,5 +1,7 @@
 'use client';
 
+import TokenImage from './TokenImage';
+
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { displaySymbol, fetchJson, formatPercent, formatPrice, tierColor, tierLabel, type LeaderboardResponse, type LeaderboardItem } from './api';
@@ -43,5 +45,5 @@ function LeaderboardRow({ item, rank, locale }: { item: LeaderboardItem; rank: n
   const { t } = useT();
   const symbol = displaySymbol(item);
   const change = item.changePct;
-  return <tr><td className="leaderboard-rank mono">{rank}</td><td><div className="leaderboard-coin"><div className="leaderboard-avatar" style={{ backgroundColor: tierColor(item.tier), ...(item.imageUrl ? { backgroundImage: `url(${item.imageUrl})`, backgroundSize: 'cover', color: 'transparent' } : {}) }}>{item.imageUrl ? null : symbol[0]}</div><strong>${symbol}</strong></div></td><td><span className="tier-text" style={{ color: tierColor(item.tier) }}>{tierLabel(item.tier)}</span></td><td className="mono price-pair"><span>{formatPrice(item.priceAtPull, locale)}</span><span className="muted">→</span><span>{formatPrice(item.priceNow, locale)}</span></td><td className={`mono ${change === null ? 'muted' : change >= 0 ? 'up-text' : 'down-text'}`}>{formatPercent(change, locale)}</td><td className="mono who-cell">{item.who || t('anonymous')}</td><td><Link className="verify-link compact-verify" href={`/verify/${item.rollId}`}>{t('verify')} ↗</Link></td></tr>;
+  return <tr><td className="leaderboard-rank mono">{rank}</td><td><div className="leaderboard-coin"><div className="leaderboard-avatar" style={{ backgroundColor: tierColor(item.tier) }}><TokenImage src={item.imageUrl} symbol={symbol} /></div><strong>${symbol}</strong></div></td><td><span className="tier-text" style={{ color: tierColor(item.tier) }}>{tierLabel(item.tier)}</span></td><td className="mono price-pair"><span>{formatPrice(item.priceAtPull, locale)}</span><span className="muted">→</span><span>{formatPrice(item.priceNow, locale)}</span></td><td className={`mono ${change === null ? 'muted' : change >= 0 ? 'up-text' : 'down-text'}`}>{formatPercent(change, locale)}</td><td className="mono who-cell">{item.who || t('anonymous')}</td><td><Link className="verify-link compact-verify" href={`/verify/${item.rollId}`}>{t('verify')} ↗</Link></td></tr>;
 }

@@ -1,6 +1,6 @@
 import type postgres from 'postgres';
 import { sql as defaultSql } from '@/lib/db';
-import { getCase, latestPool, SNAPSHOT_MAX_AGE_MINUTES } from '@/modules/cases/pools';
+import { disabledGates, getCase, latestPool, SNAPSHOT_MAX_AGE_MINUTES } from '@/modules/cases/pools';
 import { canonicalPool, DEFAULT_ODDS, newServerSeed, poolHash, resolveRoll, TIERS, type PoolItem, type Tier, type TierOdds } from './fair';
 
 /** Below this many items after filters, rolling is refused so a filter can't turn the roll into a hand pick (LAB §2.2). */
@@ -82,17 +82,19 @@ export function sanitizeFilters(input: unknown): RollFilters {
 /** Applies user filters to a frozen pool using the current snapshots; the result is stored on the roll for verification. */
 export async function filterPool(items: PoolItem[], filters: RollFilters, sql: postgres.Sql = defaultSql): Promise<PoolItem[]> {
   let pool = filters.tiers ? items.filter((i) => filters.tiers!.includes(i.t)) : items;
-  // Kill switch applies at roll time, not at the next pool rebuild (LAB-AC-069).
-  if (pool.length) {
-    const killed = await sql<{ asset_id: number }[]>`select asset_id from moderation where asset_id = any(${pool.map((i) => i.a)}::bigint[])`;
-    if (killed.length) { const k = new Set(killed.map((r) => Number(r.asset_id))); pool = pool.filter((i) => !k.has(i.a)); }
-  }
-  const needsSnapshots = filters.minLiquidityUsd || filters.minVolume24h || filters.maxAgeHours || filters.minAgeHours || filters.change24h;
-  if (!needsSnapshots || !pool.length) return canonicalPool(pool);
+  if (!pool.length) return [];
+  const off = disabledGates();
   const ids = pool.map((i) => i.a);
   const rows = await sql<{ asset_id: number; liquidity_usd: number | null; volume_24h: number | null; pair_created_at: Date | null; change_h24: number | null }[]>`
-    select asset_id, liquidity_usd, volume_24h, pair_created_at, change_h24 from asset_snapshots
-    where asset_id = any(${ids}::bigint[]) and taken_at > now() - make_interval(mins => ${SNAPSHOT_MAX_AGE_MINUTES})`;
+    select s.asset_id, s.liquidity_usd, s.volume_24h, s.pair_created_at, s.change_h24 from asset_snapshots s
+    join assets a on a.id=s.asset_id join chains ch on ch.id=a.chain_id and ch.enabled
+    where s.asset_id = any(${ids}::bigint[]) and s.taken_at > now() - make_interval(mins => ${SNAPSHOT_MAX_AGE_MINUTES})
+      and a.merged_into is null and coalesce(s.market_cap,0)>0
+      and not exists(select 1 from moderation m where m.asset_id=a.id)
+      and not exists(select 1 from symbol_blocklist b where b.symbol=upper(coalesce(a.symbol,'')))
+      and (${off.includes('liquidity')} or exists(select 1 from gate_results g where g.asset_id=a.id and g.gate='liquidity' and g.passed))
+      and not exists(select 1 from gate_results g where g.asset_id=a.id and not g.passed and g.gate<>all(${off}::text[]))
+      and (${off.includes('honeypot')} or not ch.swap_enabled or exists(select 1 from gate_results g where g.asset_id=a.id and g.gate='honeypot' and g.passed))`;
   const byId = new Map(rows.map((r) => [Number(r.asset_id), r]));
   const now = Date.now();
   pool = pool.filter(({ a }) => {
@@ -101,7 +103,7 @@ export async function filterPool(items: PoolItem[], filters: RollFilters, sql: p
     if (filters.minLiquidityUsd && (s.liquidity_usd ?? 0) < filters.minLiquidityUsd) return false;
     if (filters.minVolume24h && (s.volume_24h ?? 0) < filters.minVolume24h) return false;
     const ageH = s.pair_created_at ? (now - s.pair_created_at.getTime()) / 3.6e6 : null;
-    if (filters.maxAgeHours && (ageH === null || ageH > filters.maxAgeHours)) return false;
+    if (filters.maxAgeHours && (ageH === null || ageH < 0 || ageH > filters.maxAgeHours)) return false;
     if (filters.minAgeHours && (ageH === null || ageH < filters.minAgeHours)) return false;
     if (filters.change24h === 'up' && !((s.change_h24 ?? 0) > 0)) return false;
     if (filters.change24h === 'down' && !((s.change_h24 ?? 0) < 0)) return false;
@@ -166,6 +168,7 @@ export async function rollDetailed(input: Actor & { caseId: string; chainScope: 
   const pool = await cachedLatestPool(c.id, input.chainScope, sql);
   if (!pool) throw new RollError('no_pool', 'this case has no coins yet');
   const filters = sanitizeFilters(input.filters);
+  if (c.kind === 'new') filters.maxAgeHours = Math.min(filters.maxAgeHours ?? 24, 24);
   const items = await filterPool(pool.items, filters, sql);
   if (items.length < MIN_POOL) throw new RollError('pool_too_small', `only ${items.length} coins match these filters; loosen them`, { size: items.length, min: MIN_POOL });
 

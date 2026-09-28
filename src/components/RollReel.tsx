@@ -1,5 +1,7 @@
 'use client';
 
+import TokenImage from './TokenImage';
+
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { displaySymbol, tierColor, tierLabel, type AssetCard, type Tier } from './api';
 import { useT, type TranslationKey } from './i18n';
@@ -179,7 +181,7 @@ function Confetti({ count, tier }: { count: number; tier: Tier }) {
 function ReelCard({ card, winner }: { card: AssetCard; winner: boolean }) {
   const symbol = displaySymbol(card);
   return <div className={`reel-card tier-${card.tier} ${winner ? 'winner' : ''}`} style={{ '--rarity': tierColor(card.tier) } as React.CSSProperties}>
-    <div className="reel-art" style={{ background: card.imageUrl ? `url(${card.imageUrl}) center/cover` : undefined }}>{card.imageUrl ? null : symbol[0]}</div>
+    <div className="reel-art"><TokenImage src={card.imageUrl} symbol={symbol} /></div>
     <b>${symbol}</b><span>{tierLabel(card.tier)}</span>
   </div>;
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import TokenImage from './TokenImage';
+
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   displaySymbol,
@@ -21,7 +23,7 @@ export function TokenHeader({ asset, tier, rollId }: { asset: AssetDetail; tier:
   const symbol = displaySymbol(asset);
   const pairAge = asset.pairCreatedAt ? age(asset.pairCreatedAt, true) : t('pairAgeUnavailable');
   return <section className="panel token-header">
-    <div className="token-avatar token-avatar-large" style={{ background: tierColor(tier) }}>{symbol[0]}</div>
+    <div className="token-avatar token-avatar-large" style={{ background: tierColor(tier) }}><TokenImage src={asset.imageUrl} symbol={symbol} /></div>
     <div className="token-heading"><h2>${symbol} <span>/ {asset.chainId.toUpperCase()}</span></h2><small>{asset.dexId ?? 'DEX'} · {t('pair')} {formatAddress(asset.pairAddress, 5)} · {t('created')} {pairAge}</small></div>
     {rollId && <span className="badge badge-pull">{t('yourPull')} #{rollId} · {tierLabel(tier)}</span>}
     {asset.lockaboxBuys24h > 0 && <span className="badge">{asset.lockaboxBuys24h} {t('todayBuys')}</span>}

@@ -1,5 +1,7 @@
 'use client';
 
+import TokenImage from './TokenImage';
+
 import Link from 'next/link';
 import { displaySymbol, formatCompactUsd, formatPercent, formatPrice, tierColor, tierLabel, type AssetDetail, type Chain, type Tier } from './api';
 import { ChainIcon } from './ChainIcon';
@@ -36,7 +38,7 @@ export default function PullCard({ asset, tier, chance, rollId, chain, againRef,
       </div>
     </header>
     <section className="pull-coin">
-      <div className="pull-art" style={asset.imageUrl ? { backgroundImage: `url(${asset.imageUrl})` } : undefined}>{asset.imageUrl ? null : symbol[0]}</div>
+      <div className="pull-art"><TokenImage src={asset.imageUrl} symbol={symbol} /></div>
       <div className="pull-name">
         <h2>${symbol}</h2>
         <p className="pull-sub">{asset.name && asset.name !== asset.symbol ? `${asset.name} · ` : ''}<ChainIcon id={asset.chainId} name={chain?.name} size={14} /> {chain?.name ?? asset.chainId}</p>

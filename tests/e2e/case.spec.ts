@@ -16,16 +16,17 @@ async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function fixtures(page: Page, options: { poolTooSmall?: boolean; assetBody?: unknown; rollBody?: unknown; caseBody?: unknown; feedBody?: unknown } = {}) {
+async function fixtures(page: Page, options: { discover?: boolean; poolTooSmall?: boolean; assetBody?: unknown; rollBody?: unknown; caseBody?: unknown; feedBody?: unknown } = {}) {
   let rollPosts = 0;
   await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.pathname === '/api/meta') return json(route, meta);
+    if (url.pathname === '/api/meta') return json(route, options.discover ? {...meta, cases:[{id:'discover',kind:'discover',title:'Discover'},...meta.cases]} : meta);
     if (url.pathname === '/api/feed') return json(route, options.feedBody ?? feed);
     if (url.pathname === '/api/auth/me') return json(route, me);
     if (url.pathname === '/api/cases/trending') return json(route, options.caseBody ?? caseSummary);
+    if (url.pathname === '/api/cases/discover') return json(route, {...caseSummary,case:{id:'discover',kind:'discover',title:'Discover'}});
     if (url.pathname === '/api/assets/3') return json(route, options.assetBody ?? asset);
     if (url.pathname === '/api/assets/3/buys') return json(route, buys);
     if (url.pathname === '/api/rolls' && request.method() === 'POST') {
@@ -46,6 +47,21 @@ async function openCase(page: Page) {
   await page.getByRole('button', { name: /OPEN CASE/i }).click();
 }
 
+for (const broken of [false,true]) test(`shared token avatar ${broken ? 'falls back on image failure' : 'loads on reveal and token header'}`, async ({page}) => {
+  const imageUrl = 'https://avatar.fixture.test/coin.svg';
+  await page.route(imageUrl, route => route.fulfill(broken ? {status:404,body:''} : {contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="20" fill="orange"/></svg>'}));
+  await fixtures(page,{assetBody:{...asset,imageUrl},rollBody:{...roll,asset:{...roll.asset,imageUrl}}});
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await openCase(page);
+  await page.locator('.reel-skip').click();
+  await expect(page.locator('.pull-art')).toBeVisible();
+  if (broken) await expect(page.locator('.pull-art')).toHaveText('G');
+  else await expect.poll(()=>page.locator('.pull-art img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
+  await page.locator('.pull-close').click();
+  if (broken) await expect(page.locator('.token-avatar-large')).toHaveText('G');
+  else await expect.poll(()=>page.locator('.token-avatar-large img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBeGreaterThan(0);
+});
+
 test('roll flow shows the unboxed symbol', async ({ page }) => {
   await fixtures(page);
   await openCase(page);
@@ -57,6 +73,75 @@ test('pool_too_small shows the contract message', async ({ page }) => {
   await fixtures(page, { poolTooSmall: true });
   await openCase(page);
   await expect(page.locator('.roll-error')).toContainText('Only 5 coins match your filters — loosen them');
+});
+
+test('pair age defaults to seven days on the first roll', async ({ page }) => {
+  const state = await fixtures(page, { poolTooSmall: true });
+  await page.goto('/');
+  await expect(page.locator('.filter-summary')).toHaveText('Next roll · pair age: <7d');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await expect(page.getByRole('group', { name: 'PAIR AGE', exact: true }).getByRole('button', { name: '<7d', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+  const sent = page.waitForRequest(request => new URL(request.url()).pathname === '/api/rolls' && request.method() === 'POST');
+  await page.getByRole('button', { name: /OPEN CASE/i }).click();
+  expect((await sent).postDataJSON().filters).toEqual({ maxAgeHours: 168 });
+  await expect(page.locator('.roll-error')).toBeVisible();
+  // Insufficient matches must not trigger an automatic retry with the age filter removed.
+  expect(state.rollPosts()).toBe(1);
+});
+
+test('Discover is the default seven-day case and Trending remains separately selectable', async ({ page }) => {
+  await fixtures(page, {discover:true,poolTooSmall:true});
+  await page.goto('/');
+  await expect(page.getByRole('heading', {name:'Discover',exact:true})).toBeVisible();
+  const sent=page.waitForRequest(r=>new URL(r.url()).pathname==='/api/rolls' && r.method()==='POST');
+  await page.getByRole('button',{name:/OPEN CASE/i}).click();
+  expect((await sent).postDataJSON()).toMatchObject({caseId:'discover',filters:{maxAgeHours:168}});
+  await page.getByRole('button',{name:'Trending',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Trending',exact:true})).toBeVisible();
+});
+
+test('pair age presets and All reach the next roll without resetting other filters', async ({ page }) => {
+  await fixtures(page, { poolTooSmall: true });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await page.getByLabel('Min liquidity', { exact: true }).fill('2500');
+  await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+  for (const [label, hours] of [['<1h', 1], ['<6h', 6], ['<24h', 24], ['<3d', 72], ['<7d', 168], ['<14d', 336], ['<30d', 720], ['All', null]] as const) {
+    await page.getByRole('button', { name: /Filters/ }).click();
+    const group = page.getByRole('group', { name: 'PAIR AGE', exact: true });
+    await group.getByRole('button', { name: label, exact: true }).click();
+    await expect(group.locator('[aria-pressed="true"]')).toHaveCount(1);
+    await expect(group.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByLabel('Max pair age (hours)', { exact: true })).toHaveValue(hours === null ? '' : String(hours));
+    await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+    await expect(page.locator('.filter-summary')).toHaveText(`Next roll · pair age: ${label}`);
+    const sent = page.waitForRequest(request => new URL(request.url()).pathname === '/api/rolls' && request.method() === 'POST');
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    expect((await sent).postDataJSON().filters).toEqual({ minLiquidityUsd: 2500, ...(hours === null ? {} : { maxAgeHours: hours }) });
+    await expect(page.locator('.roll-error')).toBeVisible();
+  }
+});
+
+test('pair age controls fit mobile and keep custom hours available', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fixtures(page, { poolTooSmall: true });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  const group = page.getByRole('group', { name: 'PAIR AGE', exact: true });
+  for (const button of await group.getByRole('button').all()) {
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  }
+  await page.getByLabel('Max pair age (hours)', { exact: true }).fill('48');
+  await expect(group.locator('[aria-pressed="true"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close filters', exact: true }).click();
+  await expect(page.locator('.filter-summary')).toHaveText('Next roll · pair age: <48h');
+  const sent = page.waitForRequest(request => new URL(request.url()).pathname === '/api/rolls' && request.method() === 'POST');
+  await page.getByRole('button', { name: /OPEN CASE/i }).click();
+  expect((await sent).postDataJSON().filters).toEqual({ maxAgeHours: 48 });
 });
 
 test.describe('reveal timing', () => {

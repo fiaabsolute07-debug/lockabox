@@ -1,5 +1,7 @@
 'use client';
 
+import TokenImage from './TokenImage';
+
 import Link from 'next/link';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -331,7 +333,7 @@ export function Sidebar() {
       </div>
       <div className="side-section">{t('hotPulls')}</div>
       <div className="hot-pulls">
-        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: item.imageUrl ? `url(${item.imageUrl}) center/cover` : `var(--r-${item.tier ?? 'micro'})`, boxShadow: `0 0 0 2px var(--r-${item.tier ?? 'micro'})` }}>{item.imageUrl ? null : symbol[0]}{item.chainId ? <span className="avatar-chain"><ChainIcon id={item.chainId} size={11} /></span> : null}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
+        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: `var(--r-${item.tier ?? 'micro'})`, boxShadow: `0 0 0 2px var(--r-${item.tier ?? 'micro'})` }}><TokenImage src={item.imageUrl} symbol={symbol} />{item.chainId ? <span className="avatar-chain"><ChainIcon id={item.chainId} size={11} /></span> : null}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
       </div>
     </aside>
   );

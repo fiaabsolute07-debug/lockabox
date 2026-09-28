@@ -29,7 +29,8 @@ async function loadAsset(assetId: number, sql: postgres.Sql): Promise<AssetRow> 
   const [a] = await sql<AssetRow[]>`
     select a.id, a.chain_id, a.address, a.symbol, a.decimals, ch.swap_enabled, ch.family, exists(select 1 from moderation m where m.asset_id = a.id) as killed,
            ch.evm_chain_id, ch.rpc_url, ch.native_symbol, ch.native_decimals
-    from assets a join chains ch on ch.id = a.chain_id where a.id = ${assetId}`;
+    from assets original join assets a on a.id=coalesce(original.merged_into,original.id)
+    join chains ch on ch.id = a.chain_id where original.id = ${assetId}`;
   if (!a) throw new SwapError('not_found', 'unknown asset');
   const supported = a.family === 'solana' || (a.family === 'evm' && !!a.evm_chain_id);
   if (!a.swap_enabled || !supported || a.killed) throw new SwapError('swap_disabled', 'in-app swap is not available for this coin; use View on DEX');

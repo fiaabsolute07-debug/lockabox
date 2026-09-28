@@ -7,30 +7,26 @@ import { evmProbe } from '@/modules/swap/service';
 import { activeSeed, rotateSeed } from '@/modules/rolls/service';
 import { confirmSubmitted } from '@/modules/swap/service';
 import { paprikaPriceFallback } from './fallback';
+import { discoverNewPools, type Discovered } from './discovery';
+import { enrichAssets } from './enrichment';
+import { tokenImageUrl } from '@/modules/sources/images';
+import { enrichImages } from './images';
 import {
-  createDexPaprikaClient, createDexScreenerClient, pairsToAssets, paprikaPoolsToCandidates,
+  createDexPaprikaClient, createDexScreenerClient, pairsToAssets,
   type AssetSnapshot, type DexPaprikaClient, type DexScreenerClient,
 } from '@/modules/sources';
 
 /**
  * One ingest cycle (LAB §7.1). Server-side only; user requests never call a provider (LAB §3.5).
- * discover (DEX Screener feeds every run, DexPaprika new pools every 15 min) → enrich (tokens/v1, 30 per call)
+ * discover (feeds + budget-paced paginated new pools) → separate refresh/hydration queues (30 tokens/call)
  * → hidden gates → freeze pools → confirm trades → rotate the seed daily.
  */
 
 export type IngestDeps = { sql: postgres.Sql; ds?: DexScreenerClient; dp?: DexPaprikaClient; log?: (m: string) => void; now?: () => Date };
-type Discovered = { chainId: string; address: string; source: string };
-
-const REFRESH_AFTER_MS = 4 * 60_000;
-const PAPRIKA_EVERY_MS = 15 * 60_000;
 const HONEYPOT_RECHECK_H = 6;
-const MAX_ENRICH = 600;
-// Price refresh calls per cycle (one per chain per 30 tokens). With ~60 chains this keeps DEX Screener well under the 60/min
-// alert line together with the feeds (/api/health ds_budget); the stalest snapshots go first.
-const MAX_ENRICH_CALLS = 30;
-const MAX_HONEYPOT = 40;
+// A Solana probe uses two quote requests; 20 probes leaves room under our 60/min provider ceiling.
+const MAX_HONEYPOT = 20;
 const TOP_METAS = 3;
-let lastPaprika = 0;
 
 async function enabledChains(sql: postgres.Sql) {
   return sql<{ id: string; family: string; dexpaprika_id: string | null }[]>`select id, family, dexpaprika_id from chains where enabled order by sort`;
@@ -40,9 +36,11 @@ export async function upsertDiscovered(sql: postgres.Sql, found: Discovered[], e
   const rows = found.filter((f) => enabled.has(f.chainId) && f.address);
   for (const f of rows) {
     await sql`
-      insert into assets (chain_id, address, sources) values (${f.chainId}, ${f.address}, ${[f.source]})
+      insert into assets (chain_id, address, sources, discovered_pair_at, image_url) values (${f.chainId}, ${f.address}, ${[f.source]}, ${f.pairCreatedAt ?? null}, ${tokenImageUrl(f.imageUrl)})
       on conflict (chain_id, address) do update
-        set sources = (select array(select distinct unnest(assets.sources || excluded.sources)))`;
+        set sources = (select array(select distinct unnest(assets.sources || excluded.sources))),
+          discovered_pair_at = greatest(assets.discovered_pair_at, excluded.discovered_pair_at),
+          image_url = coalesce(nullif(assets.image_url, ''), excluded.image_url)`;
   }
   return rows.length;
 }
@@ -83,10 +81,10 @@ async function discover(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'dp' | 'l
   // Any chain DEX Screener lists is welcome (owner request): unknown ids in the feeds become enabled, swap-off chains.
   const feedChains = [...(profiles ?? []), ...(boosts ?? []), ...(top ?? []), ...(cto ?? [])].map((x) => x.chainId);
   for (const id of await registerChains(sql, feedChains, enabled)) { enabled.add(id); log(`new chain from DEX Screener feeds: ${id}`); }
-  for (const p of profiles ?? []) found.push({ chainId: p.chainId, address: p.tokenAddress, source: 'ds:profile' });
-  for (const b of boosts ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:boost' });
-  for (const b of top ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:top' });
-  for (const c of cto ?? []) found.push({ chainId: c.chainId, address: c.tokenAddress, source: 'ds:cto' });
+  for (const p of profiles ?? []) found.push({ chainId: p.chainId, address: p.tokenAddress, source: 'ds:profile', imageUrl: p.icon });
+  for (const b of boosts ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:boost', imageUrl: b.icon });
+  for (const b of top ?? []) found.push({ chainId: b.chainId, address: b.tokenAddress, source: 'ds:top', imageUrl: b.icon });
+  for (const c of cto ?? []) found.push({ chainId: c.chainId, address: c.tokenAddress, source: 'ds:cto', imageUrl: c.icon });
   let metaSnaps = 0;
   const topMetas = (metas ?? []).slice(0, TOP_METAS);
   for (const m of topMetas) {
@@ -103,19 +101,9 @@ async function discover(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'dp' | 'l
     }
     await sql`update cases set active = false where kind = 'meta' and not (meta_slug = any(${topMetas.map((m) => m.slug)}))`;
   }
-  let paprika = 0;
-  if (Date.now() - lastPaprika > PAPRIKA_EVERY_MS) {
-    lastPaprika = Date.now();
-    for (const ch of chains) {
-      if (!ch.dexpaprika_id) continue;
-      const res = await settle(`paprika ${ch.id}`, dp.searchPools(ch.dexpaprika_id, { orderBy: 'created_at', sort: 'desc', limit: 100 }));
-      const cands = paprikaPoolsToCandidates(res?.results ?? []).filter((c) => (c.liquidityUsd ?? 0) >= 1_000);
-      for (const c of cands) found.push({ chainId: c.chainId, address: c.address, source: 'paprika:new' });
-      paprika += cands.length;
-    }
-  }
   const upserted = await upsertDiscovered(sql, found, enabled);
-  return { upserted, metaSnaps, paprika };
+  const discovery = await discoverNewPools(sql, dp, chains, enabled, upsertDiscovered, log);
+  return { upserted: upserted + discovery.found, metaSnaps, paprika: discovery.found, pages: discovery.pages };
 }
 
 /** Registers DEX Screener chain ids we have not seen before (enabled, swap off). Returns the ids it added. */
@@ -133,30 +121,6 @@ export async function registerChains(sql: postgres.Sql, ids: string[], known: Se
   return added;
 }
 
-async function enrich(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'log'>>, enabled: Set<string>) {
-  const { sql, ds, log } = deps;
-  const due = await sql<{ chain_id: string; address: string }[]>`
-    select a.chain_id, a.address from assets a left join asset_snapshots s on s.asset_id = a.id
-    where a.chain_id = any(${[...enabled]}) and not exists (select 1 from moderation m where m.asset_id = a.id)
-      and (s.taken_at is null or s.taken_at < now() - make_interval(secs => ${REFRESH_AFTER_MS / 1000}))
-      and a.first_seen_at > now() - interval '7 days'
-    order by s.taken_at nulls first limit ${MAX_ENRICH}`;
-  const byChain = new Map<string, string[]>();
-  for (const d of due) byChain.set(d.chain_id, [...(byChain.get(d.chain_id) ?? []), d.address]);
-  let saved = 0;
-  let calls = 0;
-  for (const [chain, addrs] of byChain) {
-    for (let i = 0; i < addrs.length && calls < MAX_ENRICH_CALLS; i += 30) {
-      calls++;
-      try {
-        const pairs = await ds.tokens(chain, addrs.slice(i, i + 30));
-        saved += await saveSnapshots(sql, pairsToAssets(pairs), enabled);
-      } catch (e) { log(`enrich ${chain} failed: ${(e as Error).message}`); }
-    }
-  }
-  return { due: due.length, saved };
-}
-
 async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl: typeof fetch = fetch) {
   // Solana always (its pools need the gate); EVM chains only once in-app swap is switched on for them (DECISIONS #6/#10).
   const due = await sql<{ id: number; address: string; family: string; evm_chain_id: number | null; native_decimals: number }[]>`
@@ -166,6 +130,7 @@ async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl:
     join gate_results l on l.asset_id = a.id and l.gate = 'liquidity' and l.passed
     left join gate_results h on h.asset_id = a.id and h.gate = 'honeypot'
     where (a.chain_id = 'solana' or (ch.family = 'evm' and ch.swap_enabled and ch.evm_chain_id is not null))
+      and a.merged_into is null and ch.enabled and not exists(select 1 from moderation m where m.asset_id=a.id)
       and s.taken_at > now() - interval '15 minutes'
       and (h.checked_at is null or h.checked_at < now() - make_interval(hours => ${HONEYPOT_RECHECK_H}))
     order by h.checked_at nulls first, s.liquidity_usd desc limit ${MAX_HONEYPOT}`;
@@ -177,7 +142,11 @@ async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl:
         : await evmSellGate(d.evm_chain_id!, d.address, evmProbe(d.native_decimals), fetchImpl);
       await recordGate(Number(d.id), 'honeypot', out, sql);
       checked++; if (!out.passed) failed++;
-    } catch (e) { log(`honeypot ${d.address} deferred: ${(e as Error).message}`); }
+    } catch (e) {
+      const message = (e as Error).message;
+      log(`honeypot ${d.address} deferred: ${message}`);
+      if (/429|rate.?limit/i.test(message)) break; // leave unknown gates unknown; retry on a later cycle
+    }
     await new Promise((r) => setTimeout(r, 1100)); // stay well inside the free tiers (Jupiter, honeypot.is, LI.FI)
   }
   return { checked, failed };
@@ -189,7 +158,7 @@ async function pools(sql: postgres.Sql, chains: { id: string }[]) {
   for (const c of cases) {
     for (const scope of [CHAIN_SCOPE_ALL, ...chains.map((ch) => ch.id)]) {
       const p = await buildPool(c, scope, sql);
-      if (p) out.push(`${c.id}/${scope}=v${p.version}(${p.size})`);
+      if (p && scope === CHAIN_SCOPE_ALL) out.push(`${c.id}/${scope}=v${p.version}(${p.size})`);
     }
   }
   return out;
@@ -211,7 +180,25 @@ export async function prunePools(sql: postgres.Sql, keepHours = 24) {
   return gone.length;
 }
 
+/** A dedicated connection holds the session lock; never lock/unlock different pooled connections. */
 export async function runCycle(deps: IngestDeps) {
+  const connection = await deps.sql.reserve();
+  let locked = false;
+  try {
+    const [row] = await connection<{ locked: boolean }[]>`select pg_try_advisory_lock(hashtext('lockabox:ingest')) as locked`;
+    locked = row.locked;
+    if (!locked) {
+      (deps.log ?? ((m: string) => console.log(`[worker] ${m}`)))('cycle skipped: another worker owns ingest');
+      return { skipped: true as const };
+    }
+    return await runLockedCycle(deps);
+  } finally {
+    try { if (locked) await connection`select pg_advisory_unlock(hashtext('lockabox:ingest'))`; }
+    finally { connection.release(); }
+  }
+}
+
+async function runLockedCycle(deps: IngestDeps) {
   const log = deps.log ?? ((m: string) => console.log(`[worker] ${m}`));
   const calls = { ds: { n: 0 }, dp: { n: 0 }, jup: { n: 0 } };
   const ds = deps.ds ?? createDexScreenerClient({ fetch: countingFetch(calls.ds) });
@@ -223,11 +210,12 @@ export async function runCycle(deps: IngestDeps) {
     const enabled = new Set(chains.map((c) => c.id));
     const t0 = Date.now();
     const d = await discover({ sql, ds, dp, log }, enabled, chains);
-    const e = await enrich({ sql, ds, log }, enabled);
+    const e = await enrichAssets(sql, ds, enabled, saveSnapshots, log);
     const fb = await paprikaPriceFallback(sql, { fetchImpl: countingFetch(calls.dp), log, paprikaKey: !!process.env.DEXPAPRIKA_API_KEY });
     calls.dp.n += fb.credits - fb.batches; // batches bill one credit per token; the counting fetch saw one call per batch
     const h = await honeypots(sql, log, countingFetch(calls.jup));
     const p = await pools(sql, chains);
+    await enrichImages(sql).then(r => log(`avatar fallback: ${r.updated}/${r.checked} filled`)).catch(err => log(`avatar fallback deferred: ${(err as Error).message}`));
     const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });
     const seed = await activeSeed(sql);
     const [{ old }] = await sql<{ old: boolean }[]>`select active_from < now() - interval '24 hours' as old from server_seeds where id = ${seed.id}`;
@@ -243,7 +231,10 @@ export async function runCycle(deps: IngestDeps) {
 }
 
 async function recordRun(sql: postgres.Sql, started: Date, ok: boolean, calls: { ds: { n: number }; dp: { n: number }; jup: { n: number } }, note?: string) {
-  await sql`insert into worker_runs (started_at, ok, ds_calls, paprika_calls, jupiter_calls, note)
+  await sql.begin(async (tx) => {
+    await tx`insert into worker_runs (started_at, ok, ds_calls, paprika_calls, jupiter_calls, note)
             values (${started}, ${ok}, ${calls.ds.n}, ${calls.dp.n}, ${calls.jup.n}, ${note ?? null})`;
+    await tx`update discovery_requests set accounted=true where not accounted and requested_at>=${started}`;
+  });
   await sql`delete from worker_runs where finished_at < now() - interval '35 days'`;
 }

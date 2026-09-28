@@ -16,11 +16,11 @@ export async function audit(tx: Tx, actor: string, action: string, target: strin
 /** Kill switch (AC-069): out of every case at roll time and swap locked immediately. */
 export async function killAsset(assetId: number, reason: string, actor: string, sql: postgres.Sql = defaultSql) {
   return sql.begin(async (tx) => {
-    const [a] = await tx`select 1 from assets where id = ${assetId}`;
+    const [a] = await tx`select coalesce(merged_into,id) as id from assets where id = ${assetId}`;
     if (!a) throw new AdminError('not_found', 'unknown asset');
-    await tx`insert into moderation (asset_id, reason, actor) values (${assetId}, ${reason}, ${actor})
+    await tx`insert into moderation (asset_id, reason, actor) values (${a.id}, ${reason}, ${actor})
              on conflict (asset_id) do update set reason = excluded.reason, actor = excluded.actor`;
-    await audit(tx, actor, 'kill', assetId, { reason });
+    await audit(tx, actor, 'kill', assetId, { reason, canonicalAssetId: Number(a.id) });
     return { ok: true, assetId };
   });
 }
@@ -28,7 +28,9 @@ export async function killAsset(assetId: number, reason: string, actor: string, 
 /** Undo a kill made by mistake. The coin comes back at the next pool rebuild (≤ 60 s) if it still passes the gates. */
 export async function unkillAsset(assetId: number, reason: string, actor: string, sql: postgres.Sql = defaultSql) {
   return sql.begin(async (tx) => {
-    const [m] = await tx`delete from moderation where asset_id = ${assetId} returning reason`;
+    const [a] = await tx`select coalesce(merged_into,id) as id from assets where id=${assetId}`;
+    if (!a) throw new AdminError('not_found', 'unknown asset');
+    const [m] = await tx`delete from moderation where asset_id in (select id from assets where id=${a.id} or merged_into=${a.id}) returning reason`;
     if (!m) throw new AdminError('not_found', 'that asset is not killed');
     await audit(tx, actor, 'unkill', assetId, { reason, previous: m.reason });
     return { ok: true, assetId };

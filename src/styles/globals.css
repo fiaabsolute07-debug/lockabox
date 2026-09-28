@@ -147,7 +147,7 @@ a:hover { color: var(--tx); }
 .case-art .locky-logo { position: relative; color: var(--tx); filter: drop-shadow(0 8px 12px #0008); }
 .case-locky { position: relative; width: 150px; height: 150px; display: grid; place-content: center; grid-template-columns: repeat(2, 18px); gap: 10px 25px; padding-top: 30px; color: var(--tx); background: var(--acc); border: 5px solid var(--tx); border-radius: 48% 48% 12px 12px; box-shadow: inset 0 -55px #14161c, 0 8px 0 #07080a, 0 0 35px #ff5b1f66; font-size: 20px; }
 .case-locky span:last-child { grid-column: 1 / -1; justify-self: center; }
-.case-copy { min-width: 0; }
+.case-copy { position: relative; min-width: 0; }
 .case-copy h1 { margin: 4px 0 0; color: var(--tx); font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; text-transform: uppercase; }
 .case-copy p { margin: 6px 0 0; color: var(--mu); }
 .case-tabs { position: relative; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -158,6 +158,13 @@ a:hover { color: var(--tx); }
 .filter-head { display: flex; align-items: center; justify-content: space-between; color: var(--tx); font: 700 11px var(--font-mono-family); letter-spacing: .12em; }
 .filter-head button { color: var(--mu); background: transparent; border: 0; font-size: 20px; }
 .filter-group { margin-top: 13px; }
+.case-copy .filter-summary { margin-top: 8px; color: var(--acc); font: 500 11px var(--font-mono-family); }
+.age-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.age-presets button { min-height: 36px; padding: 7px 11px; color: var(--mu); background: var(--bg); border: 1px solid var(--ln); border-radius: 6px; font: 600 12px var(--font-mono-family); }
+.age-presets button:hover { color: var(--tx); border-color: var(--mu); }
+.age-presets button[aria-pressed="true"] { color: var(--tx); background: #ff5b1f22; border-color: var(--acc); }
+.age-presets button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.case-copy .filter-help { margin-top: 8px; font-size: 11px; line-height: 1.5; }
 .filter-label { display: block; margin-bottom: 7px; color: #5E6270; font: 700 10px var(--font-mono-family); letter-spacing: .12em; }
 .tier-checks { display: flex; flex-wrap: wrap; gap: 7px; }
 .tier-checks label, .confirm-row { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
@@ -731,4 +738,3 @@ td a { color: var(--mu); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
-

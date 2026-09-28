@@ -39,15 +39,16 @@ export async function paprikaPriceFallback(
   const client = opts.client ?? createDexPaprikaClient({ apiKey: process.env.DEXPAPRIKA_API_KEY || undefined, fetch: opts.fetchImpl });
 
   // Coins in the latest pool of every free case/scope, most liquid first.
-  const due = await sql<{ asset_id: number; address: string; network: string }[]>`
+  const due = await sql<{ asset_id: number; address: string; network: string; family: string }[]>`
     with latest as (
       select distinct on (case_id, chain_scope) items from case_pools where case_id <> 'sponsored' order by case_id, chain_scope, version desc
     ), ids as (select distinct (e->>'a')::bigint as asset_id from latest, jsonb_array_elements(latest.items) e)
-    select a.id as asset_id, a.address, c.dexpaprika_id as network
+    select a.id as asset_id, a.address, c.dexpaprika_id as network, c.family
     from ids join assets a on a.id = ids.asset_id join chains c on c.id = a.chain_id join asset_snapshots s on s.asset_id = a.id
-    where c.dexpaprika_id is not null and s.taken_at < now() - interval '4 minutes'
+    where c.enabled and a.merged_into is null and c.dexpaprika_id is not null and s.taken_at < now() - interval '4 minutes'
+      and not exists(select 1 from moderation m where m.asset_id=a.id)
     order by s.liquidity_usd desc nulls last limit ${FALLBACK_MAX_TOKENS}`;
-  const byNet = new Map<string, { asset_id: number; address: string }[]>();
+  const byNet = new Map<string, { asset_id: number; address: string; family: string }[]>();
   for (const d of due) byNet.set(d.network, [...(byNet.get(d.network) ?? []), d]);
   let updated = 0, credits = 0, batches = 0;
   for (const [network, list] of byNet) {
@@ -55,7 +56,7 @@ export async function paprikaPriceFallback(
       credits += list.length; batches += Math.ceil(list.length / 10);
       const prices = await client.multiPrices(network, list.map((c) => c.address));
       for (const p of prices) {
-        const hit = list.find((c) => c.address.toLowerCase() === p.address.toLowerCase());
+        const hit = list.find((c) => c.family === 'evm' ? c.address.toLowerCase() === p.address.toLowerCase() : c.address === p.address);
         if (!hit || !(typeof p.priceUsd === 'number' && p.priceUsd > 0)) continue;
         await sql`
           update asset_snapshots set

@@ -42,9 +42,9 @@ export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
   const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
     select id, name, family, swap_enabled, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
   const cases = await listCases(sql);
-  // Coins in each chain's latest Trending pool, so the UI can list active chains first and show how full they are.
+  // Discover covers every eligible source; counts are before the user's age/other filters.
   const sizes = await sql<{ chain_scope: string; size: number }[]>`
-    select distinct on (chain_scope) chain_scope, size from case_pools where case_id = 'trending' order by chain_scope, version desc`;
+    select distinct on (chain_scope) chain_scope, size from case_pools where case_id = 'discover' order by chain_scope, version desc`;
   const poolSize = new Map(sizes.map((s) => [s.chain_scope, Number(s.size)]));
   const [seed] = await sql<{ hash: string; active_from: Date }[]>`select hash, active_from from server_seeds where revealed_at is null`;
   return {
@@ -97,7 +97,7 @@ export async function assetDetail(id: number, tier: Tier | null = null, sql: pos
            s.change_m5, s.change_h1, s.change_h6, s.change_h24, s.pair_address, s.dex_id, s.pair_created_at, s.taken_at,
            s.price_source, s.dexscreener_url, s.websites, s.socials, ch.swap_enabled, ch.explorer_token_url, ch.family,
            (select count(*)::int from trades t where t.asset_id = a.id and t.status = 'confirmed' and t.created_at > now() - interval '24 hours') as buys_24h,
-           exists (select 1 from moderation m where m.asset_id = a.id) as killed
+           exists (select 1 from moderation m where m.asset_id = coalesce(a.merged_into,a.id)) as killed
     from assets a join chains ch on ch.id = a.chain_id left join asset_snapshots s on s.asset_id = a.id where a.id = ${id}`;
   if (!r) return undefined;
   const killed = r.killed;

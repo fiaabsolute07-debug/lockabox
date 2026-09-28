@@ -1,5 +1,12 @@
 import { DEXSCREENER_BASE_URL, type DexScreenerPair } from "./dexscreener";
 import type { DexPaprikaPool } from "./dexpaprika";
+import { KNOWN_CHAINS } from './chains';
+import { tokenImageUrl } from './images';
+
+/** Only EVM addresses are case-insensitive. Solana and unknown families retain their exact bytes. */
+export function normalizeAssetAddress(chainId: string, address: string) {
+  return KNOWN_CHAINS[chainId]?.family === 'evm' ? address.toLowerCase() : address;
+}
 
 export interface AssetPriceChange {
   m5: number | null;
@@ -151,10 +158,10 @@ function normalizePair(pair: DexScreenerPair): AssetSnapshot {
 
   return {
     chainId: pair.chainId,
-    address: pair.baseToken.address,
+    address: normalizeAssetAddress(pair.chainId, pair.baseToken.address),
     symbol: pair.baseToken.symbol ?? "",
     name: pair.baseToken.name ?? "",
-    imageUrl: pair.info?.imageUrl ?? null,
+    imageUrl: tokenImageUrl(pair.info?.imageUrl),
     priceUsd,
     marketCap,
     fdv,
@@ -179,20 +186,26 @@ function normalizePair(pair: DexScreenerPair): AssetSnapshot {
 
 export function pairsToAssets(pairs: readonly DexScreenerPair[]): AssetSnapshot[] {
   const bestByToken = new Map<string, DexScreenerPair>();
+  const images = new Map<string, string>();
   for (const pair of pairs) {
-    const key = `${pair.chainId}\u0000${pair.baseToken.address}`;
+    const key = `${pair.chainId}\u0000${normalizeAssetAddress(pair.chainId, pair.baseToken.address)}`;
+    const image = tokenImageUrl(pair.info?.imageUrl);
+    if (image && !images.has(key)) images.set(key, image);
     const current = bestByToken.get(key);
     if (!current || pairLiquidity(pair) > pairLiquidity(current)) {
       bestByToken.set(key, pair);
     }
   }
-  return [...bestByToken.values()].map(normalizePair);
+  return [...bestByToken.entries()].map(([key, pair]) => {
+    const snapshot = normalizePair(pair);
+    return { ...snapshot, imageUrl: snapshot.imageUrl ?? images.get(key) ?? null };
+  });
 }
 
 function isQuoteToken(chain: string, address: string): boolean {
   const quotes = QUOTE_TOKENS[chain] ?? [];
-  const normalized = address.toLowerCase();
-  return quotes.some((quote) => quote.toLowerCase() === normalized);
+  const normalized = normalizeAssetAddress(chain, address);
+  return quotes.some((quote) => normalizeAssetAddress(chain, quote) === normalized);
 }
 
 function candidateToken(pool: DexPaprikaPool): string | null {
@@ -219,7 +232,7 @@ export function paprikaPoolsToCandidates(
     if (Number.isNaN(createdAt.getTime())) continue;
     candidates.push({
       chainId: CHAIN_ID_MAP[pool.chain] ?? pool.chain,
-      address,
+      address: normalizeAssetAddress(CHAIN_ID_MAP[pool.chain] ?? pool.chain, address),
       poolId: pool.id,
       dexId: pool.dex_id,
       createdAt,
