@@ -36,15 +36,15 @@ export async function enrichImages(sql: postgres.Sql, fetchImpl: typeof fetch = 
   const due = await sql<{ id: number; chain_id: string; address: string }[]>`
     with live as (
       select distinct (e->>'a')::bigint as id
-      from (select distinct on (case_id,chain_scope) items from case_pools order by case_id,chain_scope,version desc) p
-      cross join jsonb_array_elements(p.items) e)
+      from case_pools p cross join jsonb_array_elements(p.items) e
+      where p.version=(select max(version) from case_pools q where q.case_id=p.case_id and q.chain_scope=p.chain_scope))
     select a.id,a.chain_id,a.address from assets a
     join chains c on c.id=a.chain_id
     left join asset_image_lookups l on l.asset_id=a.id
     where c.enabled and a.merged_into is null and (nullif(a.image_url,'') is null
       or exists(select 1 from asset_image_cache ic where ic.asset_id=a.id and ic.state in ('broken','unsupported')))
       and a.chain_id=any(${Object.keys(NETWORKS)}) and (l.next_attempt_at is null or l.next_attempt_at<=now())
-    order by exists(select 1 from live where live.id=a.id) desc, l.attempted_at nulls first,
+    order by (a.id in (select id from live)) desc, l.attempted_at nulls first,
       exists(select 1 from asset_snapshots s where s.asset_id=a.id and s.taken_at>now()-interval '15 minutes') desc,
       a.first_seen_at desc,a.id limit 900`;
   if (!due.length) return idle;
