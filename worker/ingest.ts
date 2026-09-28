@@ -11,6 +11,7 @@ import { discoverNewPools, type Discovered } from './discovery';
 import { enrichAssets } from './enrichment';
 import { tokenImageUrl } from '@/modules/sources/images';
 import { enrichImages } from './images';
+import { cacheAvatars } from './image-cache';
 import {
   createDexPaprikaClient, createDexScreenerClient, pairsToAssets,
   type AssetSnapshot, type DexPaprikaClient, type DexScreenerClient,
@@ -216,6 +217,7 @@ async function runLockedCycle(deps: IngestDeps) {
     const h = await honeypots(sql, log, countingFetch(calls.jup));
     const p = await pools(sql, chains);
     await enrichImages(sql).then(r => log(`avatar fallback: ${r.updated}/${r.checked} filled`)).catch(err => log(`avatar fallback deferred: ${(err as Error).message}`));
+    await cacheAvatars(sql).then(r => log(`avatar storage: ${r.cached}/${r.checked} cached`)).catch(() => log('avatar storage deferred'));
     const confirmed = await confirmSubmitted(sql).catch((err) => { log(`confirm failed: ${(err as Error).message}`); return 0; });
     const seed = await activeSeed(sql);
     const [{ old }] = await sql<{ old: boolean }[]>`select active_from < now() - interval '24 hours' as old from server_seeds where id = ${seed.id}`;

@@ -38,7 +38,7 @@ export default function PullCard({ asset, tier, chance, rollId, chain, againRef,
       </div>
     </header>
     <section className="pull-coin">
-      <div className="pull-art"><TokenImage src={asset.imageUrl} symbol={symbol} /></div>
+      <div className="pull-art"><TokenImage src={asset.imageUrl} symbol={symbol} identity={`${asset.chainId}:${asset.address}`} /></div>
       <div className="pull-name">
         <h2>${symbol}</h2>
         <p className="pull-sub">{asset.name && asset.name !== asset.symbol ? `${asset.name} · ` : ''}<ChainIcon id={asset.chainId} name={chain?.name} size={14} /> {chain?.name ?? asset.chainId}</p>

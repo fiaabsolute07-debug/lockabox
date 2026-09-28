@@ -3,7 +3,15 @@ import { tokenImageUrl } from '@/modules/sources/images';
 import { normalizeAssetAddress } from '@/modules/sources/normalize';
 
 // Explicit provider network mapping; unknown networks are not guessed.
-const NETWORKS: Record<string, string> = { solana: 'solana', ethereum: 'eth', base: 'base', bsc: 'bsc', arbitrum: 'arbitrum', polygon: 'polygon_pos', avalanche: 'avax', optimism: 'optimism' };
+// Verified against /api/v2/networks pages 1–2 (2026-09-28). Unknown IDs stay excluded.
+const NETWORKS: Record<string, string> = {
+  solana:'solana',ethereum:'eth',base:'base',bsc:'bsc',arbitrum:'arbitrum',polygon:'polygon_pos',avalanche:'avax',optimism:'optimism',
+  cronos:'cro',fantom:'ftm',metis:'metis',celo:'celo',gnosischain:'xdai',moonbeam:'glmr',kaia:'kaia',flare:'flare',aptos:'aptos',core:'core',
+  zksync:'zksync',sui:'sui-network',pulsechain:'pulsechain',starknet:'starknet-alpha',mantle:'mantle',linea:'linea',manta:'manta-pacific',
+  hedera:'hedera-hashgraph',scroll:'scroll',ton:'ton',mode:'mode',blast:'blast',zora:'zora-network',xlayer:'x-layer',bob:'bob-network',
+  taiko:'taiko',seiv2:'sei-evm',tron:'tron',worldchain:'world-chain',apechain:'apechain',cardano:'cardano',sonic:'sonic',ink:'ink',soneium:'soneium',
+  abstract:'abstract',berachain:'berachain',unichain:'unichain',hyperevm:'hyperevm',katana:'katana',near:'near',plasma:'plasma',injective:'injective',monad:'monad',megaeth:'megaeth',
+};
 
 export function geckoImages(payload: unknown, chain: string): Map<string, string> {
   const out = new Map<string, string>();
@@ -28,7 +36,8 @@ export async function enrichImages(sql: postgres.Sql, fetchImpl: typeof fetch = 
     select a.id,a.chain_id,a.address from assets a
     join chains c on c.id=a.chain_id
     left join asset_image_lookups l on l.asset_id=a.id
-    where c.enabled and a.merged_into is null and nullif(a.image_url,'') is null
+    where c.enabled and a.merged_into is null and (nullif(a.image_url,'') is null
+      or exists(select 1 from asset_image_cache ic where ic.asset_id=a.id and ic.state in ('broken','unsupported')))
       and a.chain_id=any(${Object.keys(NETWORKS)}) and (l.next_attempt_at is null or l.next_attempt_at<=now())
     order by l.attempted_at nulls first,
       exists(select 1 from asset_snapshots s where s.asset_id=a.id and s.taken_at>now()-interval '15 minutes') desc,
@@ -51,7 +60,9 @@ export async function enrichImages(sql: postgres.Sql, fetchImpl: typeof fetch = 
     for (const a of batch) {
       const image = images.get(normalizeAssetAddress(chain,a.address));
       if (!image) continue;
-      const changed = await sql`update assets set image_url=${image} where id=${a.id} and nullif(image_url,'') is null returning id`;
+      const changed = await sql`update assets a set image_url=${image} where id=${a.id} and (nullif(image_url,'') is null
+        or exists(select 1 from asset_image_cache ic where ic.asset_id=a.id and ic.state in ('broken','unsupported'))) returning id`;
+      if(changed.length) await sql`update asset_image_cache set source_url=${image},state='pending',next_check_at=now() where asset_id=${a.id} and source_url is distinct from ${image}`;
       updated += changed.length;
     }
     await sql`update asset_image_lookups set next_attempt_at=now()+interval '6 hours',last_error=null where asset_id=any(${ids}::bigint[])`;

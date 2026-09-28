@@ -181,7 +181,7 @@ function Confetti({ count, tier }: { count: number; tier: Tier }) {
 function ReelCard({ card, winner }: { card: AssetCard; winner: boolean }) {
   const symbol = displaySymbol(card);
   return <div className={`reel-card tier-${card.tier} ${winner ? 'winner' : ''}`} style={{ '--rarity': tierColor(card.tier) } as React.CSSProperties}>
-    <div className="reel-art"><TokenImage src={card.imageUrl} symbol={symbol} /></div>
+    <div className="reel-art"><TokenImage src={card.imageUrl} symbol={symbol} identity={`${card.chainId}:${card.address}`} /></div>
     <b>${symbol}</b><span>{tierLabel(card.tier)}</span>
   </div>;
 }
