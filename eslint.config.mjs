@@ -12,5 +12,5 @@ export default defineConfig([
     // Kept visible as warnings for a later refactor (DECISIONS #11); every other rule stays an error.
     rules: { 'react-hooks/set-state-in-effect': 'warn', 'react-hooks/refs': 'warn' },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', '.local/**', 'test-results/**', 'playwright-report/**', 'design/**']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', '.local/**', 'test-results/**', 'playwright-report/**', 'design/**', 'video/**']),
 ]);
