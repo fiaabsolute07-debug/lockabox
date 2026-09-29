@@ -394,18 +394,25 @@ test.describe('special reveal sounds', () => {
     await expect.poll(played).toContain('laugh');
   });
 
-  test('a minute without input plays the idle sound once, and the next input stops it', async ({ page }) => {
+  test('a minute on another tab plays the idle sound once, and coming back stops it', async ({ page }) => {
     await page.clock.install();
     await fixtures(page);
     const played = await recordFiles(page);
     await page.goto('/');
     await page.getByRole('heading', { name: 'Trending', exact: true }).click(); // a click lets the page play sound
+    const setHidden = (hidden: boolean) => page.evaluate((h) => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (h ? 'hidden' : 'visible') });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
+    await page.clock.fastForward('01:05'); // idle but still on the tab: nothing
+    expect(await played()).not.toContain('idle');
+    await setHidden(true);
     await page.clock.fastForward('00:30');
     expect(await played()).not.toContain('idle');
     await page.clock.fastForward('00:31');
     await expect.poll(played).toContain('idle');
-    await page.mouse.move(40, 40);
-    await page.mouse.move(80, 80);
+    await setHidden(false);
     await expect.poll(played).toContain('idle-stopped');
     expect((await played()).filter(p => p === 'idle')).toHaveLength(1);
   });

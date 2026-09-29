@@ -16,7 +16,8 @@ import type { Tier } from './api';
  * after MICRO_STREAK Micro pulls in a row, "doge" (bonk.mp3) when the pulled coin's symbol or name contains "doge",
  * "first-mid" (yippee.mp3) when the first roll after the page loads is a purple Mid, and on gold ★ Top pulls either
  * "top-airhorn" (airhorn.mp3, TOP_AIRHORN_CHANCE) or "top-wow" (anime-wow.mp3, TOP_WOW_CHANCE) from one draw.
- * "idle" (idle.mp3) plays once after IDLE_MS without input and stops on the next input (see useIdleSound).
+ * "idle" (idle.mp3, IDLE_VOLUME) plays once after the visitor has been on another tab for IDLE_MS, to call them back, and
+ * stops when they return (see useIdleSound).
  */
 
 /** File-only reveal sounds that replace the tier sound for special pulls; silent fallback when no file is listed. */
@@ -134,7 +135,7 @@ export function setRollSoundEnabled(value: boolean) {
   if (value) unlockRollAudio();
 }
 
-function ready() { return enabled && context && master && context.state === 'running' && !document.hidden; }
+function ready(whileHidden = false) { return enabled && context && master && context.state === 'running' && (whileHidden || !document.hidden); }
 
 function track(source: AudioScheduledSourceNode, start: number, stop: number, cleanup: AudioNode[]) {
   active.add(source);
@@ -144,9 +145,9 @@ function track(source: AudioScheduledSourceNode, start: number, stop: number, cl
 }
 
 /** Plays a licensed file for this event if one was provided; returns undefined to fall back to the synthesised sound. */
-function playFile(event: SoundEvent, volume = 1): AudioBufferSourceNode | undefined {
+function playFile(event: SoundEvent, volume = 1, whileHidden = false): AudioBufferSourceNode | undefined {
   const buffer = files.get(event);
-  if (!buffer || !ready() || !context) return undefined;
+  if (!buffer || !ready(whileHidden) || !context) return undefined;
   const source = context.createBufferSource();
   source.buffer = buffer;
   const gain = context.createGain();
@@ -309,14 +310,15 @@ function playTierSound(tier: Tier) {
   }
 }
 
-/** No input for this long plays the idle file once (owner request, 2026-09-29). */
+/** Away on another tab for this long plays the idle file once (owner request, 2026-09-29). */
 export const IDLE_MS = 60_000;
+const IDLE_VOLUME = 0.2;
 let idleSource: AudioBufferSourceNode | undefined;
 
-/** Returns false when the file cannot play yet (not decoded, sound off, tab hidden, audio still locked). */
+/** Plays while the tab is hidden. Returns false when the file cannot play yet (not decoded, sound off, audio still locked). */
 export function playIdleSound() {
   if (idleSource) return true;
-  idleSource = playFile('idle');
+  idleSource = playFile('idle', IDLE_VOLUME, true);
   if (idleSource) idleSource.addEventListener('ended', () => { idleSource = undefined; });
   return !!idleSource;
 }

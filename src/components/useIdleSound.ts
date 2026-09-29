@@ -3,30 +3,29 @@
 import { useEffect } from 'react';
 import { IDLE_MS, playIdleSound, preloadRollSounds, stopIdleSound, unlockRollAudio } from './rollAudio';
 
-const ACTIVITY = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'] as const;
-
 /**
- * Plays the idle sound once after IDLE_MS without input and stops it on the next input. Browsers only allow sound after the
- * visitor has clicked or typed, so the first click/key also unlocks audio (unless the visitor switched sound off).
+ * Plays the idle sound once after the visitor has been on another tab for IDLE_MS, to call them back, and stops it when
+ * they return. Browsers only allow sound after the visitor has clicked or typed, so the first click/key also unlocks audio
+ * (unless the visitor switched sound off).
  */
 export function useIdleSound() {
   useEffect(() => {
     void preloadRollSounds();
-    let last = Date.now();
-    let played = false;
-    const onActivity = (event: Event) => {
-      last = Date.now();
-      if (played) { stopIdleSound(); played = false; }
-      if (event.type === 'pointerdown' || event.type === 'keydown') unlockRollAudio();
+    let timer: number | undefined;
+    const onUnlock = () => unlockRollAudio();
+    const onVisibility = () => {
+      window.clearTimeout(timer);
+      if (document.hidden) timer = window.setTimeout(() => { playIdleSound(); }, IDLE_MS);
+      else stopIdleSound();
     };
-    for (const type of ACTIVITY) window.addEventListener(type, onActivity, { passive: true, capture: true });
-    const check = window.setInterval(() => {
-      if (played || Date.now() - last < IDLE_MS) return;
-      played = playIdleSound(); // not ready yet (still decoding, tab hidden…) → try again next second
-    }, 1000);
+    window.addEventListener('pointerdown', onUnlock, { passive: true, capture: true });
+    window.addEventListener('keydown', onUnlock, { capture: true });
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      window.clearInterval(check);
-      for (const type of ACTIVITY) window.removeEventListener(type, onActivity, { capture: true });
+      window.clearTimeout(timer);
+      window.removeEventListener('pointerdown', onUnlock, { capture: true });
+      window.removeEventListener('keydown', onUnlock, { capture: true });
+      document.removeEventListener('visibilitychange', onVisibility);
       stopIdleSound();
     };
   }, []);
