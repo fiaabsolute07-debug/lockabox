@@ -90,6 +90,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
       await fetchJson<{ ok: boolean; status: 'submitted' }>(`/api/trades/${built.tradeId}`, { method: 'PATCH', body: JSON.stringify({ txHash: hash, wallet: connection.address }) });
       setStatus({ kind: 'submitted', hash, tradeId: built.tradeId });
     } catch (reason) {
+      console.warn('[lockabox] buy did not complete', reason); // the real wallet error, for support
       setStatus((current) => current?.hash && current.kind !== 'approvalPending' ? current : null);
       if (isUserRejection(reason)) return;
       if (reason instanceof WalletChainUnsupportedError) { setError(t('walletLacksChain', { chain: chain.name })); setChainBlocked(true); }

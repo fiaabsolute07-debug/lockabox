@@ -76,6 +76,7 @@ function SolanaSwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rol
       await fetchJson<{ ok: boolean; status: 'submitted' }>(`/api/trades/${built.tradeId}`, { method: 'PATCH', body: JSON.stringify({ txHash: signature, wallet: publicKey.toBase58() }) });
       setStatus({ kind: 'submitted', signature, tradeId: built.tradeId });
     } catch (reason) {
+      console.warn('[lockabox] buy did not complete', reason); // the real wallet error, for support
       if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
       else if (reason instanceof ApiError && reason.code === 'sell_check_failed') { setError(t('sellCheckFailed')); setShowRollAgain(true); }
       else setError(translateApiError(reason, t, 'walletDidNotComplete'));
