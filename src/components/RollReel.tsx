@@ -4,12 +4,12 @@ import TokenImage from './TokenImage';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { displaySymbol, tierColor, tierLabel, type AssetCard, type Tier } from './api';
-import { useT, type TranslationKey } from './i18n';
+import { useT } from './i18n';
+import { pickRevealLine } from './revealLines';
 import { playRollBed, playRollReveal, playRollStart, playRollSuspense, playRollTick, stopRollAudio } from './rollAudio';
 
 const SPIN_MS = 4700;
 const SUSPENSE_MS = 220; // CS:GO reveals almost as soon as the reel stops
-const HEADLINE: Record<Tier, TranslationKey> = { micro: 'revealMicro', small: 'revealSmall', mid: 'revealMid', large: 'revealLarge', top: 'revealTop' };
 const CONFETTI: Record<Tier, number> = { micro: 0, small: 0, mid: 18, large: 60, top: 140 };
 
 /**
@@ -34,6 +34,8 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain, 
   const [presenting, setPresenting] = useState(false);
   const [panel, setPanel] = useState(false);
   const [phase, setPhase] = useState<'charging' | 'spinning' | 'suspense' | 'revealed'>('charging');
+  // A new reel mounts for every roll, so each pull gets its own headline.
+  const [headline] = useState(() => pickRevealLine(tier));
   const { t, number } = useT();
   useLayoutEffect(() => { onSettledRef.current = onSettled; });
 
@@ -140,10 +142,10 @@ export function RollReel({ cards, winIndex, tier, odds, onSettled, onRollAgain, 
     <div ref={viewportRef}
       className={`spinner roll-stage roll-${phase} ${fullscreen ? 'roll-fullscreen' : ''} ${presenting ? `roll-presenting fx-${tier}` : ''} ${presenting && panel && reveal ? 'roll-panel' : ''}`}
       style={{ '--reveal-color': settled ? tierColor(tier) : '#FFC53D' } as React.CSSProperties}
-      role={presenting ? 'dialog' : undefined} aria-modal={presenting || undefined} aria-label={presenting ? t(HEADLINE[tier]) : undefined}
+      role={presenting ? 'dialog' : undefined} aria-modal={presenting || undefined} aria-label={presenting ? headline : undefined}
       onClick={(event) => { if (!settled) skipToEnd(); else if (presenting && event.target === event.currentTarget) setPresenting(false); }}>
       {!settled && <div className="reel-overlay-title" aria-hidden="true"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div>}
-      {presenting && <div className="reveal-title" aria-live="polite"><span style={{ color: tierColor(tier) }}>{tierLabel(tier)}{chance ? ` · ${t('revealOdds', { percent: number(chance / 100, { maximumFractionDigits: 2 }) })}` : ''}</span><strong>{t(HEADLINE[tier])}</strong></div>}
+      {presenting && <div className="reveal-title" aria-live="polite"><span style={{ color: tierColor(tier) }}>{tierLabel(tier)}{chance ? ` · ${t('revealOdds', { percent: number(chance / 100, { maximumFractionDigits: 2 }) })}` : ''}</span><strong>{headline}</strong></div>}
       <div className="marker" aria-hidden="true" />
       <div className="reveal-burst" aria-hidden="true" />
       {presenting && <div className="reveal-flash" aria-hidden="true" />}

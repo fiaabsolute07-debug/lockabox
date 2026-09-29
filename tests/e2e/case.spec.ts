@@ -1,5 +1,9 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { createRequire } from 'node:module';
+import { REVEAL_LINES } from '../../src/components/revealLines';
+
+// The reveal headline is picked at random from the tier's lines.
+const revealName = (tier: keyof typeof REVEAL_LINES) => new RegExp(`^(${REVEAL_LINES[tier].map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
 
 const require = createRequire(import.meta.url);
 const meta = require('./fixtures/meta.json');
@@ -90,15 +94,15 @@ test('pair age defaults to seven days on the first roll', async ({ page }) => {
   expect(state.rollPosts()).toBe(1);
 });
 
-test('Discover is the default seven-day case and Trending remains separately selectable', async ({ page }) => {
+test('Trending is the default case (owner decision 2026-09-29) and Discover remains separately selectable', async ({ page }) => {
   await fixtures(page, {discover:true,poolTooSmall:true});
   await page.goto('/');
-  await expect(page.getByRole('heading', {name:'Discover',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading', {name:'Trending',exact:true})).toBeVisible();
   const sent=page.waitForRequest(r=>new URL(r.url()).pathname==='/api/rolls' && r.method()==='POST');
   await page.getByRole('button',{name:/OPEN CASE/i}).click();
-  expect((await sent).postDataJSON()).toMatchObject({caseId:'discover',filters:{maxAgeHours:168}});
-  await page.getByRole('button',{name:'Trending',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Trending',exact:true})).toBeVisible();
+  expect((await sent).postDataJSON()).toMatchObject({caseId:'trending',filters:{maxAgeHours:168}});
+  await page.getByRole('button',{name:'Discover',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Discover',exact:true})).toBeVisible();
 });
 
 test('pair age presets and All reach the next roll without resetting other filters', async ({ page }) => {
@@ -192,7 +196,7 @@ test('a ★ Top pull is presented full screen with rays, confetti and a halo, th
   await fixtures(page, { rollBody: topRoll });
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
-  const dialog = page.getByRole('dialog', { name: '★ TOP PULL!' });
+  const dialog = page.getByRole('dialog', { name: revealName('top') });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('.reveal-rays')).toHaveCount(1);
   expect(await dialog.locator('.confetti i').count()).toBeGreaterThan(100);
@@ -316,7 +320,7 @@ test('a Micro pull gets the "womp" reveal without confetti, and Open again rolls
   const state = await fixtures(page, { rollBody: microRoll });
   await openCase(page);
   await page.getByRole('button', { name: /Skip animation/i }).click();
-  const dialog = page.getByRole('dialog', { name: 'Womp womp…' });
+  const dialog = page.getByRole('dialog', { name: revealName('micro') });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('35% chance');
   await expect(dialog.locator('.confetti')).toHaveCount(0);

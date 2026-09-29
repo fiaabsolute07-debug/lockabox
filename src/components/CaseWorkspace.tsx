@@ -50,7 +50,7 @@ function pairAgeLabel(hours: string, all: string) {
 export default function CaseWorkspace() {
   const { t, locale, age } = useT();
   const { meta, feed, selectedChain, user, refreshUser, setRevealPending } = useAppContext();
-  const [caseId, setCaseId] = useState('discover');
+  const [caseId, setCaseId] = useState('trending');
   const [summary, setSummary] = useState<CaseResponse | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterDraft>(DEFAULT_FILTERS);

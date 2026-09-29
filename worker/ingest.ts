@@ -94,14 +94,7 @@ async function discover(deps: Required<Pick<IngestDeps, 'sql' | 'ds' | 'dp' | 'l
     metaSnaps += await saveSnapshots(sql, snaps, enabled);
     for (const s of snaps) { found.push({ chainId: s.chainId, address: s.address, source: 'ds:meta' }); found.push({ chainId: s.chainId, address: s.address, source: `ds:meta:${m.slug}` }); }
   }
-  // Meta cases follow what's trending: the top metas get a case, older meta cases are switched off.
-  if (topMetas.length) {
-    for (const [i, m] of topMetas.entries()) {
-      await sql`insert into cases (id, kind, title, meta_slug, sort) values (${`meta-${m.slug}`}, 'meta', ${m.name}, ${m.slug}, ${10 + i})
-                on conflict (id) do update set active = true, title = excluded.title, sort = excluded.sort`;
-    }
-    await sql`update cases set active = false where kind = 'meta' and not (meta_slug = any(${topMetas.map((m) => m.slug)}))`;
-  }
+  // Meta tokens still feed Discover, but meta cases no longer get their own tab (DECISIONS #19).
   const upserted = await upsertDiscovered(sql, found, enabled);
   const discovery = await discoverNewPools(sql, dp, chains, enabled, upsertDiscovered, log);
   return { upserted: upserted + discovery.found, metaSnaps, paprika: discovery.found, pages: discovery.pages };
