@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "www.lockabox.fun" }], "destination": "https://lockabox.fun/:path*", "permanent": true },
+    { "source": "/:path*", "has": [{ "type": "host", "value": "lockabox.vercel.app" }], "destination": "https://lockabox.fun/:path*", "permanent": true }
+  ]
 }
