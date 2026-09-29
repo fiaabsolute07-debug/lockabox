@@ -240,7 +240,7 @@ export function playRollSuspense(_durationMs = 0) { void _durationMs; }
 const E6 = 1318.51, GS6 = 1661.22, B6 = 1975.53, E7 = 2637.02, GS7 = 3322.44, B7 = 3951.07;
 
 /** Micro pulls in a row before Locky laughs at you (owner request, 2026-09-29). Counted once per roll by the caller. */
-export const MICRO_STREAK = 5;
+export const MICRO_STREAK = 12;
 export const nextMicroStreak = (streak: number, tier: Tier) => (tier === 'micro' ? streak + 1 : 0);
 
 /** Shares of gold ★ Top pulls that get the airhorn or the anime wow (owner requests, 2026-09-29); the rest keep the tier sound. */
@@ -261,8 +261,8 @@ export function specialSoundFor(pull: { tier: Tier; rollsThisVisit: number; micr
 
 /** How long a special reveal waits for its file to finish decoding (a fast first roll can beat the decoder). */
 const SPECIAL_WAIT_MS = 1000;
-/** Per-file volume for special sounds (1 = as recorded). The cat laugh is loud, so it plays at 35 % (owner request). */
-const SPECIAL_VOLUME: Partial<Record<SpecialSound, number>> = { 'micro-streak': 0.35 };
+/** Per-file volume for special sounds (1 = as recorded). The cat laugh is loud, so it plays at 15 % (owner request). */
+const SPECIAL_VOLUME: Partial<Record<SpecialSound, number>> = { 'micro-streak': 0.15 };
 
 export function playRollReveal(tier: Tier, special?: SpecialSound) {
   const volume = special ? SPECIAL_VOLUME[special] ?? 1 : 1;

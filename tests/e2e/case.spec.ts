@@ -341,15 +341,15 @@ test('licensed sound files in /public/sounds replace the synthesised sounds when
   await expect.poll(() => requested.sort()).toEqual(['/sounds/gold.mp3', '/sounds/tick.mp3']);
 });
 
-test('the fifth Micro in a row swaps the headline for a cat-laugh line with the streak length', async ({ page }) => {
+test('the twelfth Micro in a row swaps the headline for a cat-laugh line with the streak length', async ({ page }) => {
   await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'micro' }, asset: { ...asset } } });
   await page.goto('/');
-  const streakName = new RegExp(`^(${MICRO_STREAK_LINES.map(l => l.replaceAll('{n}', '5').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
+  const streakName = new RegExp(`^(${MICRO_STREAK_LINES.map(l => l.replaceAll('{n}', '12').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`);
   await page.getByRole('button', { name: /OPEN CASE/i }).click();
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 12; i++) {
     if (i > 1) await page.locator('.pull-card').getByRole('button', { name: /Open again/ }).click();
     await page.getByRole('button', { name: /Skip animation/i }).click();
-    const dialog = page.getByRole('dialog', { name: i < 5 ? revealName('micro') : streakName });
+    const dialog = page.getByRole('dialog', { name: i < 12 ? revealName('micro') : streakName });
     await expect(dialog).toBeVisible();
   }
 });
@@ -382,14 +382,14 @@ test.describe('special reveal sounds', () => {
     return () => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
   }
 
-  test('the fifth Micro pull in a row plays the cat laugh instead of the Micro ding', async ({ page }) => {
+  test('the twelfth Micro pull in a row plays the cat laugh instead of the Micro ding', async ({ page }) => {
     await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'micro' }, asset: { ...asset } } });
     const played = await recordFiles(page);
     await page.goto('/');
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 12; i++) {
       await page.getByRole('button', { name: /OPEN CASE/i }).click();
       await expect(page.locator('.unboxed-bar')).toBeVisible();
-      if (i < 5) expect(await played()).not.toContain('laugh');
+      if (i < 12) expect(await played()).not.toContain('laugh');
     }
     await expect.poll(played).toContain('laugh');
   });
