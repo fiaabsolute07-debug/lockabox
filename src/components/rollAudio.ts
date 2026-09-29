@@ -208,9 +208,17 @@ function shing(duration: number, volume: number, delay = 0) {
   noise(2500, duration, volume, delay, 'bandpass', 0.01, true, 9000);
 }
 
+let startedAt = 0;
+
+/** Called on the click itself (so the latch never waits for the roll API) and again when the reel starts; the second call
+ *  within START_DEDUPE_MS only resets the tick spacing instead of latching twice. */
+const START_DEDUPE_MS = 3000;
 export function playRollStart() {
-  stopRollAudio();
   lastTick = 0;
+  const now = performance.now();
+  if (startedAt && now - startedAt < START_DEDUPE_MS) return;
+  startedAt = now;
+  stopRollAudio();
   if (playFile('open')) return;
   // The case unlocks: two quick metal clicks and a short slide.
   noise(3500, 0.03, 0.5);

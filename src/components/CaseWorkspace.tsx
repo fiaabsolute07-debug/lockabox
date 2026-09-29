@@ -24,7 +24,7 @@ import { useAppContext, Sidebar } from './AppShell';
 import { LockyChat } from './LockyChat';
 import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
-import { nextMicroStreak, preloadRollSounds, rollSoundEnabled, setRollSoundEnabled, specialSoundFor, unlockRollAudio, type SpecialSound } from './rollAudio';
+import { nextMicroStreak, playRollStart, preloadRollSounds, rollSoundEnabled, setRollSoundEnabled, specialSoundFor, unlockRollAudio, type SpecialSound } from './rollAudio';
 import SwapBox from './SwapBox';
 import PullCard from './PullCard';
 import ProofBox from './ProofBox';
@@ -110,6 +110,7 @@ export default function CaseWorkspace() {
   const handleRoll = useCallback(async () => {
     if (rolling || !summary?.pool || (result !== null && !reelSettled)) return;
     unlockRollAudio();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) playRollStart(); // latch now, not after the API round trip
     setRevealPending(true);
     setResult(null);
     setReelSettled(false);
