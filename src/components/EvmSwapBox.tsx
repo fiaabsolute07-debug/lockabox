@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError, displaySymbol, explorerTxLink, fetchJson, formatPrice, formatRawAmount, type AssetDetail, type Chain, type EvmBuildResponse, type QuoteView } from './api';
-import { isUserRejection, useEvmWallet } from './EvmWallet';
+import { isUserRejection, useEvmWallet, WalletChainUnsupportedError } from './EvmWallet';
 import { useT, translateApiError } from './i18n';
 import { useTradeStatus } from './useTradeStatus';
 import { useAppContext } from './AppShell';
@@ -33,6 +33,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const [quote, setQuote] = useState<QuoteView | null>(null);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chainBlocked, setChainBlocked] = useState(false); // the wallet can't use this chain → offer DEX Screener
   const [showRollAgain, setShowRollAgain] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,7 +42,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const final = useTradeStatus(status?.kind === 'submitted' ? status.tradeId ?? null : null);
 
   useEffect(() => {
-    setSwapAvailable(asset.swapEnabled); setQuote(null); setError(null); setShowRollAgain(false); setStatus(null); setAmount(quick[1]);
+    setSwapAvailable(asset.swapEnabled); setQuote(null); setError(null); setChainBlocked(false); setShowRollAgain(false); setStatus(null); setAmount(quick[1]);
   }, [asset.id, asset.swapEnabled, quick]);
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const buy = async () => {
     if (!connection) { openWallet('evm'); return; }
     if (!quote || busy || (highSlippage && !confirmHighSlippage)) return;
-    setBusy(true); setError(null); setStatus(null);
+    setBusy(true); setError(null); setStatus(null); setChainBlocked(false);
     try {
       const built = await fetchJson<EvmBuildResponse>('/api/swap/build', { method: 'POST', body: JSON.stringify({ assetId: asset.id, amount, slippageBps: quote.slippageBps, userAddress: connection.address, rollId }) });
       await evm.switchChain(built.evm.chainId);
@@ -91,7 +92,8 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     } catch (reason) {
       setStatus((current) => current?.hash && current.kind !== 'approvalPending' ? current : null);
       if (isUserRejection(reason)) return;
-      if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
+      if (reason instanceof WalletChainUnsupportedError) { setError(t('walletLacksChain', { chain: chain.name })); setChainBlocked(true); }
+      else if (reason instanceof ApiError && reason.code === 'swap_disabled') setSwapAvailable(false);
       else if (reason instanceof ApiError && reason.code === 'sell_check_failed') { setError(t('sellCheckFailed')); setShowRollAgain(true); }
       else setError(translateApiError(reason, t, 'walletDidNotComplete'));
     } finally { setBusy(false); }
@@ -123,7 +125,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     </div>
     {inputSymbol === 'USDC' && <p className="quote-status">{t('approveExactNote')}</p>}
     {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
-    {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain ? <button onClick={onRollAgain}>{t('rollAgain')}</button> : !status && <button onClick={() => setRetry((n) => n + 1)}>{t('tryAgain')}</button>}</div>}
+    {error && <div className="inline-error" role="alert">{error} {chainBlocked && asset.links.dexscreener ? <a href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : showRollAgain && onRollAgain ? <button onClick={onRollAgain}>{t('rollAgain')}</button> : !status && <button onClick={() => setRetry((n) => n + 1)}>{t('tryAgain')}</button>}</div>}
     {statusText && <div className="trade-status" role="status">{statusText}{link && <> · <a href={link} target="_blank" rel="noreferrer">{t('viewOnExplorer')}</a></>}</div>}
     <button className="button button-buy full-width" onClick={() => void buy()} disabled={busy || (!!connection && (!quote || quoteBusy || (highSlippage && !confirmHighSlippage)))}>{connection ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectEvmToBuy')}</button>
     <p className="disclaimer">{t(viaUniswap ? 'uniswapNote' : 'lifiNote')} {t('ownWalletDisclaimer')}</p>

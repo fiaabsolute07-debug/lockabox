@@ -3,11 +3,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createWalletClient, custom, type Chain, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
+import { sessionHasChain, switchWalletChain, walletConnectSession } from './walletChain';
 
 /**
  * Injected EVM wallets (AC-036/004) without a wallet SDK: EIP-6963 discovery (MetaMask, Rabby, Coinbase Wallet…), falling back to
  * `window.ethereum`, driven through viem's `custom` transport. Nothing is signed or sent without a click; the key stays in the wallet.
- * WalletConnect needs a project id from the owner and is not wired.
+ * WalletConnect (QR / mobile) connections come from Reown AppKit and use the same client.
  */
 
 export type EvmProviderInfo = { uuid: string; name: string; icon: string; rdns: string };
@@ -35,15 +36,7 @@ export function useEvmWallet() {
   return value;
 }
 
-/** A wallet closed its popup: EIP-1193 code 4001 (viem wraps it as UserRejectedRequestError). Shown quietly, not as a failure. */
-export function isUserRejection(error: unknown): boolean {
-  let current = error as { code?: number; name?: string; cause?: unknown } | undefined;
-  for (let depth = 0; current && depth < 5; depth++) {
-    if (current.code === 4001 || current.name === 'UserRejectedRequestError' || /user (rejected|denied)|request rejected/i.test(String((current as { message?: string }).message ?? ''))) return true;
-    current = current.cause as typeof current;
-  }
-  return false;
-}
+export { isUserRejection, WalletChainUnsupportedError } from './walletChain';
 
 export function EvmWalletProvider({ children }: { children: React.ReactNode }) {
   const account = useAppKitAccount({ namespace: 'eip155' });
@@ -127,16 +120,10 @@ export function EvmWalletProvider({ children }: { children: React.ReactNode }) {
 
   const switchChain = useCallback(async (chainId: number) => {
     const c = current();
-    if (c.chainId === chainId) return;
-    try { await c.client.switchChain({ id: chainId }); }
-    catch (error) {
-      // 4902: the wallet does not know this chain yet (e.g. Robinhood Chain) → offer to add it, then switch.
-      const code = (error as { code?: number; cause?: { code?: number } }).code ?? (error as { cause?: { code?: number } }).cause?.code;
-      const network = (await import('./reown')).walletNetworks.find((n) => n.id === chainId);
-      if (code !== 4902 || !network || !('rpcUrls' in network)) throw error;
-      await c.client.addChain({ chain: network as unknown as Chain });
-      await c.client.switchChain({ id: chainId });
-    }
+    const session = walletConnectSession(c.detail.provider);
+    if (c.chainId === chainId && (!session || sessionHasChain(session, chainId))) return;
+    const network = (await import('./reown')).walletNetworks.find((n) => n.id === chainId);
+    await switchWalletChain({ client: c.client, provider: c.detail.provider, chainId, network: network && 'rpcUrls' in network ? network as unknown as Chain : undefined });
     const now = await c.client.getChainId();
     if (connectionRef.current?.address !== c.address || connectionRef.current?.detail.provider !== c.detail.provider) throw new Error('The wallet account changed. Please try again.');
     update({ ...c, chainId: now });
