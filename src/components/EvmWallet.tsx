@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { createWalletClient, custom, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
+import { createWalletClient, custom, type Chain, type EIP1193Provider, type Hex, type WalletClient } from 'viem';
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
 
 /**
@@ -128,7 +128,15 @@ export function EvmWalletProvider({ children }: { children: React.ReactNode }) {
   const switchChain = useCallback(async (chainId: number) => {
     const c = current();
     if (c.chainId === chainId) return;
-    await c.client.switchChain({ id: chainId });
+    try { await c.client.switchChain({ id: chainId }); }
+    catch (error) {
+      // 4902: the wallet does not know this chain yet (e.g. Robinhood Chain) → offer to add it, then switch.
+      const code = (error as { code?: number; cause?: { code?: number } }).code ?? (error as { cause?: { code?: number } }).cause?.code;
+      const network = (await import('./reown')).walletNetworks.find((n) => n.id === chainId);
+      if (code !== 4902 || !network || !('rpcUrls' in network)) throw error;
+      await c.client.addChain({ chain: network as unknown as Chain });
+      await c.client.switchChain({ id: chainId });
+    }
     const now = await c.client.getChainId();
     if (connectionRef.current?.address !== c.address || connectionRef.current?.detail.provider !== c.detail.provider) throw new Error('The wallet account changed. Please try again.');
     update({ ...c, chainId: now });

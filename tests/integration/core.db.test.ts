@@ -205,7 +205,9 @@ run('chains from DEX Screener (owner request 2026-09-27)', () => {
     const { registerChains } = await import('../../worker/ingest');
     const rows = await sql<{ id: string; family: string; enabled: boolean; swap_enabled: boolean }[]>`select id, family, enabled, swap_enabled from chains`;
     const byId = new Map(rows.map((r) => [r.id, r]));
-    for (const id of ['arbitrum', 'monad', 'blast', 'polygon', 'avalanche', 'sui', 'ton', 'tron', 'hyperevm']) expect(byId.get(id)).toMatchObject({ enabled: true, swap_enabled: false });
+    for (const id of ['blast', 'sui', 'ton', 'tron', 'hyperevm']) expect(byId.get(id)).toMatchObject({ enabled: true, swap_enabled: false });
+    // Chains the Uniswap API covers have in-app buys on (DECISIONS #21).
+    for (const id of ['arbitrum', 'monad', 'polygon', 'avalanche']) expect(byId.get(id)).toMatchObject({ enabled: true, swap_enabled: true });
     expect(byId.get('sui')!.family).toBe('other');
     expect(byId.get('monad')!.family).toBe('evm');
     await sql`delete from chains where id in ('zz-newchain', 'zzoff')`;

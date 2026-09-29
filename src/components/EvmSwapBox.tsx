@@ -8,12 +8,16 @@ import { useTradeStatus } from './useTradeStatus';
 import { useAppContext } from './AppShell';
 
 /**
- * EVM buy through LI.FI (AC-038, DECISIONS #10). Rendered only when the coin's chain has swap switched on. Every route fee is shown
+ * EVM buy through Uniswap (DECISIONS #21) or LI.FI (AC-038, DECISIONS #10), per chain. Rendered only when the coin's chain has
+ * swap switched on; a coin Uniswap has no pool path for falls back to "Buy on DEX". Every route fee is shown
  * on its own line next to "Lockabox fee 0"; an ERC-20 input (USDC on Arc) is approved for exactly the amount, and the swap is sent
  * only after that approval is mined. Nothing is sent without the user's click (AC-040).
  */
 
-const QUICK_AMOUNTS: Record<string, string[]> = { ETH: ['0.002', '0.005', '0.01', '0.05'], BNB: ['0.01', '0.05', '0.1', '0.5'], USDC: ['5', '10', '25', '50'] };
+const QUICK_AMOUNTS: Record<string, string[]> = {
+  ETH: ['0.002', '0.005', '0.01', '0.05'], BNB: ['0.01', '0.05', '0.1', '0.5'], USDC: ['5', '10', '25', '50'],
+  POL: ['10', '25', '50', '100'], AVAX: ['0.2', '0.5', '1', '2'], CELO: ['10', '25', '50', '100'], OKB: ['0.1', '0.2', '0.5', '1'], MON: ['5', '10', '25', '50'],
+};
 
 type Status = { kind: 'approve' | 'approvalPending' | 'confirm' | 'pending' | 'submitted'; hash?: string; tradeId?: number };
 
@@ -58,6 +62,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     return () => window.clearTimeout(timer);
   }, [amount, asset.id, slippage, swapAvailable, t]);
 
+  const viaUniswap = (quote?.provider ?? chain.swapProvider) === 'uniswap';
   const symbol = displaySymbol(asset);
   if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('buyOnDexNote')}</p>{asset.links.dexscreener ? <a className="button button-buy full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : null}</section>;
 
@@ -103,7 +108,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   })[status.kind];
 
   return <section className="panel swap-card evm-swap">
-    <div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaLifi')} · {formatPrice(asset.priceUsd, locale)}</span></div>
+    <div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t(viaUniswap ? 'viaUniswap' : 'viaLifi')} · {formatPrice(asset.priceUsd, locale)}</span></div>
     <div className="amount-box"><div className="amount-label"><span>{t('youPay')}</span><span>{inputSymbol} · {chain.name}</span></div><div className="amount-line"><input aria-label={t('amountIn', { symbol: inputSymbol })} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ''))} /><span className="token-pill">{inputSymbol}</span></div></div>
     <div className="quick-amounts">{quick.map((value) => <button key={value} className={value === amount ? 'active' : ''} onClick={() => setAmount(value)}>{value}</button>)}</div>
     <div className="slippage-row"><label htmlFor="evm-slippage">{t('slippage')}</label><div className="slippage-input"><input id="evm-slippage" type="number" min="1" max="49" step="1" value={slippage} onChange={(event) => { const next = Number(event.target.value); setSlippage(event.target.value === '' ? '' : String(Math.min(49, Math.max(1, Number.isFinite(next) ? next : 3)))); }} /><span>%</span></div></div>
@@ -120,6 +125,6 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
     {statusText && <div className="trade-status" role="status">{statusText}{link && <> · <a href={link} target="_blank" rel="noreferrer">{t('viewOnExplorer')}</a></>}</div>}
     <button className="button button-buy full-width" onClick={() => void buy()} disabled={busy || (!!connection && (!quote || quoteBusy || (highSlippage && !confirmHighSlippage)))}>{connection ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectEvmToBuy')}</button>
-    <p className="disclaimer">{t('lifiNote')} {t('ownWalletDisclaimer')}</p>
+    <p className="disclaimer">{t(viaUniswap ? 'uniswapNote' : 'lifiNote')} {t('ownWalletDisclaimer')}</p>
   </section>;
 }

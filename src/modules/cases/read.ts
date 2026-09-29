@@ -39,8 +39,8 @@ const GECKO_NETWORK: Record<string, string> = {
 };
 
 export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
-  const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
-    select id, name, family, swap_enabled, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
+  const chains = await sql<{ id: string; name: string; family: string; swap_enabled: boolean; swap_provider: string | null; evm_chain_id: number | null; native_symbol: string | null; explorer_tx_url: string | null }[]>`
+    select id, name, family, swap_enabled, swap_provider, evm_chain_id, native_symbol, explorer_tx_url from chains where enabled order by sort`;
   const cases = await listCases(sql);
   // Discover covers every eligible source; counts are before the user's age/other filters.
   const sizes = await sql<{ chain_scope: string; size: number }[]>`
@@ -48,7 +48,7 @@ export async function chainsAndCases(sql: postgres.Sql = defaultSql) {
   const poolSize = new Map(sizes.map((s) => [s.chain_scope, Number(s.size)]));
   const [seed] = await sql<{ hash: string; active_from: Date }[]>`select hash, active_from from server_seeds where revealed_at is null`;
   return {
-    chains: chains.map((c) => ({ id: c.id, name: c.name, family: c.family, swapEnabled: c.swap_enabled, evmChainId: c.evm_chain_id,
+    chains: chains.map((c) => ({ id: c.id, name: c.name, family: c.family, swapEnabled: c.swap_enabled, swapProvider: c.swap_provider, evmChainId: c.evm_chain_id,
       nativeSymbol: c.native_symbol, explorerTxUrl: c.explorer_tx_url, poolSize: poolSize.get(c.id) ?? 0 })),
     cases: cases.filter((c) => !c.cost_points).map((c) => ({ id: c.id, title: c.title, kind: c.kind })),
     activeSeedHash: seed?.hash ?? null,

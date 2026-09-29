@@ -42,9 +42,20 @@ function network(opts: { quote: Record<string, unknown>; sell?: Record<string, u
   return { f, calls };
 }
 
+// Migration state after 0019 (DECISIONS #21): Uniswap on its chains and switched on, Arc on LI.FI and off.
+export async function restoreSwapChains() {
+  await sql`update chains set swap_provider = 'uniswap' where id in ('base', 'robinhood')`;
+  await sql`update chains set swap_enabled = (swap_provider = 'uniswap' and rpc_url is not null and native_symbol is not null) where family = 'evm'`;
+}
+
 run('EVM swap via LI.FI (AC-038, DECISIONS #10)', () => {
-  beforeEach(reset);
-  afterEach(async () => { await sql`update chains set swap_enabled = false where family = 'evm'`; });
+  // These cases pin Base and Robinhood to LI.FI and start with every EVM swap off, as before DECISIONS #21.
+  beforeEach(async () => {
+    await reset();
+    await sql`update chains set swap_enabled = false where family = 'evm'`;
+    await sql`update chains set swap_provider = 'lifi' where id in ('base', 'robinhood')`;
+  });
+  afterEach(restoreSwapChains);
 
   it('stays off until the owner enables the chain', async () => {
     const id = await evmAsset('base', BNKR, 'BNKR');

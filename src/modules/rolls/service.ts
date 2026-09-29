@@ -94,7 +94,8 @@ export async function filterPool(items: PoolItem[], filters: RollFilters, sql: p
       and not exists(select 1 from symbol_blocklist b where b.symbol=upper(coalesce(a.symbol,'')))
       and (${off.includes('liquidity')} or exists(select 1 from gate_results g where g.asset_id=a.id and g.gate='liquidity' and g.passed))
       and not exists(select 1 from gate_results g where g.asset_id=a.id and not g.passed and g.gate<>all(${off}::text[]))
-      and (${off.includes('honeypot')} or not ch.swap_enabled or exists(select 1 from gate_results g where g.asset_id=a.id and g.gate='honeypot' and g.passed))`;
+      -- Same rule as eligibleItems: Solana needs a passed sell check, EVM only must not have failed one (DECISIONS #21).
+      and (${off.includes('honeypot')} or not ch.swap_enabled or ch.family = 'evm' or exists(select 1 from gate_results g where g.asset_id=a.id and g.gate='honeypot' and g.passed))`;
   const byId = new Map(rows.map((r) => [Number(r.asset_id), r]));
   const now = Date.now();
   pool = pool.filter(({ a }) => {

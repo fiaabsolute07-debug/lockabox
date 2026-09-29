@@ -6,6 +6,8 @@ export type Chain = {
   name: string;
   family: string;
   swapEnabled: boolean;
+  /** Who routes in-app buys on this chain (DECISIONS #10/#21); null where swap has never been set up. */
+  swapProvider?: 'jupiter' | 'lifi' | 'uniswap' | null;
   /** EVM chain id for wallet_switchEthereumChain / SIWE; null on Solana. */
   evmChainId?: number | null;
   nativeSymbol?: string | null;
@@ -187,7 +189,7 @@ export type QuoteView = {
   priceImpactPct: number | null;
   slippageBps: number;
   route: string[];
-  provider?: 'jupiter' | 'lifi';
+  provider?: 'jupiter' | 'lifi' | 'uniswap';
   /** Route costs charged by others (e.g. LI.FI's fixed fee as a fraction: 0.0025 = 0.25 %). Lockabox's own fee is always 0. */
   routeFees?: RouteFee[];
   lockaboxFee: 0;

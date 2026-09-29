@@ -3,13 +3,15 @@ import { sql as defaultSql } from '@/lib/db';
 import { audit } from '@/modules/admin/service';
 import { isSolanaAddress } from '@/modules/auth/session';
 import { recordGate, solanaHoneypotGate, type GateOutcome } from '@/modules/gates';
-import { evmSellGate } from '@/modules/gates/evm';
+import { evmSellGate, SellCheckUnavailable } from '@/modules/gates/evm';
 import { buildSwapTransaction, getQuote, SOL_MINT, type JupiterQuote } from './jupiter';
 import { allowance, approveCalldata, assertSafe, getLifiQuote, LifiError, NATIVE, type LifiQuote } from './lifi';
+import { assertUniswapSafe, buildUniswapTx, getUniswapQuote, UniswapError, type UniswapQuote } from './uniswap';
 
 /**
- * In-app buy (LAB §3c). Solana through Jupiter, EVM through LI.FI (DECISIONS #10, off unless `chains.swap_enabled`).
- * Lockabox never signs, never holds funds and adds no fee; route costs (DEX fees, LI.FI's own fee) are shown in the quote.
+ * In-app buy (LAB §3c). Solana through Jupiter; EVM through the chain's `swap_provider`: Uniswap (DECISIONS #21) or LI.FI
+ * (DECISIONS #10), off unless `chains.swap_enabled`. Lockabox never signs, never holds funds and adds no fee; route costs
+ * (pool fees, LI.FI's own fee) are shown in the quote.
  */
 
 export const MAX_SLIPPAGE_BPS = 4900;
@@ -22,13 +24,13 @@ export class SwapError extends Error {
 
 type AssetRow = {
   id: number; chain_id: string; address: string; symbol: string | null; decimals: number | null; swap_enabled: boolean; family: string; killed: boolean;
-  evm_chain_id: number | null; rpc_url: string | null; native_symbol: string | null; native_decimals: number;
+  evm_chain_id: number | null; rpc_url: string | null; native_symbol: string | null; native_decimals: number; swap_provider: 'jupiter' | 'lifi' | 'uniswap' | null;
 };
 
 async function loadAsset(assetId: number, sql: postgres.Sql): Promise<AssetRow> {
   const [a] = await sql<AssetRow[]>`
     select a.id, a.chain_id, a.address, a.symbol, a.decimals, ch.swap_enabled, ch.family, exists(select 1 from moderation m where m.asset_id = a.id) as killed,
-           ch.evm_chain_id, ch.rpc_url, ch.native_symbol, ch.native_decimals
+           ch.evm_chain_id, ch.rpc_url, ch.native_symbol, ch.native_decimals, ch.swap_provider
     from assets original join assets a on a.id=coalesce(original.merged_into,original.id)
     join chains ch on ch.id = a.chain_id where original.id = ${assetId}`;
   if (!a) throw new SwapError('not_found', 'unknown asset');
@@ -51,6 +53,20 @@ export async function tokenDecimals(a: Pick<AssetRow, 'id' | 'address' | 'decima
   return null;
 }
 
+/** ERC-20 `decimals()` from the chain RPC, cached on the asset row; null keeps raw units in the UI. */
+export async function evmTokenDecimals(a: Pick<AssetRow, 'id' | 'address' | 'decimals' | 'rpc_url'>, sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch): Promise<number | null> {
+  if (a.decimals !== null) return a.decimals;
+  if (!a.rpc_url) return null;
+  try {
+    const res = await fetchImpl(a.rpc_url, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: a.address, data: '0x313ce567' }, 'latest'] }) });
+    const hex = ((await res.json()) as { result?: string }).result;
+    const d = hex && hex !== '0x' ? Number(BigInt(hex)) : NaN;
+    if (Number.isInteger(d) && d >= 0 && d <= 36) { await sql`update assets set decimals = ${d} where id = ${a.id}`; return d; }
+  } catch { /* shown as raw units */ }
+  return null;
+}
+
 /** "0.05" in a coin with `decimals` decimals → smallest units. */
 export function parseAmount(amount: string, decimals: number): bigint {
   const re = new RegExp(`^\\d+(\\.\\d{1,${decimals}})?$`);
@@ -68,7 +84,7 @@ export function solToLamports(amountSol: string): bigint {
 export type RouteFee = { name: string; percentage: number | null; amountUsd: number | null };
 export type QuoteView = {
   assetId: number; symbol: string | null; inputSymbol: string; inputAmount: string; outAmount: string; outAmountMin: string; decimals: number | null;
-  priceImpactPct: number | null; slippageBps: number; route: string[]; provider: 'jupiter' | 'lifi'; routeFees: RouteFee[];
+  priceImpactPct: number | null; slippageBps: number; route: string[]; provider: 'jupiter' | 'lifi' | 'uniswap'; routeFees: RouteFee[];
   lockaboxFee: 0; sellCheck: 'passed';
 };
 
@@ -84,6 +100,29 @@ function lifiView(a: AssetRow, amount: string, q: LifiQuote, slippageBps: number
     provider: 'lifi', routeFees: q.fees.map(({ name, percentage, amountUsd }) => ({ name, percentage, amountUsd })), lockaboxFee: 0, sellCheck: 'passed' };
 }
 
+function uniswapView(a: AssetRow, amount: string, q: UniswapQuote, slippageBps: number, decimals: number | null): QuoteView {
+  return { assetId: a.id, symbol: a.symbol, inputSymbol: a.native_symbol ?? 'ETH', inputAmount: amount, outAmount: q.toAmount, outAmountMin: q.toAmountMin,
+    decimals, priceImpactPct: q.priceImpactPct, slippageBps, route: q.route, provider: 'uniswap',
+    // Pool fees are part of the price (shown per hop in the route); Uniswap's API adds no fee and neither do we.
+    routeFees: q.gasFeeUsd !== null ? [{ name: 'Network fee (est.)', percentage: null, amountUsd: q.gasFeeUsd }] : [], lockaboxFee: 0, sellCheck: 'passed' };
+}
+
+const routesViaUniswap = (a: AssetRow) => a.family === 'evm' && a.swap_provider === 'uniswap';
+
+/** No Uniswap pool path (or no API key) → the coin is bought on its DEX instead, like a chain without in-app swap. */
+function uniswapFailure(e: unknown): never {
+  if (e instanceof UniswapError && e.kind === 'transient') throw new SwapError('quote_failed', 'Uniswap is busy; try again in a moment');
+  if (e instanceof UniswapError && e.kind !== 'rejected') throw new SwapError('swap_disabled', 'no Uniswap route for this coin; use View on DEX');
+  throw new SwapError('quote_failed', e instanceof UniswapError ? e.message : 'route rejected');
+}
+
+async function uniswapQuoteFor(a: AssetRow, units: bigint, swapper: string, slippageBps: number, fetchImpl: typeof fetch, checkSender: boolean) {
+  const q = await getUniswapQuote({ chainId: a.evm_chain_id!, toToken: a.address, fromAmount: units, swapper, slippageBps }, fetchImpl).catch(uniswapFailure);
+  try { assertUniswapSafe(q, { chainId: a.evm_chain_id!, fromAmount: units, toToken: a.address, swapper: checkSender ? swapper : undefined }); }
+  catch (e) { uniswapFailure(e); }
+  return q;
+}
+
 function clampSlippage(bps: unknown) {
   const n = Number(bps ?? DEFAULT_SLIPPAGE_BPS);
   return Number.isInteger(n) && n >= 10 && n <= MAX_SLIPPAGE_BPS ? n : DEFAULT_SLIPPAGE_BPS;
@@ -96,9 +135,18 @@ export function evmProbe(nativeDecimals: number) {
 
 /** LAB-AC-039: re-run the sell check right before quoting; a failure quarantines the coin (kill switch) at once. */
 async function sellCheck(a: AssetRow, sql: postgres.Sql, fetchImpl: typeof fetch) {
-  const out: GateOutcome = a.family === 'solana'
-    ? await solanaHoneypotGate(a.address, fetchImpl)
-    : await evmSellGate(a.evm_chain_id!, a.address, evmProbe(a.native_decimals), fetchImpl);
+  let out: GateOutcome;
+  try {
+    out = a.family === 'solana'
+      ? await solanaHoneypotGate(a.address, fetchImpl)
+      : await evmSellGate(a.evm_chain_id!, a.address, evmProbe(a.native_decimals), fetchImpl, a.swap_provider);
+  } catch (e) {
+    // No verdict (e.g. no Uniswap pool path): not bought in-app, not killed either; the buy box offers "Buy on DEX".
+    if (!(e instanceof SellCheckUnavailable)) throw e;
+    await sql`insert into sell_check_skips (asset_id, reason) values (${a.id}, ${e.message})
+              on conflict (asset_id) do update set reason = excluded.reason, checked_at = now()`;
+    throw new SwapError('swap_disabled', 'no in-app route for this coin; use View on DEX');
+  }
   await recordGate(a.id, 'honeypot', out, sql);
   if (!out.passed) {
     await sql.begin(async (tx) => {
@@ -131,6 +179,7 @@ export async function quote(p: { assetId: number; amount?: string; amountSol?: s
   const units = parseAmount(amount, a.family === 'solana' ? 9 : a.native_decimals);
   const slippageBps = clampSlippage(p.slippageBps);
   await sellCheckRecent(a, sql, fetchImpl);
+  if (routesViaUniswap(a)) return uniswapView(a, amount, await uniswapQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps, await evmTokenDecimals(a, sql, fetchImpl));
   if (a.family === 'evm') return lifiView(a, amount, await lifiQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps);
   const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps }, fetchImpl)
     .catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
@@ -152,6 +201,17 @@ export async function build(
     const wallet = p.wallet.toLowerCase();
     const units = parseAmount(amount, a.native_decimals);
     await sellCheck(a, sql, fetchImpl);
+    if (routesViaUniswap(a)) {
+      const uq = await uniswapQuoteFor(a, units, wallet, slippageBps, fetchImpl, true);
+      const tx = await buildUniswapTx(uq, fetchImpl).catch(uniswapFailure);
+      try { assertUniswapSafe(uq, { chainId: a.evm_chain_id!, fromAmount: units, toToken: a.address, swapper: wallet }, tx); } catch (e) { uniswapFailure(e); }
+      const [row] = await sql<{ id: number }[]>`
+        insert into trades (roll_id, user_id, wallet, chain_id, asset_id, input_symbol, input_amount, out_amount_min, quote, status)
+        values (${p.rollId ?? null}, ${p.userId ?? null}, ${wallet}, ${a.chain_id}, ${a.id}, ${a.native_symbol ?? 'ETH'}, ${amount}, ${uq.toAmountMin}, ${sql.json({ provider: 'uniswap', ...uq } as never)}, 'built')
+        returning id`;
+      const transaction: EvmTx = { to: tx.to, data: tx.data, value: tx.value, gasLimit: tx.gasLimit, chainId: tx.chainId };
+      return { tradeId: Number(row.id), evm: { chainId: a.evm_chain_id!, approval: null, transaction }, quote: uniswapView(a, amount, uq, slippageBps, await evmTokenDecimals(a, sql, fetchImpl)) };
+    }
     const q = await lifiQuoteFor(a, units, wallet, slippageBps, fetchImpl, true);
     if (!q.tx) throw new SwapError('quote_failed', 'LI.FI returned no transaction');
     // ERC-20 input (Arc pays in USDC): approve exactly this amount to LI.FI's contract first, only if the allowance is short.

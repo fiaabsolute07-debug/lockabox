@@ -2,7 +2,7 @@ import { KNOWN_CHAINS } from '@/modules/sources/chains';
 import type postgres from 'postgres';
 import { buildPool, CHAIN_SCOPE_ALL, listCases } from '@/modules/cases/pools';
 import { liquidityGate, recordGate, solanaHoneypotGate } from '@/modules/gates';
-import { evmSellGate } from '@/modules/gates/evm';
+import { evmSellGate, SellCheckUnavailable, type SwapProvider } from '@/modules/gates/evm';
 import { evmProbe } from '@/modules/swap/service';
 import { activeSeed, rotateSeed } from '@/modules/rolls/service';
 import { confirmSubmitted } from '@/modules/swap/service';
@@ -117,8 +117,8 @@ export async function registerChains(sql: postgres.Sql, ids: string[], known: Se
 
 async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl: typeof fetch = fetch) {
   // Solana always (its pools need the gate); EVM chains only once in-app swap is switched on for them (DECISIONS #6/#10).
-  const due = await sql<{ id: number; address: string; family: string; evm_chain_id: number | null; native_decimals: number }[]>`
-    select a.id, a.address, ch.family, ch.evm_chain_id, ch.native_decimals from assets a
+  const due = await sql<{ id: number; address: string; family: string; evm_chain_id: number | null; native_decimals: number; swap_provider: SwapProvider | null }[]>`
+    select a.id, a.address, ch.family, ch.evm_chain_id, ch.native_decimals, ch.swap_provider from assets a
     join chains ch on ch.id = a.chain_id
     join asset_snapshots s on s.asset_id = a.id
     join gate_results l on l.asset_id = a.id and l.gate = 'liquidity' and l.passed
@@ -127,17 +127,21 @@ async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl:
       and a.merged_into is null and ch.enabled and not exists(select 1 from moderation m where m.asset_id=a.id)
       and s.taken_at > now() - interval '15 minutes'
       and (h.checked_at is null or h.checked_at < now() - make_interval(hours => ${HONEYPOT_RECHECK_H}))
+      and not exists (select 1 from sell_check_skips k where k.asset_id = a.id and k.checked_at > now() - make_interval(hours => ${HONEYPOT_RECHECK_H}))
     order by h.checked_at nulls first, s.liquidity_usd desc limit ${MAX_HONEYPOT}`;
   let checked = 0, failed = 0;
   for (const d of due) {
     try {
       const out = d.family === 'solana'
         ? await solanaHoneypotGate(d.address, fetchImpl)
-        : await evmSellGate(d.evm_chain_id!, d.address, evmProbe(d.native_decimals), fetchImpl);
+        : await evmSellGate(d.evm_chain_id!, d.address, evmProbe(d.native_decimals), fetchImpl, d.swap_provider);
       await recordGate(Number(d.id), 'honeypot', out, sql);
       checked++; if (!out.passed) failed++;
     } catch (e) {
       const message = (e as Error).message;
+      // No verdict (no Uniswap pool path, API timeout): park it for a while instead of retrying it first every cycle.
+      if (e instanceof SellCheckUnavailable) await sql`insert into sell_check_skips (asset_id, reason) values (${d.id}, ${message})
+        on conflict (asset_id) do update set reason = excluded.reason, checked_at = now()`;
       log(`honeypot ${d.address} deferred: ${message}`);
       if (/429|rate.?limit/i.test(message)) break; // leave unknown gates unknown; retry on a later cycle
     }

@@ -86,3 +86,10 @@ integration described as independent and non-custodial), check `GET /api/health`
 `update chains set swap_enabled = true where id = 'base';` (one chain at a time). The database refuses it unless the chain is enabled
 and has `evm_chain_id`, `rpc_url` and `native_symbol` (migration 0012). Do one small buy from your own wallet and check the trade row
 reaches `confirmed` and shows in "Buys via Lockabox". Undo: `update chains set swap_enabled = false where id = 'base';`.
+
+## 8b. In-app EVM buys through Uniswap (DECISIONS #21)
+On since migration 0020 for every chain with `swap_provider = 'uniswap'`. Needs `UNISWAP_API_KEY` on the web (Vercel) and the worker
+(Railway); without it quotes fall back to "Buy on DEX" and the worker's sell checks on non-honeypot.is chains are deferred.
+Switch one chain off: `update chains set swap_enabled = false where id = 'base';`. Move a chain to LI.FI instead:
+`update chains set swap_provider = 'lifi' where id = '…';` (LI.FI terms, see §8). Check a live buy: one small buy from your own wallet,
+the trade row reaches `confirmed`, the tx `to` is the chain's Universal Router (src/modules/swap/uniswap.ts).

@@ -3,12 +3,19 @@
 import { createAppKit } from '@reown/appkit/react';
 import { EthersAdapter } from '@reown/appkit-adapter-ethers';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
-import { mainnet, base, bsc, arbitrum, optimism, polygon, avalanche, solana, linea, scroll, mantle, blast, gnosis, celo, sonic } from '@reown/appkit/networks';
+import {
+  mainnet, base, bsc, arbitrum, optimism, polygon, avalanche, solana, linea, scroll, mantle, blast, gnosis, celo, sonic,
+  unichain, monad, xLayer, worldchain, soneium, megaeth, robinhood, arc, ink, zora,
+} from '@reown/appkit/networks';
 
 const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID;
 if (!projectId) throw new Error('Set NEXT_PUBLIC_REOWN_PROJECT_ID to enable WalletConnect.');
 
-export const walletNetworks = [solana, mainnet, base, bsc, arbitrum, optimism, polygon, avalanche, linea, scroll, mantle, blast, gnosis, celo, sonic] as const;
+// Every EVM chain with in-app buys (Uniswap, DECISIONS #21) must be listed: a WalletConnect session only approves these networks.
+export const walletNetworks = [
+  solana, mainnet, base, bsc, arbitrum, optimism, polygon, avalanche, linea, scroll, mantle, blast, gnosis, celo, sonic,
+  unichain, monad, xLayer, worldchain, soneium, megaeth, robinhood, arc, ink, zora,
+] as const;
 const origin = typeof window !== 'undefined' ? window.location.origin : 'https://lockabox.fun';
 
 export const walletKit = createAppKit({

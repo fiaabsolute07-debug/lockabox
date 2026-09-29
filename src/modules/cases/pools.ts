@@ -33,8 +33,8 @@ export function disabledGates(env: string | undefined = process.env.LAB_DISABLED
 }
 
 /**
- * Assets eligible for a case right now: fresh snapshot, not killed, liquidity gate passed, and — on chains where
- * swapping is enabled — the honeypot gate passed too (LAB §2.3). Tier = market-cap bucket (LAB option A).
+ * Assets eligible for a case right now: fresh snapshot, not killed, liquidity gate passed, no failed gate, and — on Solana
+ * with swapping enabled — the honeypot gate passed too (LAB §2.3; EVM: DECISIONS #21). Tier = market-cap bucket (LAB option A).
  */
 export async function eligibleItems(c: CaseRow, chainScope: string, sql: postgres.Sql = defaultSql, off: string[] = disabledGates()): Promise<PoolItem[]> {
   const liquidityOn = !off.includes('liquidity');
@@ -51,7 +51,9 @@ export async function eligibleItems(c: CaseRow, chainScope: string, sql: postgre
       and not exists (select 1 from symbol_blocklist b where b.symbol = upper(coalesce(a.symbol, '')))
       and (not ${liquidityOn} or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'liquidity' and g.passed))
       and not exists (select 1 from gate_results g where g.asset_id = a.id and not g.passed and g.gate <> all(${off}::text[]))
-      and (not ${honeypotOn} or not ch.swap_enabled or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'honeypot' and g.passed))
+      -- Solana with swap: only sell-checked coins. EVM with swap: coins not checked yet stay in (a failed check drops them via the
+      -- line above), because every buy re-runs the sell check right before quoting and building (AC-039, DECISIONS #21).
+      and (not ${honeypotOn} or not ch.swap_enabled or ch.family = 'evm' or exists (select 1 from gate_results g where g.asset_id = a.id and g.gate = 'honeypot' and g.passed))
       and case ${c.kind}
             when 'discover' then true
             when 'trending' then a.sources && ${TRENDING_SOURCES}::text[]
