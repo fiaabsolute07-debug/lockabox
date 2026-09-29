@@ -15,7 +15,7 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 async function setup(page: Page, options: { user?: boolean; asset?: Record<string, unknown>; sponsored?: unknown; campaigns?: unknown } = {}) {
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -133,26 +133,31 @@ test('sound toggle, contents close button and reel copy', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Skip animation/ })).toBeVisible();
 });
 
-test('the 18+ gate is in the server HTML on a first visit, and a confirmation is remembered by cookie', async ({ page, request }) => {
+test('first visit: Locky’s "not financial advice" screen replaces the 18+ gate (DECISIONS #20), is in the server HTML, and Got it is remembered by cookie', async ({ page, context, request }) => {
   const html = await (await request.get('/')).text();
-  expect(html).toContain('id="age-title"');
+  expect(html).toContain('id="nfa-title"');
+  expect(html).not.toContain('18 or older');
+  await context.clearCookies();
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     const body: Record<string, unknown> = { '/api/meta': meta, '/api/feed': feed, '/api/cases/trending': caseSummary, '/api/auth/me': { user: null }, '/api/sponsored/live': { label: 'Sponsored', items: [] } };
     return json(route, body[path] ?? {});
   });
   await page.goto('/');
-  await expect(page.getByRole('dialog', { name: 'Are you 18 or older?' })).toBeVisible();
-  await page.getByRole('button', { name: 'I am 18 or older' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Not financial advice' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('img', { name: 'Locky' })).toBeVisible();
+  await expect(dialog).toContainText('not financial advice. i am a box.');
+  await dialog.getByRole('button', { name: 'Got it, let me roll' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  expect((await page.context().cookies()).find((cookie) => cookie.name === 'lab_age')?.value).toBe('1');
-  const again = await page.request.get('/');
-  expect(await again.text()).not.toContain('id="age-title"');
+  expect((await context.cookies()).find((cookie) => cookie.name === 'lab_nfa')?.value).toBe('1');
+  expect(await (await page.request.get('/')).text()).not.toContain('id="nfa-title"');
+  await expect(page.locator('footer')).toContainText('18+');
 });
 
-test('a confirmation stored before the cookie existed closes the gate and sets the cookie', async ({ page }) => {
+test('a disclaimer already seen (stored in the browser) does not show again', async ({ page }) => {
   await setup(page);
   await page.goto('/');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect.poll(async () => (await page.context().cookies()).find((cookie) => cookie.name === 'lab_age')?.value).toBe('1');
+  await expect(page.getByRole('button', { name: /OPEN CASE/i })).toBeVisible();
 });

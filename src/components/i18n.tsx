@@ -5,10 +5,14 @@ import { ApiError } from './api';
 import { LOCALES, type Language } from './language';
 
 const EN = {
-  ageTitle: 'Are you 18 or older?',
-  ageDescription: 'Lockabox is a random discovery app for digital assets. Please confirm your age before entering.',
-  ageConfirm: 'I am 18 or older',
-  ageFine: 'You can leave at any time. Nothing here is investment advice.',
+  nfaEyebrow: 'LOCKABOX · HEADS UP',
+  nfaBubble: 'not financial advice. i am a box.',
+  nfaTitle: 'Not financial advice',
+  nfaBody: 'Lockabox opens a free case and shows you a random memecoin. It is a way to discover coins, nothing more.',
+  nfaPointRandom: 'Every pull is random. It is not a pick, a tip or a signal.',
+  nfaPointZero: 'Memecoins swing hard and can go to zero. Only spend what you can lose.',
+  nfaPointDyor: 'You decide what to do with every pull. DYOR.',
+  nfaConfirm: 'Got it, let me roll',
   searchComingSoon: 'Search coming soon',
   allChains: 'All chains',
   connectWallet: 'Connect wallet',
@@ -38,7 +42,6 @@ const EN = {
   verify: 'Verify',
   loading: 'Loading…',
   couldNotLoad: 'Could not load this page.',
-  entry: 'LOCKABOX · ENTRY',
   inviteLinked: 'Invite linked',
   signInNotCompleted: 'Sign in was not completed',
   couldNotUpdatePrivacy: 'Could not update privacy settings',

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('Reown opens the real wallet catalog and WalletConnect QR without requesting a signature', async ({ page }) => {
   test.setTimeout(90000);
-  await page.addInitScript(() => localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet', exact: true }).click();
   const modal = page.locator('w3m-modal');

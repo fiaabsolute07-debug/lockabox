@@ -58,7 +58,7 @@ test('AC-003: real SIWS round trip against the local API and database; same wall
   const live = await request.get('/api/meta').then((response) => response.ok()).catch(() => false);
   test.skip(!live, 'needs the local database: pnpm db:start && pnpm db:migrate');
   const { address } = await standardWallet(page);
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.goto('/');
   await connectSolana(page);
   await page.getByRole('button', { name: 'Sign in to Lockabox', exact: true }).click({ timeout: 20_000 });
@@ -84,7 +84,7 @@ test('AC-040/042: a Solana buy is built only on the click, sent through the wall
   const message = new TransactionMessage({ payerKey: payer, recentBlockhash: PublicKey.default.toBase58(), instructions: [SystemProgram.transfer({ fromPubkey: payer, toPubkey: payer, lamports: 1 })] }).compileToV0Message();
   const unsigned = Buffer.from(new VersionedTransaction(message).serialize()).toString('base64');
   const state = { builds: [] as unknown[], patch: null as unknown, polls: 0 };
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

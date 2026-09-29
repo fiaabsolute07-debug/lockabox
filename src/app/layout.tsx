@@ -4,7 +4,7 @@ import { Caveat, Inter, JetBrains_Mono } from 'next/font/google';
 import WalletProviders from '@/components/WalletProviders';
 import AppShell from '@/components/AppShell';
 import { LanguageProvider } from '@/components/i18n';
-import { AGE_COOKIE } from '@/components/language';
+import { DISCLAIMER_COOKIE } from '@/components/language';
 import '@/styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -17,12 +17,11 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const cookieStore = await cookies();
-  // The 18+ gate is rendered on the server for first visits, so it paints with the page instead of after hydration (AC-077).
-  const ageConfirmed = cookieStore.get(AGE_COOKIE)?.value === '1';
+  // The first-visit disclaimer is rendered on the server, so it paints with the page instead of after hydration (AC-077).
+  const disclaimerSeen = (await cookies()).get(DISCLAIMER_COOKIE)?.value === '1';
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable} ${caveat.variable}`}>
-      <body><LanguageProvider><WalletProviders><AppShell ageConfirmed={ageConfirmed}>{children}</AppShell></WalletProviders></LanguageProvider></body>
+      <body><LanguageProvider><WalletProviders><AppShell disclaimerSeen={disclaimerSeen}>{children}</AppShell></WalletProviders></LanguageProvider></body>
     </html>
   );
 }

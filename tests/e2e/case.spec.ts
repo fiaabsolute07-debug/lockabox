@@ -22,7 +22,7 @@ async function json(route: Route, body: unknown, status = 200) {
 
 async function fixtures(page: Page, options: { discover?: boolean; poolTooSmall?: boolean; assetBody?: unknown; rollBody?: unknown; caseBody?: unknown; feedBody?: unknown } = {}) {
   let rollPosts = 0;
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

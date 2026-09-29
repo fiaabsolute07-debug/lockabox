@@ -8,7 +8,7 @@ const asset = require('./fixtures/asset.json');
 
 for (const recover of [true, false]) test(`avatar retry ${recover ? 'recovers' : 'stops after two retries'}`, async ({page}) => {
   let calls = 0;
-  await page.addInitScript(() => localStorage.setItem('lab_age_confirmed','1'));
+  await page.addInitScript(() => localStorage.setItem('lab_disclaimer_seen','1'));
   await page.emulateMedia({reducedMotion:'reduce'});
   const imageUrl = 'https://avatar.fixture.test/retry.svg';
   await page.route(imageUrl, async route => {

@@ -19,7 +19,8 @@ import { ChainIcon } from './ChainIcon';
 import WalletConnectButton, { type WalletFamily } from './WalletConnectButton';
 import { useT } from './i18n';
 import { useIdleSound } from './useIdleSound';
-import { AGE_COOKIE } from './language';
+import { DISCLAIMER_COOKIE } from './language';
+import { LockyLogo } from './LockyLogo';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -59,7 +60,7 @@ function usePersistedChain(meta: MetaResponse | null) {
   return [selected, set] as const;
 }
 
-export default function AppShell({ children, ageConfirmed = false }: { children: React.ReactNode; ageConfirmed?: boolean }) {
+export default function AppShell({ children, disclaimerSeen = false }: { children: React.ReactNode; disclaimerSeen?: boolean }) {
   useIdleSound();
   const { t } = useT();
   const [meta, setMeta] = useState<MetaResponse | null>(null);
@@ -138,43 +139,14 @@ export default function AppShell({ children, ageConfirmed = false }: { children:
   const context = useMemo(() => ({ meta, feed, user, selectedChain, setSelectedChain, refreshUser, showToast, setRevealPending, walletDialog, openWallet, closeWallet }), [meta, feed, user, selectedChain, refreshUser, showToast, setRevealPending, walletDialog, openWallet, closeWallet]);
   return (
     <AppContext.Provider value={context}>
-      <AgeGate initiallyConfirmed={ageConfirmed} />
+      <DisclaimerIntro initiallySeen={disclaimerSeen} />
       <Header />
       <FeedTicker />
       {children}
       <Footer />
+      <MobileTabBar />
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
     </AppContext.Provider>
-  );
-}
-
-const rememberAge = () => { document.cookie = `${AGE_COOKIE}=1; Path=/; Max-Age=31536000; SameSite=Lax`; };
-
-function AgeGate({ initiallyConfirmed }: { initiallyConfirmed: boolean }) {
-  const { t } = useT();
-  // Open on the server unless the cookie says 18+ was confirmed; confirmations stored before the cookie existed close it on mount.
-  const [open, setOpen] = useState(!initiallyConfirmed);
-  useEffect(() => {
-    if (initiallyConfirmed) return;
-    let stored = false;
-    try { stored = window.localStorage.getItem('lab_age_confirmed') === '1'; } catch { /* storage can be disabled */ }
-    if (stored) { rememberAge(); setOpen(false); }
-  }, [initiallyConfirmed]);
-  if (!open) return null;
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="age-title">
-      <div className="age-modal panel">
-        <span className="eyebrow">{t('entry')}</span>
-        <h1 id="age-title">{t('ageTitle')}</h1>
-        <p>{t('ageDescription')}</p>
-        <button className="button button-primary age-confirm" onClick={() => {
-          try { window.localStorage.setItem('lab_age_confirmed', '1'); } catch { /* the cookie still remembers it */ }
-          rememberAge();
-          setOpen(false);
-        }}>{t('ageConfirm')}</button>
-        <p className="fine-print">{t('ageFine')}</p>
-      </div>
-    </div>
   );
 }
 
@@ -237,6 +209,60 @@ export function Sidebar() {
       </div>
     </aside>
   );
+}
+
+const DISCLAIMER_KEY = 'lab_disclaimer_seen';
+
+/** First visit: Locky says this is not financial advice (owner decision 2026-09-29, DECISIONS #20; replaces the 18+ gate). */
+function DisclaimerIntro({ initiallySeen }: { initiallySeen: boolean }) {
+  const { t } = useT();
+  const [open, setOpen] = useState(!initiallySeen);
+  useEffect(() => {
+    if (initiallySeen) return;
+    let stored = false;
+    try { stored = window.localStorage.getItem(DISCLAIMER_KEY) === '1'; } catch { /* storage can be disabled */ }
+    if (stored) setOpen(false);
+  }, [initiallySeen]);
+  if (!open) return null;
+  const close = () => {
+    try { window.localStorage.setItem(DISCLAIMER_KEY, '1'); } catch { /* the cookie still remembers it */ }
+    document.cookie = `${DISCLAIMER_COOKIE}=1; Path=/; Max-Age=31536000; SameSite=Lax`;
+    setOpen(false);
+  };
+  return (
+    <div className="modal-backdrop nfa-backdrop" role="dialog" aria-modal="true" aria-labelledby="nfa-title">
+      <div className="nfa-modal panel">
+        <div className="nfa-locky">
+          <span className="locky-bubble nfa-bubble" aria-hidden="true">{t('nfaBubble')}</span>
+          <LockyLogo size={132} />
+        </div>
+        <span className="eyebrow">{t('nfaEyebrow')}</span>
+        <h1 id="nfa-title">{t('nfaTitle')}</h1>
+        <p>{t('nfaBody')}</p>
+        <ul className="nfa-points">
+          <li>{t('nfaPointRandom')}</li>
+          <li>{t('nfaPointZero')}</li>
+          <li>{t('nfaPointDyor')}</li>
+        </ul>
+        <button className="button button-primary nfa-confirm" autoFocus onClick={close}>{t('nfaConfirm')}</button>
+      </div>
+    </div>
+  );
+}
+
+/** Phones hide the sidebar, so its four links live in a bottom tab bar within thumb reach (≤ 800 px, see globals.css). */
+function MobileTabBar() {
+  const { t } = useT();
+  const pathname = usePathname();
+  const tabs = [
+    { href: '/', icon: '▣', label: t('roll'), active: pathname === '/' },
+    { href: '/leaderboard', icon: '↗', label: t('bestPulls'), active: pathname === '/leaderboard' },
+    { href: '/earn', icon: '◎', label: t('earnPoints'), active: pathname === '/earn' },
+    { href: '/verify', icon: '✓', label: t('verifyRolls'), active: pathname.startsWith('/verify') },
+  ];
+  return <nav className="mobile-tabbar" aria-label={t('primaryNavigation')}>
+    {tabs.map((tab) => <Link key={tab.href} href={tab.href} className={tab.active ? 'active' : ''} aria-current={tab.active ? 'page' : undefined}><span aria-hidden="true">{tab.icon}</span>{tab.label}</Link>)}
+  </nav>;
 }
 
 function Footer() {

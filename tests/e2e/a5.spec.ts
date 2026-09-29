@@ -78,7 +78,7 @@ const walletCalls = (page: Page) => page.evaluate(() => (window as unknown as { 
 
 async function setup(page: Page, options: { asset?: unknown } = {}) {
   const state = { statusPolls: 0, signedIn: false, nonceBody: null as unknown, verifyBody: null as unknown, buildBody: null as unknown, patch: null as { url: string; body: unknown } | null };
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -163,7 +163,7 @@ test('real SIWE round trip against the local API and database (throwaway key, no
   const address = account.address.toLowerCase();
   await page.exposeFunction('__labSign', (hex: string) => account.signMessage({ message: { raw: hex as `0x${string}` } }));
   await mockWallet(page, { address, realSign: true });
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
   await page.getByRole('button', { name: /Fixture Wallet/ }).click();
@@ -264,7 +264,7 @@ test.describe('admin console', () => {
 
   async function adminRoutes(page: Page) {
     const requests: { path: string; method: string; auth: string | null; actor: string | null; body: unknown }[] = [];
-    await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+    await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
     await page.route('**/api/**', async (route) => {
       const request = route.request();
       const url = new URL(request.url());

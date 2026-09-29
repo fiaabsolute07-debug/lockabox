@@ -38,7 +38,7 @@ async function setup(page: Page, options: { signedIn?: boolean; leaderboard?: un
   let inviteAcceptCalls = 0;
   let taskClaimBody: unknown = null;
   let sponsoredOpenCalls = 0;
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

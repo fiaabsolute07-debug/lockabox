@@ -20,7 +20,7 @@ async function json(route: Route, body: unknown, status = 200) {
 
 async function setup(page: Page) {
   const state = { quotes: [] as { slippageBps?: number }[], builds: 0 };
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -91,7 +91,7 @@ test('every DEX Screener chain is listed with its self-hosted logo; chains with 
     { id: 'blast', name: 'Blast', family: 'evm', swapEnabled: false, poolSize: 0 },
     { id: 'story', name: 'Story', family: 'evm', swapEnabled: false, poolSize: 0 },
   ];
-  await page.addInitScript(() => window.localStorage.setItem('lab_age_confirmed', '1'));
+  await page.addInitScript(() => window.localStorage.setItem('lab_disclaimer_seen', '1'));
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     const body: Record<string, unknown> = { '/api/meta': { ...meta, chains }, '/api/feed': feed, '/api/cases/trending': caseSummary, '/api/auth/me': { user: null }, '/api/sponsored/live': { label: 'Sponsored', items: [] } };
