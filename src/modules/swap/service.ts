@@ -143,6 +143,7 @@ async function sellCheck(a: AssetRow, sql: postgres.Sql, fetchImpl: typeof fetch
   } catch (e) {
     // No verdict (e.g. no Uniswap pool path): not bought in-app, not killed either; the buy box offers "Buy on DEX".
     if (!(e instanceof SellCheckUnavailable)) throw e;
+    if (e.retryable) throw new SwapError('quote_failed', 'the route service timed out; try again in a moment');
     await sql`insert into sell_check_skips (asset_id, reason) values (${a.id}, ${e.message})
               on conflict (asset_id) do update set reason = excluded.reason, checked_at = now()`;
     throw new SwapError('swap_disabled', 'no in-app route for this coin; use View on DEX');

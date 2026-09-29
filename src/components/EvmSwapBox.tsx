@@ -36,12 +36,13 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
   const [showRollAgain, setShowRollAgain] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
-  const [swapAvailable, setSwapAvailable] = useState(true);
+  const [swapAvailable, setSwapAvailable] = useState(asset.swapEnabled);
+  const [retry, setRetry] = useState(0);
   const final = useTradeStatus(status?.kind === 'submitted' ? status.tradeId ?? null : null);
 
   useEffect(() => {
-    setSwapAvailable(true); setQuote(null); setError(null); setShowRollAgain(false); setStatus(null); setAmount(quick[1]);
-  }, [asset.id, quick]);
+    setSwapAvailable(asset.swapEnabled); setQuote(null); setError(null); setShowRollAgain(false); setStatus(null); setAmount(quick[1]);
+  }, [asset.id, asset.swapEnabled, quick]);
 
   useEffect(() => {
     const parsed = Number(amount);
@@ -60,11 +61,11 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
         .finally(() => setQuoteBusy(false));
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [amount, asset.id, slippage, swapAvailable, t]);
+  }, [amount, asset.id, slippage, swapAvailable, retry, t]);
 
   const viaUniswap = (quote?.provider ?? chain.swapProvider) === 'uniswap';
   const symbol = displaySymbol(asset);
-  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t('buyOnDexNote')}</p>{asset.links.dexscreener ? <a className="button button-buy full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : null}</section>;
+  if (!swapAvailable) return <section className="panel swap-card"><div className="card-heading"><h3>{t('buy')} ${symbol}</h3><span>{t('viaDex')} · {formatPrice(asset.priceUsd, locale)}</span></div><p className="muted">{t(chain.swapEnabled ? 'buyOnDexCoinNote' : 'buyOnDexNote')}</p>{asset.links.dexscreener ? <a className="button button-buy full-width" href={asset.links.dexscreener} target="_blank" rel="noreferrer">{t('buyOnDex')}</a> : null}</section>;
 
   const highSlippage = Number(slippage) > 10;
   const connection = evm.connection;
@@ -122,7 +123,7 @@ export default function EvmSwapBox({ asset, chain, rollId, onRollAgain }: { asse
     </div>
     {inputSymbol === 'USDC' && <p className="quote-status">{t('approveExactNote')}</p>}
     {quoteBusy && <p className="quote-status">{t('updatingQuote')}</p>}
-    {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain && <button onClick={onRollAgain}>{t('rollAgain')}</button>}</div>}
+    {error && <div className="inline-error" role="alert">{error} {showRollAgain && onRollAgain ? <button onClick={onRollAgain}>{t('rollAgain')}</button> : !status && <button onClick={() => setRetry((n) => n + 1)}>{t('tryAgain')}</button>}</div>}
     {statusText && <div className="trade-status" role="status">{statusText}{link && <> · <a href={link} target="_blank" rel="noreferrer">{t('viewOnExplorer')}</a></>}</div>}
     <button className="button button-buy full-width" onClick={() => void buy()} disabled={busy || (!!connection && (!quote || quoteBusy || (highSlippage && !confirmHighSlippage)))}>{connection ? `${t('buy')} ${symbol.toUpperCase()} · ${t('reviewInWallet')}` : t('connectEvmToBuy')}</button>
     <p className="disclaimer">{t(viaUniswap ? 'uniswapNote' : 'lifiNote')} {t('ownWalletDisclaimer')}</p>

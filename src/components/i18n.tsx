@@ -396,6 +396,8 @@ const EN = {
   pullContinue: 'Continue',
   buyOnDex: 'Buy on DEX Screener ↗',
   buyOnDexNote: 'In-app buying is not on for this chain yet; DEX Screener lists the pools where you can buy it.',
+  buyOnDexCoinNote: 'This coin can’t be bought in-app right now (no Uniswap pool path, or its price is being refreshed); DEX Screener lists the pools where you can buy it.',
+  tryAgain: 'Try again',
 } as const;
 
 export type TranslationKey = keyof typeof EN;

@@ -12,11 +12,12 @@ import { useTradeStatus } from './useTradeStatus';
 
 const QUICK_AMOUNTS = ['0.01', '0.05', '0.1', '0.5', '1'];
 
-/** Solana buys through Jupiter; EVM buys through LI.FI only when the owner switched swap on for that chain (DECISIONS #10). */
+/** Solana buys through Jupiter; EVM buys through Uniswap or LI.FI on chains with swap switched on (DECISIONS #10/#21). */
 export default function SwapBox({ asset, rollId, onRollAgain }: { asset: AssetDetail; rollId?: number; onRollAgain?: () => void }) {
   const { meta } = useAppContext();
   const chain = meta?.chains.find((item) => item.id === asset.chainId);
-  if (chain?.family === 'evm' && chain.evmChainId && asset.swapEnabled) return <EvmSwapBox asset={asset} chain={chain} rollId={rollId} onRollAgain={onRollAgain} />;
+  // EVM coins never fall through to the Solana box; the EVM box explains why a coin can't be bought in-app right now.
+  if (chain?.family === 'evm' && chain.evmChainId && chain.swapEnabled) return <EvmSwapBox asset={asset} chain={chain} rollId={rollId} onRollAgain={onRollAgain} />;
   return <SolanaSwapBox asset={asset} rollId={rollId} onRollAgain={onRollAgain} />;
 }
 

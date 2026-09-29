@@ -123,6 +123,17 @@ run('EVM swap via the Uniswap API (DECISIONS #21)', () => {
     expect((await sql`select count(*)::int n from moderation`)[0].n).toBe(0);
   });
 
+  it('a Uniswap timeout is retried once, then asks the buyer to try again: the coin is neither parked nor switched to "Buy on DEX"', async () => {
+    let calls = 0;
+    const timeout = (async () => { calls++; return respond({ errorCode: 'UpstreamTimeoutError', detail: 'A routing dependency timed out' }, 404); }) as unknown as typeof fetch;
+    await expect(evmSellGate(4663, TOKEN, 10n ** 16n, timeout, 'uniswap')).rejects.toMatchObject({ retryable: true });
+    expect(calls).toBe(2);
+    const id = await asset('robinhood', TOKEN, 'XDP');
+    await expect(quote({ assetId: id, amount: '0.01' }, sql, timeout)).rejects.toMatchObject({ code: 'quote_failed' });
+    expect((await sql`select count(*)::int n from sell_check_skips`)[0].n).toBe(0);
+    expect((await sql`select count(*)::int n from moderation`)[0].n).toBe(0);
+  });
+
   it('buyable through Uniswap but no way to sell back there fails the sell check', async () => {
     const bodies = [respond(fx('uniswap/quote-base-native.json')), respond({ errorCode: 'NoRouteFoundError', detail: 'No route' }, 404)];
     const out = await evmSellGate(4663, TOKEN, 10n ** 16n, (async () => bodies.shift()!) as unknown as typeof fetch, 'uniswap');

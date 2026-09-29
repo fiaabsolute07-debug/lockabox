@@ -69,6 +69,16 @@ function apiKey() {
 }
 
 async function post<T>(path: string, body: unknown, fetchImpl: Fetch): Promise<T> {
+  try { return await postOnce<T>(path, body, fetchImpl); }
+  catch (e) {
+    // The docs: only a timeout can succeed on an unchanged retry; try once more after a short pause.
+    if (!(e instanceof UniswapError) || e.kind !== 'transient') throw e;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return postOnce<T>(path, body, fetchImpl);
+  }
+}
+
+async function postOnce<T>(path: string, body: unknown, fetchImpl: Fetch): Promise<T> {
   const res = await fetchImpl(`${BASE}${path}`, { method: 'POST', headers: headers(apiKey()), body: JSON.stringify(body), signal: AbortSignal.timeout(15_000) });
   const json = (await res.json().catch(() => ({}))) as T & { errorCode?: string; detail?: string; message?: string };
   if (res.ok) return json;

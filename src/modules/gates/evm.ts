@@ -48,12 +48,15 @@ export async function lifiRoundTripGate(chainId: number, token: string, probe: b
   }
 }
 
-/** No verdict: the check could not run (no Uniswap pool path to buy through, API timeout, no key). Never a reason to kill a coin. */
-export class SellCheckUnavailable extends Error {}
+/** No verdict: the check could not run (no Uniswap pool path to buy through, API timeout, no key). Never a reason to kill a coin.
+ *  `retryable` (timeouts, rate limits): try again shortly instead of parking the coin. */
+export class SellCheckUnavailable extends Error {
+  constructor(message: string, public retryable = false) { super(message); }
+}
 
 export async function uniswapRoundTripGate(chainId: number, token: string, probe: bigint, fetchImpl: typeof fetch = fetch): Promise<GateOutcome> {
   const noVerdict = (e: unknown): never => {
-    if (e instanceof UniswapError) throw new SellCheckUnavailable(`Uniswap: ${e.message}`);
+    if (e instanceof UniswapError) throw new SellCheckUnavailable(`Uniswap: ${e.message}`, e.kind === 'transient');
     throw e; // network: retry next cycle
   };
   const buy = await getUniswapQuote({ chainId, toToken: token, fromAmount: probe, swapper: PROBE_FROM, slippageBps: 500 }, fetchImpl).catch(noVerdict);

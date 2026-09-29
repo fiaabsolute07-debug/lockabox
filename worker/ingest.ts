@@ -140,7 +140,7 @@ async function honeypots(sql: postgres.Sql, log: (m: string) => void, fetchImpl:
     } catch (e) {
       const message = (e as Error).message;
       // No verdict (no Uniswap pool path, API timeout): park it for a while instead of retrying it first every cycle.
-      if (e instanceof SellCheckUnavailable) await sql`insert into sell_check_skips (asset_id, reason) values (${d.id}, ${message})
+      if (e instanceof SellCheckUnavailable && !e.retryable) await sql`insert into sell_check_skips (asset_id, reason) values (${d.id}, ${message})
         on conflict (asset_id) do update set reason = excluded.reason, checked_at = now()`;
       log(`honeypot ${d.address} deferred: ${message}`);
       if (/429|rate.?limit/i.test(message)) break; // leave unknown gates unknown; retry on a later cycle
