@@ -18,6 +18,7 @@ import { LockyChat } from './LockyChat';
 import { ChainIcon } from './ChainIcon';
 import WalletConnectButton, { type WalletFamily } from './WalletConnectButton';
 import { useT } from './i18n';
+import { useIdleSound } from './useIdleSound';
 import { AGE_COOKIE } from './language';
 
 type AppContextValue = {
@@ -59,6 +60,7 @@ function usePersistedChain(meta: MetaResponse | null) {
 }
 
 export default function AppShell({ children, ageConfirmed = false }: { children: React.ReactNode; ageConfirmed?: boolean }) {
+  useIdleSound();
   const { t } = useT();
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [feed, setFeed] = useState<FeedResponse | null>(null);

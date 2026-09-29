@@ -24,7 +24,7 @@ import { useAppContext, Sidebar } from './AppShell';
 import { LockyChat } from './LockyChat';
 import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
-import { rollSoundEnabled, setRollSoundEnabled, unlockRollAudio } from './rollAudio';
+import { nextMicroStreak, preloadRollSounds, rollSoundEnabled, setRollSoundEnabled, specialSoundFor, unlockRollAudio, type SpecialSound } from './rollAudio';
 import SwapBox from './SwapBox';
 import PullCard from './PullCard';
 import ProofBox from './ProofBox';
@@ -56,9 +56,12 @@ export default function CaseWorkspace() {
   const [filters, setFilters] = useState<FilterDraft>(DEFAULT_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  useEffect(() => { setSoundEnabled(rollSoundEnabled()); }, []);
+  useEffect(() => { setSoundEnabled(rollSoundEnabled()); void preloadRollSounds(); }, []);
   const contentsDialog = useRef<HTMLDialogElement>(null);
   const [result, setResult] = useState<RollResponse | null>(null);
+  const [special, setSpecial] = useState<SpecialSound | undefined>();
+  const microStreak = useRef(0); // counted once per roll that comes back from the API
+  const rollsThisVisit = useRef(0);
   const [reelSettled, setReelSettled] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
@@ -112,6 +115,9 @@ export default function CaseWorkspace() {
     setRolling(true); setRollError(null);
     try {
       const value = await fetchJson<RollResponse>('/api/rolls', { method: 'POST', body: JSON.stringify({ caseId, chain: selectedChain, filters: filterPayload }) });
+      microStreak.current = nextMicroStreak(microStreak.current, value.roll.tier);
+      rollsThisVisit.current += 1;
+      setSpecial(specialSoundFor({ tier: value.roll.tier, rollsThisVisit: rollsThisVisit.current, microStreak: microStreak.current, asset: value.asset }));
       setReelSettled(false);
       setResult(value);
     } catch (error) {
@@ -175,7 +181,7 @@ export default function CaseWorkspace() {
         </div>
         {sponsoredSelected ? <SponsoredDrops items={sponsoredLive} user={!!user} cost={liveCost} busy={sponsoredBusy} error={sponsoredError} result={sponsoredResult} onOpen={() => void handleSponsoredOpen()} /> : <>
           {rollError && <div className="roll-error" role="alert">{rollError}</div>}
-          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} />} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
+          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} special={special} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} />} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
           {result && reelSettled && !rolling && <UnboxedBar result={result} onRollAgain={() => void handleRoll()} onBuy={() => document.getElementById('swap-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
         </>}
       </section>

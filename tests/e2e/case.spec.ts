@@ -341,6 +341,102 @@ test('licensed sound files in /public/sounds replace the synthesised sounds when
   await expect.poll(() => requested.sort()).toEqual(['/sounds/gold.mp3', '/sounds/tick.mp3']);
 });
 
+test.describe('special reveal sounds', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  // Record every decoded file that starts playing: decoded lengths: laugh 3.274 s, bonk 0.432 s, yippee 2.647 s, airhorn 2.966 s, wow 4.18 s, idle ~29 s.
+  async function recordFiles(page: Page) {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __played: string[] };
+      w.__played = [];
+      const start = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function (...args: Parameters<typeof start>) {
+        const d = this.buffer?.duration ?? 0;
+        if (Math.abs(d - 3.274) < 0.05) w.__played.push('laugh');
+        if (Math.abs(d - 0.432) < 0.03) w.__played.push('bonk');
+        if (Math.abs(d - 2.647) < 0.05) w.__played.push('yippee');
+        if (Math.abs(d - 2.966) < 0.05) w.__played.push('airhorn');
+        if (Math.abs(d - 4.18) < 0.05) w.__played.push('wow');
+        if (d > 20) w.__played.push('idle');
+        return start.apply(this, args);
+      };
+      const stop = AudioBufferSourceNode.prototype.stop;
+      AudioBufferSourceNode.prototype.stop = function (...args: Parameters<typeof stop>) {
+        if ((this.buffer?.duration ?? 0) > 20) w.__played.push('idle-stopped');
+        return stop.apply(this, args);
+      };
+    });
+    return () => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
+  }
+
+  test('the third Micro pull in a row plays the cat laugh instead of the Micro ding', async ({ page }) => {
+    await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'micro' }, asset: { ...asset } } });
+    const played = await recordFiles(page);
+    await page.goto('/');
+    for (let i = 1; i <= 3; i++) {
+      await page.getByRole('button', { name: /OPEN CASE/i }).click();
+      await expect(page.locator('.unboxed-bar')).toBeVisible();
+      if (i < 3) expect(await played()).not.toContain('laugh');
+    }
+    await expect.poll(played).toContain('laugh');
+  });
+
+  test('a minute without input plays the idle sound once, and the next input stops it', async ({ page }) => {
+    await page.clock.install();
+    await fixtures(page);
+    const played = await recordFiles(page);
+    await page.goto('/');
+    await page.getByRole('heading', { name: 'Trending', exact: true }).click(); // a click lets the page play sound
+    await page.clock.fastForward('00:30');
+    expect(await played()).not.toContain('idle');
+    await page.clock.fastForward('00:31');
+    await expect.poll(played).toContain('idle');
+    await page.mouse.move(40, 40);
+    await page.mouse.move(80, 80);
+    await expect.poll(played).toContain('idle-stopped');
+    expect((await played()).filter(p => p === 'idle')).toHaveLength(1);
+  });
+
+  test('a purple Mid on the first roll of the visit gets the yippee, a later Mid does not', async ({ page }) => {
+    await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'mid' }, asset: { ...asset } } });
+    const played = await recordFiles(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.unboxed-bar')).toBeVisible();
+    await expect.poll(played).toContain('yippee');
+    // Dev mode runs the reveal effect twice, so compare counts instead of expecting exactly one.
+    const afterFirst = (await played()).filter(p => p === 'yippee').length;
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.unboxed-bar')).toBeVisible();
+    await page.waitForTimeout(500);
+    expect((await played()).filter(p => p === 'yippee')).toHaveLength(afterFirst);
+  });
+
+  for (const [draw, expected] of [[0.1, 'airhorn'], [0.4, 'wow'], [0.9, null]] as const) test(`a gold Top gets the airhorn 1/3, the anime wow 10 % (draw ${draw})`, async ({ page }) => {
+    await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'top' }, asset: { ...asset } } });
+    const played = await recordFiles(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Trending', exact: true })).toBeVisible();
+    // Fix the draw only after the page has loaded: libraries need real randomness while they start up.
+    await page.evaluate((r) => { Math.random = () => r; }, draw);
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.unboxed-bar')).toBeVisible();
+    if (expected) await expect.poll(played).toContain(expected);
+    await page.waitForTimeout(500);
+    expect((await played()).filter(p => p === 'airhorn' || p === 'wow')).toEqual(expected ? expect.arrayContaining([expected]) : []);
+    if (expected) expect(await played()).not.toContain(expected === 'airhorn' ? 'wow' : 'airhorn');
+  });
+
+  test('a coin with doge in its name gets the bonk', async ({ page }) => {
+    await fixtures(page, { rollBody: { ...roll, roll: { ...roll.roll, tier: 'mid' }, asset: { ...asset, symbol: 'BABYDOGE', name: 'Baby Doge' } } });
+    const played = await recordFiles(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.unboxed-bar')).toBeVisible();
+    await expect.poll(played).toContain('bonk');
+  });
+});
+
 test('after the reveal a coin card shows real market data and puts the buy box first', async ({ page }) => {
   const state = await fixtures(page, { assetBody: { ...asset, swapEnabled: false, lockaboxBuys24h: 4 } });
   await openCase(page);

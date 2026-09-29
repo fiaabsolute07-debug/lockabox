@@ -12,11 +12,16 @@ import type { Tier } from './api';
  *   { "open": "open.mp3", "tick": "tick.mp3", "reveal-micro": "blue.mp3", "reveal-small": "purple.mp3",
  *     "reveal-mid": "pink.mp3", "reveal-large": "red.mp3", "reveal-top": "gold.mp3" }
  * Any event with a file plays the file; the others keep the synthesised sound.
- * "micro-streak" (e.g. "cat-laugh.mp3") has no synthesised version: it plays instead of the Micro ding once
- * MICRO_STREAK Micro pulls land in a row, and is silent when no file is listed.
+ * Special events have no synthesised version and play instead of the tier sound: "micro-streak" (cat-laugh.mp3)
+ * after MICRO_STREAK Micro pulls in a row, "doge" (bonk.mp3) when the pulled coin's symbol or name contains "doge",
+ * "first-mid" (yippee.mp3) when the first roll after the page loads is a purple Mid, and on gold ★ Top pulls either
+ * "top-airhorn" (airhorn.mp3, TOP_AIRHORN_CHANCE) or "top-wow" (anime-wow.mp3, TOP_WOW_CHANCE) from one draw.
+ * "idle" (idle.mp3) plays once after IDLE_MS without input and stops on the next input (see useIdleSound).
  */
 
-type SoundEvent = 'open' | 'tick' | `reveal-${Tier}` | 'micro-streak';
+/** File-only reveal sounds that replace the tier sound for special pulls; silent fallback when no file is listed. */
+export type SpecialSound = 'micro-streak' | 'doge' | 'first-mid' | 'top-airhorn' | 'top-wow';
+type SoundEvent = 'open' | 'tick' | `reveal-${Tier}` | SpecialSound | 'idle';
 
 const STORAGE_KEY = 'lab_roll_sound';
 const MASTER = 0.55;
@@ -57,20 +62,41 @@ function makeReverb(ctx: AudioContext) {
   return send;
 }
 
-/** Optional licensed sound files (see the header comment). Missing manifest = synthesised sound only. */
-async function loadFiles(ctx: AudioContext) {
+let fileBytes: Promise<Map<SoundEvent, ArrayBuffer>> | undefined;
+
+/** Fetches the optional licensed files (see the header comment) ahead of the first roll. Needs no AudioContext, so it can run
+ * on page load; the first click then only has to decode, and a special sound is ready even on a fast first reveal. */
+export function preloadRollSounds() {
+  fileBytes ??= (async () => {
+    const out = new Map<SoundEvent, ArrayBuffer>();
+    try {
+      const response = await fetch('/sounds/manifest.json', { cache: 'no-store' });
+      if (!response.ok) return out;
+      const manifest = (await response.json()) as Partial<Record<SoundEvent, string>>;
+      await Promise.all(Object.entries(manifest).map(async ([event, file]) => {
+        if (typeof file !== 'string' || !/^[\w.-]+\.(mp3|ogg|wav|m4a)$/.test(file)) return;
+        const r = await fetch(`/sounds/${file}`);
+        if (r.ok) out.set(event as SoundEvent, await r.arrayBuffer());
+      }));
+    } catch { /* Missing manifest = synthesised sound only. */ }
+    return out;
+  })();
+  return fileBytes;
+}
+
+let filesDecoded: Promise<unknown> | undefined;
+
+function loadFiles(ctx: AudioContext) {
   if (filesRequested) return;
   filesRequested = true;
-  try {
-    const response = await fetch('/sounds/manifest.json', { cache: 'no-store' });
-    if (!response.ok) return;
-    const manifest = (await response.json()) as Partial<Record<SoundEvent, string>>;
-    await Promise.all(Object.entries(manifest).map(async ([event, file]) => {
-      if (typeof file !== 'string' || !/^[\w.-]+\.(mp3|ogg|wav|m4a)$/.test(file)) return;
-      const bytes = await (await fetch(`/sounds/${file}`)).arrayBuffer();
-      files.set(event as SoundEvent, await ctx.decodeAudioData(bytes));
-    }));
-  } catch { /* Keep the synthesised sounds. */ }
+  filesDecoded = decodeFiles(ctx);
+}
+
+async function decodeFiles(ctx: AudioContext) {
+  // Decode in parallel so a short file (bonk) is never stuck behind a long one (idle).
+  await Promise.all([...(await preloadRollSounds())].map(async ([event, bytes]) => {
+    try { files.set(event, await ctx.decodeAudioData(bytes.slice(0))); } catch { /* This event keeps its synthesised sound. */ }
+  }));
 }
 
 // Unlock before awaiting the roll API, while still inside the user's gesture.
@@ -117,10 +143,10 @@ function track(source: AudioScheduledSourceNode, start: number, stop: number, cl
   source.stop(stop);
 }
 
-/** Plays a licensed file for this event if one was provided; returns false to fall back to the synthesised sound. */
-function playFile(event: SoundEvent, volume = 1) {
+/** Plays a licensed file for this event if one was provided; returns undefined to fall back to the synthesised sound. */
+function playFile(event: SoundEvent, volume = 1): AudioBufferSourceNode | undefined {
   const buffer = files.get(event);
-  if (!buffer || !ready() || !context) return false;
+  if (!buffer || !ready() || !context) return undefined;
   const source = context.createBufferSource();
   source.buffer = buffer;
   const gain = context.createGain();
@@ -128,7 +154,7 @@ function playFile(event: SoundEvent, volume = 1) {
   source.connect(gain);
   gain.connect(master!);
   track(source, context.currentTime, context.currentTime + buffer.duration + 0.05, [gain]);
-  return true;
+  return source;
 }
 
 function voice(volume: number, start: number, duration: number, attack: number, wet: boolean) {
@@ -213,14 +239,40 @@ export function playRollSuspense(_durationMs = 0) { void _durationMs; }
 // E major (E6, G#6, B6, E7, G#7, B7) — bright, open, like an item reveal.
 const E6 = 1318.51, GS6 = 1661.22, B6 = 1975.53, E7 = 2637.02, GS7 = 3322.44, B7 = 3951.07;
 
-/** Micro pulls in a row before Locky laughs at you (owner request, 2026-09-29). */
+/** Micro pulls in a row before Locky laughs at you (owner request, 2026-09-29). Counted once per roll by the caller. */
 export const MICRO_STREAK = 3;
-let microStreak = 0;
 export const nextMicroStreak = (streak: number, tier: Tier) => (tier === 'micro' ? streak + 1 : 0);
 
-export function playRollReveal(tier: Tier) {
-  microStreak = nextMicroStreak(microStreak, tier);
-  if (microStreak >= MICRO_STREAK && playFile('micro-streak')) return;
+/** Shares of gold ★ Top pulls that get the airhorn or the anime wow (owner requests, 2026-09-29); the rest keep the tier sound. */
+export const TOP_AIRHORN_CHANCE = 1 / 3;
+export const TOP_WOW_CHANCE = 0.1;
+
+/** Which special sound (if any) a pull gets: doge first, then a purple first roll, the ★ Top airhorn/wow, then a Micro streak.
+ * `random` is only used for the airhorn draw; the sound is cosmetic and has nothing to do with the provably fair roll. */
+export function specialSoundFor(pull: { tier: Tier; rollsThisVisit: number; microStreak: number; asset: { symbol?: string | null; name?: string | null } }, random = Math.random): SpecialSound | undefined {
+  if (/doge/i.test(`${pull.asset.symbol ?? ''} ${pull.asset.name ?? ''}`)) return 'doge';
+  if (pull.rollsThisVisit === 1 && pull.tier === 'mid') return 'first-mid';
+  if (pull.tier === 'top') {
+    const r = random();
+    return r < TOP_AIRHORN_CHANCE ? 'top-airhorn' : r < TOP_AIRHORN_CHANCE + TOP_WOW_CHANCE ? 'top-wow' : undefined;
+  }
+  return pull.microStreak >= MICRO_STREAK ? 'micro-streak' : undefined;
+}
+
+/** How long a special reveal waits for its file to finish decoding (a fast first roll can beat the decoder). */
+const SPECIAL_WAIT_MS = 1000;
+
+export function playRollReveal(tier: Tier, special?: SpecialSound) {
+  if (special && playFile(special)) return;
+  if (special && filesDecoded && !files.has(special)) {
+    const wait = new Promise(resolve => setTimeout(resolve, SPECIAL_WAIT_MS));
+    void Promise.race([filesDecoded, wait]).then(() => { if (!playFile(special)) playTierSound(tier); });
+    return;
+  }
+  playTierSound(tier);
+}
+
+function playTierSound(tier: Tier) {
   if (playFile(`reveal-${tier}`)) return;
   switch (tier) {
     case 'micro': // blue: one plain ding
@@ -252,4 +304,22 @@ export function playRollReveal(tier: Tier) {
       noise(8000, 2.2, 0.05, 0.3, 'highpass', 0.4, true);
       break;
   }
+}
+
+/** No input for this long plays the idle file once (owner request, 2026-09-29). */
+export const IDLE_MS = 60_000;
+let idleSource: AudioBufferSourceNode | undefined;
+
+/** Returns false when the file cannot play yet (not decoded, sound off, tab hidden, audio still locked). */
+export function playIdleSound() {
+  if (idleSource) return true;
+  idleSource = playFile('idle');
+  if (idleSource) idleSource.addEventListener('ended', () => { idleSource = undefined; });
+  return !!idleSource;
+}
+
+export function stopIdleSound() {
+  if (!idleSource) return;
+  try { idleSource.stop(); } catch { /* Already stopped. */ }
+  idleSource = undefined;
 }
