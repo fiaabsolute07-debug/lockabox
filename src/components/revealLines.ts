@@ -58,3 +58,18 @@ export function pickRevealLine(tier: Tier, random = Math.random) {
   const lines = REVEAL_LINES[tier];
   return lines[Math.floor(random() * lines.length)];
 }
+
+// Shown instead of the Micro headline while the cat laugh plays ({n} = Micro pulls in a row).
+export const MICRO_STREAK_LINES: readonly string[] = [
+  'HAHAHA. {n} Micros in a row.',
+  'The cat saw that. {n} in a row.',
+  'Locky can’t stop laughing.',
+  '{n} Micros. Down astronomically.',
+  'Certified dust collector ({n} in a row).',
+  'Even the box is laughing.',
+  'Bro is farming Micros. {n} straight.',
+];
+
+export function pickStreakLine(streak: number, random = Math.random) {
+  return MICRO_STREAK_LINES[Math.floor(random() * MICRO_STREAK_LINES.length)].replaceAll('{n}', String(streak));
+}

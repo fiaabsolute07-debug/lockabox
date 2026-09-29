@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickRevealLine, REVEAL_LINES } from '@/components/revealLines';
+import { MICRO_STREAK_LINES, pickRevealLine, pickStreakLine, REVEAL_LINES } from '@/components/revealLines';
 
 describe('reveal headlines', () => {
   it('every tier has several lines and keeps its original headline first', () => {
@@ -8,12 +8,16 @@ describe('reveal headlines', () => {
     expect(REVEAL_LINES.top[0]).toBe('★ TOP PULL!');
   });
   it('never promises returns or uses the words the case page must not show', () => {
-    for (const line of Object.values(REVEAL_LINES).flat()) {
+    for (const line of [...Object.values(REVEAL_LINES).flat(), ...MICRO_STREAK_LINES]) {
       expect(line).not.toMatch(/risk|safe|scam|rug|moon|100x|guarantee|profit|lambo|rich/i);
     }
   });
   it('picks from the right tier', () => {
     expect(pickRevealLine('mid', () => 0)).toBe(REVEAL_LINES.mid[0]);
     expect(pickRevealLine('top', () => 0.999)).toBe(REVEAL_LINES.top.at(-1));
+  });
+  it('the cat-laugh headline carries the streak length', () => {
+    expect(pickStreakLine(4, () => 0)).toBe('HAHAHA. 4 Micros in a row.');
+    for (const line of MICRO_STREAK_LINES) expect(pickStreakLine(3, () => MICRO_STREAK_LINES.indexOf(line) / MICRO_STREAK_LINES.length)).not.toContain('{n}');
   });
 });

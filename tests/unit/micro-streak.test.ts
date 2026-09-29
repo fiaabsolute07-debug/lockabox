@@ -8,14 +8,15 @@ const pull = (tier: Tier, rollsThisVisit: number, microStreak: number, asset: { 
 describe('special reveal sounds', () => {
   it('counts Micro pulls in a row and resets on anything better', () => {
     const run = (tiers: Tier[]) => tiers.reduce(nextMicroStreak, 0);
-    expect(MICRO_STREAK).toBe(3);
+    expect(MICRO_STREAK).toBe(5);
     expect(run(['micro', 'micro'])).toBe(2);
     expect(run(['micro', 'micro', 'small', 'micro'])).toBe(1);
     expect(run(['micro', 'micro', 'micro', 'micro'])).toBe(4); // keeps laughing while the streak lasts
   });
-  it('laughs from the third Micro in a row', () => {
-    expect(pull('micro', 2, 2)).toBeUndefined();
-    expect(pull('micro', 3, 3)).toBe('micro-streak');
+  it('laughs from the fifth Micro in a row', () => {
+    expect(pull('micro', 4, 4)).toBeUndefined();
+    expect(pull('micro', 5, 5)).toBe('micro-streak');
+    expect(pull('micro', 6, 6)).toBe('micro-streak');
   });
   it('yippee only when the first roll of the visit is a purple Mid', () => {
     expect(pull('mid', 1, 0)).toBe('first-mid');

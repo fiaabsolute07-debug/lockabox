@@ -5,7 +5,7 @@ import TokenImage from './TokenImage';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { displaySymbol, tierColor, tierLabel, type AssetCard, type Tier } from './api';
 import { useT } from './i18n';
-import { pickRevealLine } from './revealLines';
+import { pickRevealLine, pickStreakLine } from './revealLines';
 import { playRollBed, playRollReveal, playRollStart, playRollSuspense, playRollTick, stopRollAudio, type SpecialSound } from './rollAudio';
 
 const SPIN_MS = 4700;
@@ -19,8 +19,8 @@ const CONFETTI: Record<Tier, number> = { micro: 0, small: 0, mid: 18, large: 60,
  */
 export type RevealActions = { close: () => void; again: () => void; againRef: React.Ref<HTMLButtonElement> };
 
-export function RollReel({ cards, winIndex, tier, odds, special, onSettled, onRollAgain, reveal }: {
-  cards: AssetCard[]; winIndex: number; tier: Tier; odds?: Partial<Record<Tier, number>>; special?: SpecialSound; onSettled?: () => void; onRollAgain?: () => void;
+export function RollReel({ cards, winIndex, tier, odds, special, microStreak = 0, onSettled, onRollAgain, reveal }: {
+  cards: AssetCard[]; winIndex: number; tier: Tier; odds?: Partial<Record<Tier, number>>; special?: SpecialSound; microStreak?: number; onSettled?: () => void; onRollAgain?: () => void;
   /** The coin card shown after the tier effect (PullCard); without it, the reveal keeps simple Open again / See the coin buttons. */
   reveal?: (actions: RevealActions) => React.ReactNode;
 }) {
@@ -35,7 +35,7 @@ export function RollReel({ cards, winIndex, tier, odds, special, onSettled, onRo
   const [panel, setPanel] = useState(false);
   const [phase, setPhase] = useState<'charging' | 'spinning' | 'suspense' | 'revealed'>('charging');
   // A new reel mounts for every roll, so each pull gets its own headline.
-  const [headline] = useState(() => pickRevealLine(tier));
+  const [headline] = useState(() => (special === 'micro-streak' ? pickStreakLine(microStreak) : pickRevealLine(tier)));
   const { t, number } = useT();
   const specialRef = useRef(special);
   useLayoutEffect(() => { onSettledRef.current = onSettled; specialRef.current = special; });
