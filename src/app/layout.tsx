@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { cookies } from 'next/headers';
 import { Caveat, Inter, JetBrains_Mono } from 'next/font/google';
 import WalletProviders from '@/components/WalletProviders';
@@ -21,7 +23,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const disclaimerSeen = (await cookies()).get(DISCLAIMER_COOKIE)?.value === '1';
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable} ${caveat.variable}`}>
-      <body><LanguageProvider><WalletProviders><AppShell disclaimerSeen={disclaimerSeen}>{children}</AppShell></WalletProviders></LanguageProvider></body>
+      <body><LanguageProvider><WalletProviders><AppShell disclaimerSeen={disclaimerSeen}>{children}</AppShell></WalletProviders></LanguageProvider><Analytics /><SpeedInsights /></body>
     </html>
   );
 }
