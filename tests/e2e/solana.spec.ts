@@ -114,7 +114,7 @@ test('AC-040/042: a Solana buy is built only on the click, sent through the wall
   expect(sent).toHaveLength(0);
   await box.getByRole('button', { name: /Buy GLORP · review in wallet/ }).click();
   await expect(box.getByRole('status')).toContainText('Swap submitted');
-  expect(state.builds).toEqual([{ assetId: 3, amountSol: '0.05', slippageBps: 300, userPublicKey: address, rollId: 42 }]);
+  expect(state.builds).toEqual([{ assetId: 3, amountSol: '0.05', slippageBps: 300, userPublicKey: address, rollId: 42, legacyTransaction: false }]); // extension wallet → Jupiter's v0 transaction
   expect(sent).toEqual([unsigned]);
   const signature = (state.patch as { txHash: string }).txHash;
   expect(state.patch).toEqual({ txHash: signature, wallet: address });

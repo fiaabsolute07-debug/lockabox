@@ -21,8 +21,12 @@ export class JupiterError extends Error {
 
 type Fetch = typeof globalThis.fetch;
 
-export async function getQuote(p: { inputMint: string; outputMint: string; amount: string; slippageBps: number }, fetchImpl: Fetch = fetch): Promise<JupiterQuote> {
-  const qs = new URLSearchParams({ inputMint: p.inputMint, outputMint: p.outputMint, amount: p.amount, slippageBps: String(p.slippageBps), restrictIntermediateTokens: 'true' });
+/**
+ * `legacy`: a legacy (non-versioned) transaction for wallets that can't sign v0 transactions over WalletConnect (OKX, Trust…).
+ * Jupiter then only uses routes that fit without address lookup tables, so some coins have a worse route or none.
+ */
+export async function getQuote(p: { inputMint: string; outputMint: string; amount: string; slippageBps: number; legacy?: boolean }, fetchImpl: Fetch = fetch): Promise<JupiterQuote> {
+  const qs = new URLSearchParams({ inputMint: p.inputMint, outputMint: p.outputMint, amount: p.amount, slippageBps: String(p.slippageBps), restrictIntermediateTokens: 'true', ...(p.legacy ? { asLegacyTransaction: 'true' } : {}) });
   const res = await fetchImpl(`${JUPITER_BASE}/quote?${qs}`, { signal: AbortSignal.timeout(10_000) });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || (body as { error?: string }).error) {
@@ -34,11 +38,11 @@ export async function getQuote(p: { inputMint: string; outputMint: string; amoun
   return quote;
 }
 
-/** Unsigned versioned transaction (base64) for the user's wallet to sign. No fee account is ever passed. */
-export async function buildSwapTransaction(quote: JupiterQuote, userPublicKey: string, fetchImpl: Fetch = fetch): Promise<{ swapTransaction: string; lastValidBlockHeight: number | null }> {
+/** Unsigned transaction (base64; versioned unless `legacy`) for the user's wallet to sign. No fee account is ever passed. */
+export async function buildSwapTransaction(quote: JupiterQuote, userPublicKey: string, fetchImpl: Fetch = fetch, legacy = false): Promise<{ swapTransaction: string; lastValidBlockHeight: number | null }> {
   const res = await fetchImpl(`${JUPITER_BASE}/swap`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(15_000),
-    body: JSON.stringify({ quoteResponse: quote, userPublicKey, dynamicComputeUnitLimit: true, wrapAndUnwrapSol: true, prioritizationFeeLamports: 'auto' }),
+    body: JSON.stringify({ quoteResponse: quote, userPublicKey, dynamicComputeUnitLimit: true, wrapAndUnwrapSol: true, prioritizationFeeLamports: 'auto', ...(legacy ? { asLegacyTransaction: true } : {}) }),
   });
   const body = (await res.json().catch(() => ({}))) as { swapTransaction?: string; lastValidBlockHeight?: number; error?: string };
   if (!res.ok || !body.swapTransaction) throw new JupiterError('SWAP_BUILD_FAILED', body.error ?? `swap build failed (${res.status})`, res.status);

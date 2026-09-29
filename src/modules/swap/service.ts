@@ -174,7 +174,7 @@ async function lifiQuoteFor(a: AssetRow, units: bigint, from: string, slippageBp
 }
 
 /** `amount` is in the chain's input coin (SOL, ETH, BNB, or USDC on Arc); `amountSol` is the older name for Solana. */
-export async function quote(p: { assetId: number; amount?: string; amountSol?: string; slippageBps?: unknown }, sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch): Promise<QuoteView> {
+export async function quote(p: { assetId: number; amount?: string; amountSol?: string; slippageBps?: unknown; legacy?: boolean }, sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch): Promise<QuoteView> {
   const a = await loadAsset(p.assetId, sql);
   const amount = p.amount ?? p.amountSol ?? '';
   const units = parseAmount(amount, a.family === 'solana' ? 9 : a.native_decimals);
@@ -182,7 +182,7 @@ export async function quote(p: { assetId: number; amount?: string; amountSol?: s
   await sellCheckRecent(a, sql, fetchImpl);
   if (routesViaUniswap(a)) return uniswapView(a, amount, await uniswapQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps, await evmTokenDecimals(a, sql, fetchImpl));
   if (a.family === 'evm') return lifiView(a, amount, await lifiQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps);
-  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps }, fetchImpl)
+  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps, legacy: !!p.legacy }, fetchImpl)
     .catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
   return jupiterView(a, amount, q, await tokenDecimals(a, sql, fetchImpl));
 }
@@ -191,7 +191,7 @@ export type EvmTx = { to: string; data: string; value: string; gasLimit: string 
 
 /** Builds an unsigned transaction for the user's wallet from a fresh server-side quote (never a client-supplied quote). */
 export async function build(
-  p: { assetId: number; amount?: string; amountSol?: string; slippageBps?: unknown; wallet: string; rollId?: number | null; userId?: string | null },
+  p: { assetId: number; amount?: string; amountSol?: string; slippageBps?: unknown; wallet: string; rollId?: number | null; userId?: string | null; legacy?: boolean },
   sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch,
 ) {
   const a = await loadAsset(p.assetId, sql);
@@ -231,14 +231,15 @@ export async function build(
   if (!isSolanaAddress(p.wallet)) throw new SwapError('bad_amount', 'a Solana wallet address is required');
   const units = parseAmount(amount, 9);
   await sellCheck(a, sql, fetchImpl);
-  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps }, fetchImpl)
+  const legacy = !!p.legacy;
+  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps, legacy }, fetchImpl)
     .catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
-  const tx = await buildSwapTransaction(q, p.wallet, fetchImpl).catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
+  const tx = await buildSwapTransaction(q, p.wallet, fetchImpl, legacy).catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
   const [row] = await sql<{ id: number }[]>`
     insert into trades (roll_id, user_id, wallet, chain_id, asset_id, input_symbol, input_amount, out_amount_min, quote, status)
     values (${p.rollId ?? null}, ${p.userId ?? null}, ${p.wallet}, ${a.chain_id}, ${a.id}, 'SOL', ${amount}, ${q.otherAmountThreshold}, ${sql.json(q as never)}, 'built')
     returning id`;
-  return { tradeId: Number(row.id), swapTransaction: tx.swapTransaction, lastValidBlockHeight: tx.lastValidBlockHeight, quote: jupiterView(a, amount, q, await tokenDecimals(a, sql, fetchImpl)) };
+  return { tradeId: Number(row.id), swapTransaction: tx.swapTransaction, legacy, lastValidBlockHeight: tx.lastValidBlockHeight, quote: jupiterView(a, amount, q, await tokenDecimals(a, sql, fetchImpl)) };
 }
 
 export async function markSubmitted(tradeId: number, txHash: string, wallet: string, sql: postgres.Sql = defaultSql) {

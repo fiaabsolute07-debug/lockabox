@@ -182,6 +182,7 @@ const EN = {
   updatingQuote: 'Updating quote…',
   couldNotQuote: 'Could not fetch a quote right now.',
   walletDidNotComplete: 'The wallet did not complete the swap.',
+  walletNoAnswer: 'Your wallet didn’t answer within a minute, so nothing was sent from here. If you did confirm, check your wallet’s activity before trying again. On a phone, opening lockabox.fun in your wallet app’s own browser works best.',
   walletLacksChain: 'Your wallet can’t use {chain} on this connection. Buy it on DEX Screener, or connect a browser-extension wallet (MetaMask, Rabby) to buy here.',
   sellCheckFailed: 'This token was removed after the pre-trade check.',
   insufficientPoints: 'Not enough points for this case yet. New accounts can spend points 24 hours after they sign up.',
