@@ -741,3 +741,16 @@ td a { color: var(--mu); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Locky's hover speech bubble (design/locky-ascii-v7.html). */
+.locky-chat { position: relative; display: inline-grid; place-items: center; }
+.case-contents-trigger .locky-chat { align-self: start; }
+.locky-bubble { position: absolute; left: 50%; z-index: 40; width: max-content; max-width: 240px; padding: 6px 10px; color: var(--tx); background: var(--p2); border: 2px solid var(--tx); box-shadow: 3px 3px 0 var(--acc); font: 700 12px/1.3 var(--font-mono-family); letter-spacing: 0; text-transform: none; white-space: nowrap; pointer-events: none; transform: translateX(-50%); animation: locky-pop .14s steps(2, end); }
+.locky-bubble::after { content: ""; position: absolute; left: 50%; width: 10px; height: 8px; margin-left: -5px; background: var(--tx); }
+.locky-chat-above .locky-bubble { bottom: calc(100% + 10px); }
+.locky-chat-above .locky-bubble::after { bottom: -10px; clip-path: polygon(0 0, 100% 0, 30% 100%); }
+/* The header logo sits at the left edge, so its bubble opens to the right. */
+.locky-chat-below .locky-bubble { top: calc(100% + 10px); left: -2px; transform: none; }
+.locky-chat-below .locky-bubble::after { top: -10px; left: 16px; clip-path: polygon(30% 0, 100% 100%, 0 100%); }
+@keyframes locky-pop { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .locky-bubble { animation: none; } }

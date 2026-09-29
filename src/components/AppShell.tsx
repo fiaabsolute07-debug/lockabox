@@ -14,7 +14,7 @@ import {
   type MeResponse,
   type MetaResponse,
 } from './api';
-import { LockyLogo } from './LockyLogo';
+import { LockyChat } from './LockyChat';
 import { ChainIcon } from './ChainIcon';
 import WalletConnectButton, { type WalletFamily } from './WalletConnectButton';
 import { useT } from './i18n';
@@ -183,7 +183,7 @@ function Header() {
   const chainName = selectedChain === 'all' ? t('allChains') : meta?.chains.find((chain) => chain.id === selectedChain)?.name ?? 'Solana';
   return (
     <header className="topbar">
-      <Link href="/" className="brand" aria-label={t('brandHome')}><LockyLogo /><span>lockabox<span className="brand-dot">.</span></span></Link>
+      <Link href="/" className="brand" aria-label={t('brandHome')}><LockyChat placement="below" /><span>lockabox<span className="brand-dot">.</span></span></Link>
       <div className="search-box"><span className="search-icon" aria-hidden="true">⌕</span><input aria-label={t('searchComingSoon')} disabled placeholder={t('searchComingSoon')} /><kbd>/</kbd></div>
       <div className="top-actions">
         <div className="chain-select-wrap">
