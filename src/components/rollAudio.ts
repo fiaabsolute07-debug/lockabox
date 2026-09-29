@@ -12,9 +12,11 @@ import type { Tier } from './api';
  *   { "open": "open.mp3", "tick": "tick.mp3", "reveal-micro": "blue.mp3", "reveal-small": "purple.mp3",
  *     "reveal-mid": "pink.mp3", "reveal-large": "red.mp3", "reveal-top": "gold.mp3" }
  * Any event with a file plays the file; the others keep the synthesised sound.
+ * "micro-streak" (e.g. "cat-laugh.mp3") has no synthesised version: it plays instead of the Micro ding once
+ * MICRO_STREAK Micro pulls land in a row, and is silent when no file is listed.
  */
 
-type SoundEvent = 'open' | 'tick' | `reveal-${Tier}`;
+type SoundEvent = 'open' | 'tick' | `reveal-${Tier}` | 'micro-streak';
 
 const STORAGE_KEY = 'lab_roll_sound';
 const MASTER = 0.55;
@@ -211,7 +213,14 @@ export function playRollSuspense(_durationMs = 0) { void _durationMs; }
 // E major (E6, G#6, B6, E7, G#7, B7) — bright, open, like an item reveal.
 const E6 = 1318.51, GS6 = 1661.22, B6 = 1975.53, E7 = 2637.02, GS7 = 3322.44, B7 = 3951.07;
 
+/** Micro pulls in a row before Locky laughs at you (owner request, 2026-09-29). */
+export const MICRO_STREAK = 3;
+let microStreak = 0;
+export const nextMicroStreak = (streak: number, tier: Tier) => (tier === 'micro' ? streak + 1 : 0);
+
 export function playRollReveal(tier: Tier) {
+  microStreak = nextMicroStreak(microStreak, tier);
+  if (microStreak >= MICRO_STREAK && playFile('micro-streak')) return;
   if (playFile(`reveal-${tier}`)) return;
   switch (tier) {
     case 'micro': // blue: one plain ding
