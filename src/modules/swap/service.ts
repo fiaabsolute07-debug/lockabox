@@ -174,6 +174,16 @@ async function lifiQuoteFor(a: AssetRow, units: bigint, from: string, slippageBp
 }
 
 /** `amount` is in the chain's input coin (SOL, ETH, BNB, or USDC on Arc); `amountSol` is the older name for Solana. */
+/** Jupiter quote; with `legacy`, falls back to a v0 route when no legacy route exists (pump.fun AMM pools have none). */
+export async function jupiterQuote(a: AssetRow, units: bigint, slippageBps: number, legacy: boolean, fetchImpl: typeof fetch) {
+  const ask = (asLegacy: boolean) => getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps, legacy: asLegacy }, fetchImpl);
+  try { return { q: await ask(legacy), legacy }; }
+  catch (e) {
+    if (!legacy) throw new SwapError('quote_failed', (e as Error).message);
+    return { q: await ask(false).catch((e2) => { throw new SwapError('quote_failed', (e2 as Error).message); }), legacy: false };
+  }
+}
+
 export async function quote(p: { assetId: number; amount?: string; amountSol?: string; slippageBps?: unknown; legacy?: boolean }, sql: postgres.Sql = defaultSql, fetchImpl: typeof fetch = fetch): Promise<QuoteView> {
   const a = await loadAsset(p.assetId, sql);
   const amount = p.amount ?? p.amountSol ?? '';
@@ -182,8 +192,7 @@ export async function quote(p: { assetId: number; amount?: string; amountSol?: s
   await sellCheckRecent(a, sql, fetchImpl);
   if (routesViaUniswap(a)) return uniswapView(a, amount, await uniswapQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps, await evmTokenDecimals(a, sql, fetchImpl));
   if (a.family === 'evm') return lifiView(a, amount, await lifiQuoteFor(a, units, PROBE_FROM, slippageBps, fetchImpl, false), slippageBps);
-  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps, legacy: !!p.legacy }, fetchImpl)
-    .catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
+  const { q } = await jupiterQuote(a, units, slippageBps, !!p.legacy, fetchImpl);
   return jupiterView(a, amount, q, await tokenDecimals(a, sql, fetchImpl));
 }
 
@@ -231,9 +240,7 @@ export async function build(
   if (!isSolanaAddress(p.wallet)) throw new SwapError('bad_amount', 'a Solana wallet address is required');
   const units = parseAmount(amount, 9);
   await sellCheck(a, sql, fetchImpl);
-  const legacy = !!p.legacy;
-  const q = await getQuote({ inputMint: SOL_MINT, outputMint: a.address, amount: units.toString(), slippageBps, legacy }, fetchImpl)
-    .catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
+  const { q, legacy } = await jupiterQuote(a, units, slippageBps, !!p.legacy, fetchImpl);
   const tx = await buildSwapTransaction(q, p.wallet, fetchImpl, legacy).catch((e) => { throw new SwapError('quote_failed', (e as Error).message); });
   const [row] = await sql<{ id: number }[]>`
     insert into trades (roll_id, user_id, wallet, chain_id, asset_id, input_symbol, input_amount, out_amount_min, quote, status)
