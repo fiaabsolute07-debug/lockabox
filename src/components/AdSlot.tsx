@@ -8,7 +8,8 @@ const UNIT = process.env.NEXT_PUBLIC_AADS_UNIT_ID?.trim();
 /**
  * One A-ADS banner above the footer, never near the buy, wallet or case-opening flows (DECISIONS #24).
  * A-ADS finds the unit by the iframe's `data-aa` attribute in the page HTML, so this renders on the server too.
- * The sandbox lets the ad run and open its link in a new tab, but never navigate or script Lockabox itself.
+ * The iframe matches A-ADS's own embed code: its checker reports a sandboxed or lazy-loaded unit as not found. Being
+ * cross-origin, the ad still can't read the page or the wallet connection.
  */
 export function AdSlot() {
   const { t } = useT();
@@ -20,9 +21,6 @@ export function AdSlot() {
         data-aa={UNIT}
         src={`https://acceptable.a-ads.com/${UNIT}/?size=Adaptive`}
         title={t('adLabel')}
-        loading="lazy"
-        referrerPolicy="strict-origin-when-cross-origin"
-        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       />
     </aside>
   );
