@@ -99,6 +99,13 @@ a:hover { color: var(--tx); }
 .ad-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 18px 0; border-top: 1px solid var(--ln); }
 .ad-label { align-self: center; color: #5E6270; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .ad-slot iframe { display: block; width: 100%; max-width: 728px; height: 90px; border: 0; overflow: hidden; background: transparent; }
+/* The first-visit disclaimer covers the page, and A-ADS rejects a covered banner. While it is open (desktop, where A-ADS
+   checks), the banner sits fixed at the bottom and the dialog is centred above it, so neither covers the other. */
+@media (min-width: 801px) {
+  body:has(.nfa-backdrop) .ad-slot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 101; padding-bottom: 12px; background: #0B0C10; }
+  body:has(.ad-slot) .nfa-backdrop { padding-bottom: 136px; }
+  body:has(.ad-slot) .nfa-modal { max-height: calc(100dvh - 156px); overflow-y: auto; }
+}
 /* /support: tip addresses */
 .support-card { padding: 22px; }
 .support-hero { display: flex; align-items: center; gap: 22px; }
