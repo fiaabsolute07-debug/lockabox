@@ -60,8 +60,30 @@ export function effectiveOdds(odds: TierOdds, items: PoolItem[]): Partial<Record
 }
 
 /** 'uniform': every coin in the pool has the same chance, 1/N (owner decision 2026-09-28). 'tiers': the older two-step roll
- * (tier by the case's tier odds, then a coin inside that tier), kept so earlier rolls still verify. */
-export type OddsMode = 'tiers' | 'uniform';
+ * (tier by the case's tier odds, then a coin inside that tier), kept so earlier rolls still verify. 'pick3': "Pick 1 of 3"
+ * (owner request 2026-10-01): three different coins are drawn and the user's face-down card choice decides which is theirs. */
+export type OddsMode = 'tiers' | 'uniform' | 'pick3';
+
+export const PICK_CARDS = 3;
+const PICK_MAX_CURSORS = 64;
+
+/**
+ * "Pick 1 of 3": draws `PICK_CARDS` different positions of the canonical pool, one HMAC float per cursor (0, 1, 2, …), skipping
+ * a position already drawn. The user sends the card index before anything is drawn, and the seed is committed, so the server
+ * cannot steer which coin sits under which card. Drawing without replacement keeps every coin at exactly 1/N for any card.
+ */
+export function drawThree(serverSeed: string, clientSeed: string, nonce: number, poolSize: number): { positions: number[]; floats: number[] } {
+  if (poolSize < PICK_CARDS) throw new Error('pool too small for three cards');
+  const positions: number[] = [];
+  const floats: number[] = [];
+  for (let cursor = 0; positions.length < PICK_CARDS; cursor++) {
+    if (cursor >= PICK_MAX_CURSORS) throw new Error('could not draw three different coins');
+    const r = fairFloat(serverSeed, clientSeed, nonce, cursor);
+    const position = Math.floor(r * poolSize);
+    if (!positions.includes(position)) { positions.push(position); floats.push(r); }
+  }
+  return { positions, floats };
+}
 
 /** Share of the pool in each tier, in basis points summing to 10 000: the real chance of each tier when every coin is equal. */
 export function uniformOdds(items: PoolItem[]): Partial<Record<Tier, number>> {
@@ -76,13 +98,19 @@ export function uniformOdds(items: PoolItem[]): Partial<Record<Tier, number>> {
   return out;
 }
 
-export type RollInput = { serverSeed: string; clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds; mode?: OddsMode };
-export type RollOutcome = { tier: Tier; assetId: number; rTier: number; rItem: number; odds: Partial<Record<Tier, number>> };
+export type RollInput = { serverSeed: string; clientSeed: string; nonce: number; items: PoolItem[]; odds: TierOdds; mode?: OddsMode; pick?: number | null };
+export type RollOutcome = { tier: Tier; assetId: number; rTier: number; rItem: number; odds: Partial<Record<Tier, number>>; candidates?: number[] };
 
 /** Deterministic: same input, same outcome. `items` must already be the filtered pool. */
-export function resolveRoll({ serverSeed, clientSeed, nonce, items, odds, mode = 'tiers' }: RollInput): RollOutcome {
+export function resolveRoll({ serverSeed, clientSeed, nonce, items, odds, mode = 'tiers', pick: card }: RollInput): RollOutcome {
   if (!items.length) throw new Error('empty pool');
   const pool = canonicalPool(items);
+  if (mode === 'pick3') {
+    if (card == null || !Number.isInteger(card) || card < 0 || card >= PICK_CARDS) throw new Error('pick must be 0, 1 or 2');
+    const { positions, floats } = drawThree(serverSeed, clientSeed, nonce, pool.length);
+    const chosen = pool[positions[card]];
+    return { tier: chosen.t, assetId: chosen.a, rTier: floats[card], rItem: floats[card], odds: uniformOdds(pool), candidates: positions.map((p) => pool[p].a) };
+  }
   if (mode === 'uniform') {
     // One draw over the canonical pool: coin i wins when floor(r × N) = i, so each coin has exactly 1/N.
     const rTier = fairFloat(serverSeed, clientSeed, nonce, 0);

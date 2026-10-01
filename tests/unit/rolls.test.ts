@@ -68,3 +68,46 @@ describe('uniform odds (owner decision 2026-09-28)', () => {
     expect(resolveRoll({ ...input, mode: 'tiers' })).toEqual(resolveRoll({ serverSeed: 's', clientSeed: 'c', nonce: 7, items: pool, odds: DEFAULT_ODDS }));
   });
 });
+
+describe('"Pick 1 of 3" (owner request 2026-10-01, DECISIONS #27)', () => {
+  const input = { serverSeed: 'rotation-7', clientSeed: 'card-picker', nonce: 9, items: pool, odds: DEFAULT_ODDS, mode: 'pick3' as const };
+
+  it('draws three different coins, deterministically and independent of pool order; the chosen card is the result', () => {
+    for (let n = 0; n < 500; n++) {
+      const cards = resolveRoll({ ...input, nonce: n, pick: 0 }).candidates!;
+      expect(cards).toHaveLength(3);
+      expect(new Set(cards).size).toBe(3);
+      for (const pick of [0, 1, 2]) {
+        const r = resolveRoll({ ...input, nonce: n, pick });
+        expect(r.candidates).toEqual(cards);              // the cards don't depend on the choice
+        expect(r.assetId).toBe(cards[pick]);
+        expect(resolveRoll({ ...input, nonce: n, pick, items: [...pool].reverse() })).toEqual(r);
+      }
+    }
+  });
+
+  it('rejects a missing or out-of-range card', () => {
+    for (const pick of [undefined, null, -1, 3, 1.5]) expect(() => resolveRoll({ ...input, pick })).toThrow(/pick must be/);
+  });
+
+  it('every coin still comes up about 1/N of the time, whichever card is chosen', () => {
+    const N = 30_000;
+    for (const pick of [0, 1, 2]) {
+      const counts = new Map<number, number>();
+      for (let n = 0; n < N; n++) { const a = resolveRoll({ ...input, nonce: n, pick }).assetId; counts.set(a, (counts.get(a) ?? 0) + 1); }
+      const expected = N / pool.length;
+      expect(counts.size).toBe(pool.length);
+      for (const c of counts.values()) expect(Math.abs(c - expected) / expected).toBeLessThan(0.25);
+    }
+  });
+
+  it('the browser verifier recomputes the same three cards and result', async () => {
+    const { recomputeRoll } = await import('@/components/fairBrowser');
+    for (let n = 0; n < 40; n++) {
+      const pick = n % 3;
+      const server = resolveRoll({ ...input, nonce: n, pick });
+      const browser = await recomputeRoll({ serverSeed: input.serverSeed, clientSeed: input.clientSeed, nonce: n, items: [...pool].reverse(), odds: DEFAULT_ODDS, oddsMode: 'pick3', pick });
+      expect(browser).toEqual({ tier: server.tier, assetId: server.assetId, candidates: server.candidates });
+    }
+  });
+});

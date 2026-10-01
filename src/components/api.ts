@@ -116,9 +116,13 @@ export type RollResponse = {
     nonce: number;
     odds: Partial<Record<Tier, number>>;
     createdAt: string;
+    pick?: number;
+    candidates?: number[];
   };
   asset: AssetDetail;
   reel: { winIndex: number; cards: AssetCard[] };
+  /** "Pick 1 of 3" rolls only: the chosen card and the three coins under the cards, in card order. */
+  picks?: { index: number; cards: AssetCard[] };
 };
 
 export type RollFilters = {
@@ -144,6 +148,9 @@ export type RollRecordResponse = {
     serverSeedHash: string;
     seedRevealed: boolean;
     createdAt: string;
+    oddsMode?: 'tiers' | 'uniform' | 'pick3';
+    pick?: number | null;
+    candidates?: number[] | null;
   };
   asset: AssetDetail;
 };
@@ -162,7 +169,9 @@ export type VerificationResponse =
       nonce: number;
       items: { a: number; t: Tier }[];
       odds: Partial<Record<Tier, number>>;
-      oddsMode?: 'tiers' | 'uniform';
+      oddsMode?: 'tiers' | 'uniform' | 'pick3';
+      pick?: number | null;
+      candidates?: number[] | null;
     };
 
 export type BuyItem = {

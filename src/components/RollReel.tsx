@@ -171,7 +171,7 @@ export function RollReel({ cards, winIndex, tier, odds, special, microStreak = 0
   );
 }
 
-function Confetti({ count, tier }: { count: number; tier: Tier }) {
+export function Confetti({ count, tier }: { count: number; tier: Tier }) {
   // Random layout is decided once per reveal (state initialiser), so re-renders don't reshuffle it.
   const [pieces] = useState(() => Array.from({ length: count }, (_, i) => ({
     left: Math.random() * 100, delay: Math.random() * (tier === 'top' ? 1.2 : 0.6), duration: 2.2 + Math.random() * 1.8,

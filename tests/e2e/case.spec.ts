@@ -476,3 +476,50 @@ test('after the reveal a coin card shows real market data and puts the buy box f
   await expect(card).toHaveCount(0);
   await expect(page.locator('.unboxed-bar')).toBeVisible();
 });
+
+test.describe('"Pick 1 of 3" (DECISIONS #27)', () => {
+  // The fixture reel holds three different coins; the one the user picks comes back as $GLORP (asset 3).
+  const glorp = roll.reel.cards.find((card: { id: number }) => card.id === 3);
+  const others = roll.reel.cards.filter((card: { id: number }) => card.id !== 3);
+
+  test('Locky deals three face-down cards, the roll waits for the card, and all three flip after the choice', async ({ page }) => {
+    await fixtures(page);
+    const picks: unknown[] = [];
+    await page.route('**/api/rolls', async (route) => {
+      const pick = route.request().postDataJSON().pick;
+      picks.push(pick);
+      const cards = [...others]; cards.splice(pick, 0, glorp);
+      await json(route, { ...roll, roll: { ...roll.roll, pick, candidates: cards.map((card: { id: number }) => card.id) }, asset, picks: { index: pick, cards } }, 201);
+    });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'pick 1 of 3' }).click();
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.pick-card')).toHaveCount(3);
+    await expect(page.locator('.pick-card.flipped')).toHaveCount(0);
+    expect(picks).toEqual([]);                                   // nothing is drawn before a card is chosen
+    await page.getByRole('button', { name: 'Card 2, face down' }).click();
+    await expect.poll(() => picks).toEqual([1]);
+    await expect(page.locator('.pick-card.flipped')).toHaveCount(3);
+    await expect(page.locator('.pick-card.chosen')).toContainText('$GLORP');
+    await expect(page.locator('.pick-card.chosen')).toContainText('yours');
+    await expect(page.locator('.pick-card.other')).toHaveCount(2);
+    for (const card of await page.locator('.pick-card.other').all()) await expect(card).toContainText('could’ve been');
+    await expect(page.locator('.pull-card h2')).toHaveText('$GLORP');
+    // The mode is remembered for the next visit.
+    expect(await page.evaluate(() => localStorage.getItem('lab_play_mode'))).toBe('pick');
+  });
+
+  test('Escape backs out before a card is chosen and nothing is rolled; keys 1–3 pick', async ({ page }) => {
+    const state = await fixtures(page);
+    await page.addInitScript(() => localStorage.setItem('lab_play_mode', 'pick'));
+    await page.goto('/');
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await expect(page.locator('.pick-card')).toHaveCount(3);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.pick-stage')).toHaveCount(0);
+    expect(state.rollPosts()).toBe(0);
+    await page.getByRole('button', { name: /OPEN CASE/i }).click();
+    await page.keyboard.press('3');
+    await expect.poll(() => state.rollPosts()).toBe(1);
+  });
+});

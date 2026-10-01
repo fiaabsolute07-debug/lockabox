@@ -144,6 +144,21 @@ run('rolls (LAB-AC-028/030/031/032)', () => {
     expect(sha256Hex(JSON.stringify(v!.items))).toBe(r.itemsHash);
     await expect(sql`update rolls set tier = 'top' where id = ${r.rollId}`).rejects.toThrow(/immutable/);
   });
+
+  it('"Pick 1 of 3": stores the chosen card and the three coins, and verifies all of them after rotation', async () => {
+    const r = await roll({ deviceId: 'device-pick3pick3pk', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL, pick: 2 });
+    expect(r.pick).toBe(2);
+    expect(new Set(r.candidates).size).toBe(3);
+    expect(r.assetId).toBe(r.candidates![2]);
+    await expect(roll({ deviceId: 'device-pick3badpick', caseId: 'trending', chainScope: CHAIN_SCOPE_ALL, pick: 3 })).rejects.toMatchObject({ code: 'bad_pick' });
+    await rotateSeed();
+    const v = await verifyRoll(r.rollId);
+    if (!v || v.status === 'pending') throw new Error('expected a revealed roll');
+    expect(v.status).toBe('verified');
+    expect(v.oddsMode).toBe('pick3');
+    expect(v.pick).toBe(2);
+    expect(v.candidates).toEqual(r.candidates);
+  });
 });
 
 run('roll latency (LAB-AC-077, server side)', () => {

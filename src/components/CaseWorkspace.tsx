@@ -24,6 +24,7 @@ import { useAppContext } from './AppShell';
 import { LockyChat } from './LockyChat';
 import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
+import { PickThree } from './PickThree';
 import { nextMicroStreak, playRollStart, preloadRollSounds, rollSoundEnabled, setRollSoundEnabled, specialSoundFor, unlockRollAudio, type SpecialSound } from './rollAudio';
 import SwapBox from './SwapBox';
 import PullCard from './PullCard';
@@ -66,6 +67,12 @@ export default function CaseWorkspace() {
   const [reelSettled, setReelSettled] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
+  // "Pick 1 of 3" (DECISIONS #27) sits beside the reel; the choice is remembered per browser.
+  const [playMode, setPlayMode] = useState<'spin' | 'pick'>('spin');
+  useEffect(() => { try { if (window.localStorage.getItem('lab_play_mode') === 'pick') setPlayMode('pick'); } catch { /* storage can be disabled */ } }, []);
+  const choosePlayMode = (mode: 'spin' | 'pick') => { setPlayMode(mode); try { window.localStorage.setItem('lab_play_mode', mode); } catch { /* storage can be disabled */ } };
+  const [pickOpen, setPickOpen] = useState(false);
+  const [pickChoice, setPickChoice] = useState<number | null>(null);
   const [sponsoredLive, setSponsoredLive] = useState<SponsoredLiveItem[]>([]);
   const [sponsoredSelected, setSponsoredSelected] = useState(false);
   const [sponsoredResult, setSponsoredResult] = useState<SponsoredOpenResponse | null>(null);
@@ -85,7 +92,7 @@ export default function CaseWorkspace() {
   useEffect(() => {
     if (!meta?.cases.some((item) => item.id === caseId)) return;
     let active = true;
-    setSummary(null); setSummaryError(null); setResult(null); setRollError(null);
+    setSummary(null); setSummaryError(null); setResult(null); setRollError(null); setPickOpen(false);
     void fetchJson<CaseResponse>(`/api/cases/${encodeURIComponent(caseId)}?chain=${encodeURIComponent(selectedChain)}`).then((value) => { if (active) setSummary(value); }).catch((error: unknown) => { if (active) setSummaryError(translateApiError(error, tRef.current, 'couldNotLoad')); });
     return () => { active = false; };
   }, [caseId, meta, selectedChain]);
@@ -107,16 +114,12 @@ export default function CaseWorkspace() {
     return payload;
   }, [filters]);
 
-  const handleRoll = useCallback(async () => {
-    if (rolling || !summary?.pool || (result !== null && !reelSettled)) return;
-    unlockRollAudio();
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) playRollStart(); // latch now, not after the API round trip
+  const requestRoll = useCallback(async (pick: number | null) => {
     setRevealPending(true);
-    setResult(null);
     setReelSettled(false);
     setRolling(true); setRollError(null);
     try {
-      const value = await fetchJson<RollResponse>('/api/rolls', { method: 'POST', body: JSON.stringify({ caseId, chain: selectedChain, filters: filterPayload }) });
+      const value = await fetchJson<RollResponse>('/api/rolls', { method: 'POST', body: JSON.stringify({ caseId, chain: selectedChain, filters: filterPayload, ...(pick === null ? {} : { pick }) }) });
       microStreak.current = nextMicroStreak(microStreak.current, value.roll.tier);
       rollsThisVisit.current += 1;
       setStreakShown(microStreak.current);
@@ -125,6 +128,7 @@ export default function CaseWorkspace() {
       setResult(value);
     } catch (error) {
       setRevealPending(false);
+      setPickOpen(false);
       if (error instanceof ApiError && error.code === 'pool_too_small') {
         const detail = error.detail as { size?: number } | undefined;
         setRollError(t('onlyCoins', { size: detail?.size ?? 0 }));
@@ -132,7 +136,24 @@ export default function CaseWorkspace() {
       else if (error instanceof ApiError && error.status === 429) setRollError(t('easyOneRoll'));
       else setRollError(translateApiError(error, t, 'couldNotOpen'));
     } finally { setRolling(false); }
-  }, [caseId, filterPayload, reelSettled, result, rolling, selectedChain, summary?.pool, t, setRevealPending]);
+  }, [caseId, filterPayload, selectedChain, t, setRevealPending]);
+
+  const handleRoll = useCallback(async () => {
+    if (rolling || !summary?.pool || (result !== null && !reelSettled) || (pickOpen && result === null)) return;
+    unlockRollAudio();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) playRollStart(); // latch now, not after the API round trip
+    setResult(null);
+    if (playMode === 'pick') { setPickChoice(null); setPickOpen(true); setRollError(null); return; } // Locky deals; the roll waits for the card
+    setPickOpen(false);
+    await requestRoll(null);
+  }, [pickOpen, playMode, reelSettled, requestRoll, result, rolling, summary?.pool]);
+
+  const handlePick = useCallback((index: number) => {
+    if (pickChoice !== null || rolling) return;
+    setPickChoice(index);
+    void requestRoll(index);
+  }, [pickChoice, requestRoll, rolling]);
+  const cancelPick = useCallback(() => { if (pickChoice === null) setPickOpen(false); }, [pickChoice]);
 
   const handleReelSettled = useCallback(() => { setReelSettled(true); setRevealPending(false); }, [setRevealPending]);
 
@@ -181,11 +202,11 @@ export default function CaseWorkspace() {
             {!sponsoredSelected && <p className="filter-summary">{t('pairAgeSelection', { age: pairAgeLabel(filters.maxAgeHours, t('all')) })}</p>}
             {!sponsoredSelected && filterOpen && <FilterPopover applied={filters} onApply={(next) => { setFilters(next); setRollError(null); setFilterOpen(false); }} onClose={() => setFilterOpen(false)} />}
           </div>
-          {!sponsoredSelected && <div className={`open-area${result && reelSettled && !rolling ? ' after-pull' : ''}`}><button className="open-button" onClick={() => void handleRoll()} disabled={rolling || !summary?.pool || (result !== null && !reelSettled)}>{rolling ? <><strong>{t('opening')}</strong><small>{t('findingPull')}</small></> : result && !reelSettled ? <><strong>{t('revealing')}</strong><small>{t('watchReel')}</small></> : <><strong>{t('openCase')}</strong><small>{t('freeUnlimited')}</small></> }</button>{feed?.stats && (feed.stats.rolls1h > 0 || feed.stats.buysToday > 0 || feed.stats.lastTopPullAt) && <div className="case-stats"><span>● {new Intl.NumberFormat(locale).format(feed.stats.rolls1h)} {t('openedHour')}</span>{feed.stats.buysToday > 0 && <span>{new Intl.NumberFormat(locale).format(feed.stats.buysToday)} {t('buysToday')}</span>}{feed.stats.lastTopPullAt && <span>{t('lastTopPull', { age: age(feed.stats.lastTopPullAt) })}</span>}</div>}</div>}
+          {!sponsoredSelected && <div className={`open-area${result && reelSettled && !rolling ? ' after-pull' : ''}`}><div className="play-modes" role="group" aria-label={t('playMode')}>{(['spin', 'pick'] as const).map((mode) => <button key={mode} type="button" aria-pressed={playMode === mode} disabled={rolling || pickOpen && !reelSettled && result === null} onClick={() => choosePlayMode(mode)}>{mode === 'spin' ? t('modeSpin') : t('modePick')}</button>)}</div><button className="open-button" onClick={() => void handleRoll()} disabled={rolling || !summary?.pool || (result !== null && !reelSettled)}>{rolling ? <><strong>{t('opening')}</strong><small>{t('findingPull')}</small></> : result && !reelSettled ? <><strong>{t('revealing')}</strong><small>{t('watchReel')}</small></> : <><strong>{t('openCase')}</strong><small>{t('freeUnlimited')}</small></> }</button>{feed?.stats && (feed.stats.rolls1h > 0 || feed.stats.buysToday > 0 || feed.stats.lastTopPullAt) && <div className="case-stats"><span>● {new Intl.NumberFormat(locale).format(feed.stats.rolls1h)} {t('openedHour')}</span>{feed.stats.buysToday > 0 && <span>{new Intl.NumberFormat(locale).format(feed.stats.buysToday)} {t('buysToday')}</span>}{feed.stats.lastTopPullAt && <span>{t('lastTopPull', { age: age(feed.stats.lastTopPullAt) })}</span>}</div>}</div>}
         </div>
         {sponsoredSelected ? <SponsoredDrops items={sponsoredLive} user={!!user} cost={liveCost} busy={sponsoredBusy} error={sponsoredError} result={sponsoredResult} onOpen={() => void handleSponsoredOpen()} /> : <>
           {rollError && <div className="roll-error" role="alert">{rollError}</div>}
-          {result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} special={special} microStreak={streakShown} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} />} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
+          {result?.picks || (pickOpen && !result) ? <PickThree cards={result?.picks?.cards ?? null} chosen={result?.picks?.index ?? pickChoice} tier={result?.roll.tier} odds={result?.roll.odds} special={special} microStreak={streakShown} onPick={handlePick} onCancel={cancelPick} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={result ? ({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} /> : undefined} /> : result ? <RollReel cards={result.reel.cards} winIndex={result.reel.winIndex} tier={result.roll.tier} special={special} microStreak={streakShown} odds={result.roll.odds} onSettled={handleReelSettled} onRollAgain={() => void handleRoll()} reveal={({ close, again, againRef }) => <PullCard asset={result.asset} tier={result.roll.tier} chance={result.roll.odds?.[result.roll.tier]} rollId={result.roll.rollId} chain={meta?.chains.find((chain) => chain.id === result.asset.chainId)} againRef={againRef} onAgain={again} onClose={close} />} /> : rolling ? <div className="spinner roll-stage roll-charging roll-fullscreen" aria-busy="true"><div className="reel-overlay-title"><span>LOCKABOX</span><strong>{t('reelOpening')}</strong></div><div className="marker" aria-hidden="true" /></div> : <div className="spinner empty-spinner"><div className="marker" aria-hidden="true" /><div className="empty-spinner-copy"><span className="empty-icon">✦</span><strong>{t('openToReveal')}</strong><small>{t('firstPullWaiting')}</small></div></div>}
           {result && reelSettled && !rolling && <UnboxedBar result={result} onRollAgain={() => void handleRoll()} onBuy={() => document.getElementById('swap-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />}
         </>}
       </section>

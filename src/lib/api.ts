@@ -10,7 +10,7 @@ export function problem(status: number, code: string, message: string, detail?: 
 }
 
 const ROLL_STATUS: Record<RollError['code'], number> = {
-  case_not_found: 404, case_needs_points: 402, no_pool: 409, pool_too_small: 422, rate_limited: 429, no_actor: 400,
+  case_not_found: 404, case_needs_points: 402, no_pool: 409, pool_too_small: 422, rate_limited: 429, no_actor: 400, bad_pick: 400,
 };
 
 /** Maps known domain errors to HTTP problems; anything else is a 500 without internals. */

@@ -1020,3 +1020,44 @@ body { background: transparent; }  /* html paints the page colour, so the sky ca
   .sky-star, .open-button::after { display: none; }
   .feed-copy { display: none; }
 }
+
+/* ---- "Pick 1 of 3" (DECISIONS #27): Locky deals three face-down cards; the chosen one flips, then the other two. ---- */
+.play-modes { display: flex; gap: 6px; }
+.play-modes button { flex: 1; min-height: 32px; color: var(--mu); background: none; border: 2px dotted var(--dot); border-radius: 0; font: 900 15px var(--font-display); letter-spacing: .03em; }
+.play-modes button[aria-pressed="true"] { color: var(--tx); border-color: var(--acc); }
+.play-modes button:disabled { opacity: .6; }
+.pick-stage { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 22px 12px; overflow: hidden; border: 2px dotted var(--dot); }
+.pick-stage.roll-fullscreen { padding: 24px 16px; border: 0; cursor: default; }
+.pick-locky { position: relative; z-index: 2; display: grid; place-items: center; margin-top: 44px; animation: locky-bob 2.4s steps(2, end) infinite; }
+.pick-locky .locky-bubble { bottom: calc(100% - 2px); max-width: none; animation: none; }
+.pick-locky .locky-bubble::after { bottom: -10px; clip-path: polygon(0 0, 100% 0, 30% 100%); }
+.pick-cancel { position: absolute; top: 16px; right: 16px; z-index: 8; width: 40px; height: 40px; color: var(--mu); background: none; border: 2px dotted var(--dot); font-size: 22px; line-height: 1; }
+.pick-cancel:hover { color: var(--tx); border-color: var(--acc); }
+.pick-row { position: relative; z-index: 2; display: flex; justify-content: center; gap: clamp(10px, 3vw, 28px); perspective: 1000px; transition: filter 400ms ease; }
+.roll-panel .pick-row, .roll-panel .pick-locky { filter: blur(6px) brightness(.45); }
+.pick-card { width: clamp(96px, 26vw, 190px); aspect-ratio: 3 / 4; padding: 0; color: inherit; background: none; border: 0; cursor: pointer; animation: pick-deal .5s steps(6, end) both; animation-delay: var(--deal-delay); }
+.pick-card:disabled { opacity: 1; cursor: default; }
+.pick-inner { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .56s steps(8, end); }
+.pick-choosing .pick-card:hover .pick-inner, .pick-choosing .pick-card:focus-visible .pick-inner { transform: translateY(-12px); }
+.pick-card.flipped .pick-inner { transform: rotateY(180deg); }
+.pick-back, .pick-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.pick-back { background: repeating-linear-gradient(45deg, #ff5b1f14 0 6px, transparent 6px 12px), var(--bg); border: 2px dotted var(--acc); }
+.pick-back b { color: var(--acc); font: 900 clamp(30px, 5vw, 48px)/1 var(--font-display); }
+.pick-back small { position: absolute; top: 8px; left: 10px; color: var(--mu); font: 900 16px var(--font-display); }
+.pick-face { background: var(--bg); border: 2px solid var(--rarity); box-shadow: inset 0 -6px 0 var(--rarity); transform: rotateY(180deg); }
+.pick-art { width: 56%; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border-radius: 50%; box-shadow: 0 0 0 3px var(--rarity); }
+.pick-art img, .pick-art > * { width: 100%; height: 100%; }
+.pick-face b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 900 clamp(15px, 2.4vw, 24px)/1 var(--font-display); }
+.pick-face em { color: var(--rarity); font: 700 12px var(--font-display); font-style: normal; letter-spacing: .14em; text-transform: uppercase; }
+.pick-face small { color: var(--mu); font-size: 11px; }
+.pick-card.waiting .pick-inner { animation: pick-wait .5s steps(4, end) infinite; }
+.pick-card.other:not(.flipped) { opacity: .45; }
+.pick-card.other.flipped { opacity: .62; filter: saturate(.6); }
+.pick-card.chosen.flipped { transform: scale(1.06); }
+.pick-hint { position: relative; z-index: 2; margin: 0; color: var(--mu); font-size: 12px; }
+@keyframes pick-deal { from { opacity: 0; transform: translateY(-160px) scale(.4) rotate(-12deg); } }
+@keyframes pick-wait { 25% { transform: translate(-3px, -6px) rotate(-2deg); } 75% { transform: translate(3px, -6px) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .pick-card, .pick-card.waiting .pick-inner, .pick-locky { animation: none; }
+  .pick-inner { transition: none; }
+}

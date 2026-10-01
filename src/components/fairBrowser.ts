@@ -39,10 +39,22 @@ export async function recomputeRoll(input: {
   nonce: number;
   items: BrowserPoolItem[];
   odds: Partial<Record<Tier, number>>;
-  /** 'uniform' (every coin 1/N) for rolls since 2026-09-28; 'tiers' for older ones. */
-  oddsMode?: 'tiers' | 'uniform';
-}) {
+  /** 'uniform' (every coin 1/N) for rolls since 2026-09-28; 'tiers' for older ones; 'pick3' for "Pick 1 of 3". */
+  oddsMode?: 'tiers' | 'uniform' | 'pick3';
+  /** 'pick3' only: the card the user chose (0–2). */
+  pick?: number | null;
+}): Promise<{ tier: Tier; assetId: number; candidates?: number[] }> {
   const pool = canonicalPool(input.items);
+  if (input.oddsMode === 'pick3') {
+    // Same as the server's drawThree: cursors 0, 1, 2, … each give a position; repeats are skipped until three differ.
+    const positions: number[] = [];
+    for (let cursor = 0; positions.length < 3 && cursor < 64; cursor += 1) {
+      const position = Math.floor((await hmacFloat(input.serverSeed, input.clientSeed, input.nonce, cursor)) * pool.length);
+      if (!positions.includes(position)) positions.push(position);
+    }
+    const chosen = pool[positions[input.pick ?? 0]];
+    return { tier: chosen?.t ?? 'micro', assetId: chosen?.a ?? 0, candidates: positions.map((position) => pool[position].a) };
+  }
   if (input.oddsMode === 'uniform') {
     const pick = pool[Math.floor((await hmacFloat(input.serverSeed, input.clientSeed, input.nonce, 0)) * pool.length)];
     return { tier: pick?.t ?? 'micro', assetId: pick?.a ?? 0 };
