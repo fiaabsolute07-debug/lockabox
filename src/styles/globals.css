@@ -1061,3 +1061,14 @@ body { background: transparent; }  /* html paints the page colour, so the sky ca
   .pick-card, .pick-card.waiting .pick-inner, .pick-locky { animation: none; }
   .pick-inner { transition: none; }
 }
+
+/* After a pull (owner: "see it right after the spin, no scrolling"): two columns on wide screens; the right one is sticky and
+   starts with the buy box, then the coin info and the proof. The side rails step aside while a pull is shown. */
+@media (min-width: 1100px) {
+  .workspace-grid.has-pull { display: grid; grid-template-columns: minmax(0, 1fr) 380px; column-gap: 20px; align-items: start; max-width: 1320px; }
+  .workspace-grid.has-pull .main-column { display: flex; flex-direction: column; gap: 16px; grid-column: 1; padding: 0; }
+  .workspace-grid.has-pull .right-rail { grid-column: 2; grid-row: 1; position: sticky; top: 72px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 88px); overflow-y: auto; scrollbar-width: thin; }
+  .workspace-grid.has-pull #swap-box { order: -1; }
+  body:has(.workspace-grid.has-pull) .side-rail { display: none; }
+  body:has(.workspace-grid.has-pull) :is(.topbar, .top-nav, .feed-ticker, .footer) { padding-left: max(16px, calc((100% - 1288px) / 2)); padding-right: max(16px, calc((100% - 1288px) / 2)); }
+}

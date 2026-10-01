@@ -191,7 +191,9 @@ export default function CaseWorkspace() {
   const napping = !result && !rolling;
   const liveCost = sponsoredLive.reduce((max, item) => Math.max(max, item.costPoints), 0);
 
-  return <div className={`workspace-grid ${sponsoredSelected ? 'workspace-sponsored' : ''}`}>
+  // After a pull, wide screens put the buy box beside the case so it is in view without scrolling (globals.css .has-pull).
+  const showingPull = !!result && reelSettled && !rolling && !sponsoredSelected;
+  return <div className={`workspace-grid ${sponsoredSelected ? 'workspace-sponsored' : ''} ${showingPull ? 'has-pull' : ''}`}>
     <main className="main-column">
       <section className="panel case-panel">
         <div className="sound-row"><button type="button" className="button button-outline sound-toggle" aria-pressed={soundEnabled} aria-label={t('soundLabel')} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); setRollSoundEnabled(next); }}><span aria-hidden="true">{soundEnabled ? '♪' : '♩'}</span> {soundEnabled ? t('soundOn') : t('soundOff')}</button></div>
