@@ -218,7 +218,7 @@ test('clicking a spinning reel skips to the settled pull', async ({ page }) => {
   await expect(page.locator('.unboxed-bar')).toBeVisible();
 });
 
-test('feed and hot pulls do not reveal the token while the reel is spinning', async ({ page }) => {
+test('the feed does not reveal the token while the reel is spinning', async ({ page }) => {
   await fixtures(page);
   let pendingFeed: Route | undefined;
   await page.route('**/api/feed', route => { pendingFeed = route; });
@@ -229,10 +229,8 @@ test('feed and hot pulls do not reveal the token while the reel is spinning', as
   await json(pendingFeed!, { ...feed, items: [{ kind: 'pull', ref: '42', assetId: 3, symbol: 'SPOILER', tier: 'top', at: new Date().toISOString() }] });
   await page.waitForTimeout(150);
   await expect(page.locator('.feed-ticker').filter({ hasText: 'SPOILER' })).toHaveCount(0);
-  await expect(page.locator('.hot-pulls')).not.toContainText('SPOILER');
   await page.getByRole('button', { name: /Skip animation/i }).click();
   await expect(page.locator('.feed-ticker')).toContainText('SPOILER');
-  await expect(page.locator('.hot-pulls')).toContainText('SPOILER');
   await expect(page.locator('.reel-card.winner')).toHaveCount(1);
 });
 

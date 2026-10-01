@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Sidebar } from './AppShell';
 import { ChainIcon } from './ChainIcon';
 import { LockyLogo } from './LockyLogo';
 import { explorerUrl, type DonateWallet } from './donate';
@@ -12,7 +11,6 @@ export default function SupportClient({ wallets }: { wallets: (DonateWallet & { 
   const { t } = useT();
   return (
     <div className="workspace-grid leaderboard-layout">
-      <Sidebar />
       <main className="main-column leaderboard-main">
         <section className="panel support-card">
           <div className="support-hero">

@@ -16,8 +16,10 @@
   --accent: var(--acc);
   --panel: var(--p);
   --muted: var(--mu);
-  --font-sans: var(--font-inter), Inter, sans-serif;
-  --font-mono-family: var(--font-mono), 'JetBrains Mono', monospace;
+  --font-sans: var(--font-mono), 'DM Mono', ui-monospace, Menlo, monospace;
+  --font-mono-family: var(--font-mono), 'DM Mono', ui-monospace, Menlo, monospace;
+  --font-display: var(--font-doto), 'Doto', monospace;
+  --dot: #3A3D47;
 }
 
 * { box-sizing: border-box; }
@@ -845,4 +847,101 @@ td a { color: var(--mu); }
   .workspace-grid:has(.case-panel) .right-rail { order: 2; padding: 0; }
   .open-area.after-pull { position: static; }
   .open-area.after-pull .open-button { height: 52px; box-shadow: none; }
+}
+
+/* ---- Dotted 8-bit look (owner, 2026-10-01; DECISIONS #26): DM Mono text, Doto dot-matrix headings and numbers,
+   dotted borders, square corners, flat fills. Restyles the shared pieces only; layout rules above are untouched. ---- */
+body { font: 400 13px/1.5 var(--font-sans); }
+.panel { background: var(--bg); border: 2px dotted var(--dot); border-radius: 0; }
+.eyebrow, .filter-label, .filter-head { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+.case-copy h1, .leaderboard-heading h1, .nfa-modal h1, .support-hero h1 { font-family: var(--font-display); font-weight: 900; letter-spacing: 0; text-transform: lowercase; }
+.case-copy h1 { font-size: 46px; line-height: 1; }
+.leaderboard-heading h1, .support-hero h1 { font-size: 40px; }
+.nfa-modal h1 { font-size: 34px; }
+
+.topbar { border-bottom: 2px dotted var(--dot); }
+.brand > span { font-family: var(--font-display); font-weight: 900; font-size: 22px; letter-spacing: .04em; }
+.search-box, .search-box kbd, .chip-button, .points-pill { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.feed-ticker { background: none; border-bottom: 2px dotted var(--dot); }
+.nav-item, .chain-row, .account-link, .account-signout { border-radius: 0; }
+.nav-item.active, .chain-row.active { color: var(--tx); background: none; box-shadow: inset 3px 0 0 var(--acc); }
+.nav-item:hover, .chain-row:hover { background: none; color: var(--tx); }
+.chain-count { background: none; border-radius: 0; }
+.footer, .ad-slot { border-top: 2px dotted var(--dot); }
+.mobile-tabbar { border-top: 2px dotted var(--dot); }
+
+.button { border-radius: 0; font-family: var(--font-display); font-weight: 900; font-size: 15px; letter-spacing: .03em; }
+.button-primary { background: var(--acc); box-shadow: 0 4px 0 #B8400F; }
+.button-primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #B8400F; }
+.verify-link { border: 2px dotted var(--up); border-radius: 0; font-family: var(--font-display); font-weight: 900; font-size: 14px; }
+.open-button { background: var(--acc); border-radius: 0; box-shadow: 0 6px 0 #B8400F; text-transform: lowercase; }
+.open-button:active { transform: translateY(4px); box-shadow: 0 2px 0 #B8400F; }
+.open-button strong { font-family: var(--font-display); font-weight: 900; font-size: 34px; letter-spacing: .04em; }
+.open-button small { font-family: var(--font-sans); letter-spacing: .12em; text-transform: uppercase; }
+.nfa-modal { border: 2px dotted var(--acc); border-radius: 0; }
+.toast { border-radius: 0; border: 2px dotted var(--dot); border-left: 3px solid var(--acc); }
+
+/* Tabs and chips: dotted outlines, the selected one in orange. */
+.case-tabs button, .chart-tabs button, .table-tabs button { background: none; border: 2px dotted var(--dot); border-radius: 0; font-weight: 400; }
+.case-tabs button:hover, .case-tabs button.active, .chart-tabs button.active, .table-tabs button.active { color: var(--tx); background: none; border-color: var(--acc); }
+.case-tabs button.filter-button.active { color: var(--bg); background: var(--acc); border-color: var(--acc); }
+.wallet-button { color: var(--acc); border-color: var(--acc); font-family: var(--font-display); font-weight: 900; font-size: 15px; letter-spacing: .03em; }
+
+/* Locky naps until the first open: zzz drifting up beside him. */
+.case-zzz { position: absolute; top: 24px; left: calc(50% + 62px); z-index: 2; color: var(--mu); font: 900 16px/1 var(--font-display); pointer-events: none; }
+.case-zzz i { position: absolute; font-style: normal; opacity: 0; animation: zzz-float 3s steps(6, end) infinite; }
+.case-zzz i:nth-child(2) { left: 10px; font-size: 19px; animation-delay: 1s; }
+.case-zzz i:nth-child(3) { left: 22px; font-size: 23px; animation-delay: 2s; }
+@keyframes zzz-float { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px); } }
+@media (prefers-reduced-motion: reduce) { .case-zzz i { animation: none; opacity: 1; } }
+
+/* Claim-page layout on desktop (DECISIONS #26): a text nav under the header and one centred column; the old sidebar is gone.
+   After a pull the column reads case → coin header → coin info + buy → proof → chart, like the phone layout. */
+.top-nav { display: none; }
+@media (min-width: 801px) {
+  .topbar, .top-nav, .feed-ticker { padding-left: max(16px, calc((100% - 880px) / 2)); padding-right: max(16px, calc((100% - 880px) / 2)); }
+  .brand { width: auto; margin-right: auto; }
+  .top-nav { display: flex; align-items: center; gap: 22px; height: 40px; color: var(--mu); border-bottom: 2px dotted var(--dot); }
+  .top-nav a.active { color: var(--tx); }
+  .top-nav a.active::before { content: '> '; color: var(--acc); }
+
+  .workspace-grid { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 912px; min-height: 0; margin: 0 auto; padding: 24px 16px 40px; }
+  .workspace-grid .main-column { display: contents; }
+  .workspace-grid .main-column > * { order: 3; }
+  .workspace-grid .main-column > .case-panel { order: 1; }
+  .workspace-grid .main-column > .token-header { order: 2; }
+  .workspace-grid .right-rail { order: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 0; border: 0; }
+  .workspace-grid .right-rail > :last-child { grid-column: 1 / -1; }
+  .pre-roll-card, .rail-empty { display: none; }
+
+  .case-panel { background: none; border: 0; }
+  .sound-row { padding: 0 0 4px; }
+  .case-hero { grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding: 6px 0 22px; background: none; border: 0; border-radius: 0; }
+  .case-art, .case-art.case-contents-trigger { display: grid; place-items: center; width: auto; height: 170px; padding: 0; transform: none; grid-column: auto; grid-row: auto; background: none; border: 0; }
+  .case-art::before { content: ''; position: absolute; left: -8px; top: 0; width: 176px; height: 72px; background-image: radial-gradient(circle, var(--dot) 1.3px, transparent 1.6px); background-size: 6px 6px;
+                      clip-path: polygon(24% 0, 56% 0, 56% 20%, 84% 20%, 84% 52%, 100% 52%, 100% 86%, 8% 86%, 8% 58%, 0 58%, 0 30%, 24% 30%); }
+  .case-art::after { content: ''; position: absolute; left: 50%; bottom: 26px; width: 90px; height: 6px; transform: translateX(-50%); background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.5px); background-size: 6px 6px; }
+  .case-glow { display: none; }
+  .case-art { grid-column: 1; grid-row: 1; }
+  .case-copy { grid-column: 2; grid-row: 1; }
+  .case-art .locky-chat { position: relative; z-index: 1; align-self: center; }
+  .case-contents-trigger .locky-logo { width: 132px; height: 132px; }
+  .case-contents-trigger:hover { background: none; border-color: transparent; }
+  .case-art .locky-logo { filter: none; }
+  .case-contents-hint { position: absolute; bottom: 0; }
+  .case-copy h1 { font-size: 56px; }
+  .open-area { grid-column: 1 / -1; grid-row: 2; }
+  .open-button { height: 92px; }
+  .open-button strong { font-size: 42px; }
+  .case-stats { font: 400 12px var(--font-sans); }
+  .spinner { background: var(--bg); border: 2px dotted var(--dot); }
+  .empty-spinner-copy strong { font: 900 24px/1.2 var(--font-display); }
+  .roll-error { border-radius: 0; }
+
+  .footer { padding-left: max(18px, calc((100% - 880px) / 2)); padding-right: max(18px, calc((100% - 880px) / 2)); }
+}
+@media (max-width: 800px) {
+  .brand > span { font-size: 17px; letter-spacing: 0; }
+  .wallet-button { flex: none; max-width: 124px; padding: 0 6px; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
+  .case-zzz { display: none; }
 }

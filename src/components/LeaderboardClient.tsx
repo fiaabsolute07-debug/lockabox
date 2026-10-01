@@ -5,7 +5,6 @@ import TokenImage from './TokenImage';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { displaySymbol, fetchJson, formatPercent, formatPrice, tierColor, tierLabel, type LeaderboardResponse, type LeaderboardItem } from './api';
-import { Sidebar } from './AppShell';
 import { useT, translateApiError } from './i18n';
 
 export default function LeaderboardClient() {
@@ -23,7 +22,6 @@ export default function LeaderboardClient() {
 
   return (
     <div className="workspace-grid leaderboard-layout">
-      <Sidebar />
       <main className="main-column leaderboard-main">
         <section className="panel leaderboard-card">
           <div className="leaderboard-heading">

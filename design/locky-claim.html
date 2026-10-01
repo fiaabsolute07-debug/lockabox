@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Locky Claim Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0C10; --tx: #E6E7EA; --mu: #8A8F9C; --dim: #5E6270; --acc: #FF5B1F; --acc-d: #B8400F; --dot: #3A3D47;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--tx); }
+  body { font: 400 14px/1.6 'DM Mono', ui-monospace, Menlo, monospace; -webkit-font-smoothing: antialiased; }
+  .col { width: min(400px, 100% - 32px); margin: 0 auto; padding: 22px 0 64px; }
+  .brand { font: 900 19px/1.65 'Doto', monospace; letter-spacing: .05em; }
+  .brand b { color: var(--acc); }
+
+  /* sky: dotted clouds + sleeping Locky */
+  .sky { position: relative; height: 270px; margin-top: 8px; }
+  .cloud { position: absolute; background-image: radial-gradient(circle, var(--dot) 1.3px, transparent 1.6px); background-size: 6px 6px; }
+  .c1 { left: -4%; top: 4px; width: 300px; height: 112px; opacity: .95;
+        clip-path: polygon(30% 0, 52% 0, 52% 14%, 72% 14%, 72% 30%, 92% 30%, 92% 56%, 76% 56%, 76% 78%, 26% 78%, 26% 62%, 2% 62%, 2% 40%, 18% 40%, 18% 18%, 30% 18%); }
+  .c2 { right: -8%; top: 128px; width: 200px; height: 86px; opacity: .7;
+        clip-path: polygon(14% 10%, 52% 10%, 52% 0, 76% 0, 76% 30%, 100% 30%, 100% 70%, 30% 70%, 30% 52%, 0 52%, 0 26%, 14% 26%); }
+  .locky { position: absolute; left: 50%; top: 134px; transform: translateX(-50%); animation: breathe 3.2s steps(2, end) infinite; }
+  .locky svg { display: block; width: 132px; height: auto; image-rendering: pixelated; }
+  .shadow { position: absolute; left: 50%; top: 226px; width: 96px; height: 6px; transform: translateX(-50%);
+            background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.5px); background-size: 6px 6px; }
+  .zzz { position: absolute; left: calc(50% + 62px); top: 112px; font: 900 16px/1 'Doto', monospace; color: var(--mu); }
+  .zzz span { position: absolute; opacity: 0; animation: float 3s steps(6, end) infinite; }
+  .zzz span:nth-child(2) { left: 10px; font-size: 18px; animation-delay: 1s; }
+  .zzz span:nth-child(3) { left: 22px; font-size: 22px; animation-delay: 2s; }
+  @keyframes float { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px); } }
+  @keyframes breathe { 50% { transform: translate(-50%, 2px); } }
+
+  .eyebrow { margin: 6px 0 0; color: var(--mu); font: 700 14px/1.65 'Doto', monospace; letter-spacing: .14em; text-transform: uppercase; }
+  h1 { margin: 10px 0 18px; font: 900 40px/1.05 'Doto', monospace; letter-spacing: -.01em; }
+
+  .dotted { border: 2px dotted var(--acc); }
+  .card { padding: 16px 16px 14px; }
+  .label { color: var(--mu); font: 700 13px/1.65 'Doto', monospace; letter-spacing: .14em; text-transform: uppercase; }
+  .big { margin: 6px 0 2px; font: 900 64px/1 'Doto', monospace; color: var(--acc); letter-spacing: .01em; }
+  .per { font: 900 30px/1.1 'Doto', monospace; }
+  .card small { display: block; margin-top: 8px; color: var(--mu); font-size: 13px; line-height: 1.65; }
+
+  .copy p { margin: 18px 0 0; color: var(--tx); font-size: 14px; line-height: 1.65; }
+  .copy strong { color: var(--tx); }
+  .hr { height: 2px; margin: 22px 0; background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.5px); background-size: 6px 2px; }
+
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .meta b { display: block; margin-top: 2px; font-weight: 400; }
+  .meta small { color: var(--mu); font-size: 13px; }
+
+  .step { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 12px; align-items: start; }
+  .num { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; border: 2px dotted var(--acc); color: var(--acc); font: 900 18px/1 'Doto', monospace; }
+  .step h2 { margin: 0; font: 900 23px/1.1 'Doto', monospace; }
+  .step .hint { margin-top: 4px; color: var(--mu); font-size: 13px; }
+  .save { padding: 6px 12px; color: var(--acc); background: none; font: 900 17px 'Doto', monospace; letter-spacing: .03em; cursor: pointer; }
+  .save:disabled { opacity: .4; cursor: default; }
+  .save.done { color: var(--bg); background: var(--acc); border-style: solid; }
+  .field { grid-column: 2 / -1; display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-bottom: 6px;
+           background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.5px); background-size: 6px 2px; background-repeat: repeat-x; background-position: bottom; }
+  .field span { color: var(--acc); font-weight: 500; }
+  .field input { flex: 1; min-width: 0; padding: 4px 0; color: var(--tx); background: none; border: 0; outline: 0; font: inherit; }
+  .field input::placeholder { color: var(--dim); }
+  .more { margin-top: 22px; text-align: center; color: var(--mu); font-size: 13px; }
+  .note { margin-top: 30px; color: var(--dim); font-size: 10px; text-align: center; letter-spacing: .08em; }
+</style>
+</head>
+<body>
+<main class="col">
+  <div class="brand">lockabox<b>.</b></div>
+
+  <div class="sky" aria-hidden="true">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="zzz"><span>z</span><span>z</span><span>Z</span></div>
+    <div class="locky" id="locky"></div>
+    <div class="shadow"></div>
+  </div>
+
+  <div class="eyebrow">LOCKABOX / $LOCKY CLAIM</div>
+  <h1>wake locky up</h1>
+
+  <section class="card dotted">
+    <div class="label">YOUR DROP</div>
+    <div class="big">???,???</div>
+    <div class="per">$LOCKY per wallet</div>
+    <small>sent to your wallet once you finish the steps and the list closes.</small>
+  </section>
+
+  <div class="copy">
+    <p>Every wallet that finishes the steps gets the same drop. <strong>One per person.</strong> Duplicate and bot accounts are removed before anything is sent.</p>
+    <p>Not financial advice. Locky is a box.</p>
+  </div>
+
+  <div class="hr"></div>
+  <div class="meta">
+    <div><span class="label">TOKEN</span><b>$LOCKY · Solana</b><small>address on @lockabox</small></div>
+    <div><span class="label">DROP DATE</span><b>announced on X</b><small>list closes first</small></div>
+  </div>
+  <div class="hr"></div>
+
+  <section class="step">
+    <div class="num">1</div>
+    <div><h2>Your X handle</h2><div class="hint">so we know who the drop is for</div></div>
+    <button class="save dotted" id="save" disabled>Save</button>
+    <label class="field"><span>@</span><input id="handle" placeholder="your x handle" autocomplete="off" spellcheck="false" maxlength="15"></label>
+  </section>
+  <div class="more" id="more">5 more steps unlock as you go</div>
+
+  <div class="note">DESIGN MOCKUP · NOTHING IS SAVED</div>
+</main>
+
+<script>
+  // Locky "Cap Box" pixel map from src/components/LockyLogo.tsx, eyes closed (sleeping).
+  const ROWS = [
+    '..........DD..........',
+    '.......OOOOOOOO.......',
+    '.....OOOOOOOOOOOO.....',
+    '....OOOOOOOOOOOOOOD...',
+    'OOOODDDDDDDDDDDDDDDD..',
+    '....WWWWWWOOWWWWWWSS..',
+    '....WWWWWWWWWWWWWWSS..',
+    '.WWWWWEEWWWWWEEWWWSSWW',
+    '....WWWWWWWWWWWWWWSS..',
+    '....WWWWWWWWWWWWWWSS..',
+    '....SSSSSSSSSSSSSSSS..',
+    '.....W.W......W.W.....',
+    '.....W.W......W.W.....',
+  ];
+  const OPEN = ROWS.map((r, y) => y === 6 ? '....WWWEWWWWWWEWWWSS..' : y === 7 ? '.WWWWWWEWWWWWWEWWWSSWW' : r);
+  const FILL = { O: '#FF5B1F', D: '#B8400F', W: '#E6E7EA', S: '#9A9EAA', E: '#0D0E12' };
+  const draw = (rows) => {
+    let rects = '';
+    rows.forEach((row, y) => [...row].forEach((c, x) => { if (FILL[c]) rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${FILL[c]}"/>`; }));
+    document.getElementById('locky').innerHTML = `<svg viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges">${rects}</svg>`;
+  };
+  draw(ROWS);
+
+  const input = document.getElementById('handle'), save = document.getElementById('save');
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/[^A-Za-z0-9_]/g, '');
+    save.disabled = input.value.length < 1;
+    save.classList.remove('done'); save.textContent = 'Save';
+  });
+  save.addEventListener('click', () => {
+    save.classList.add('done'); save.textContent = 'Saved';
+    document.getElementById('more').textContent = 'step 2 unlocked · 4 more after that';
+    draw(OPEN);                                       // Locky wakes up
+    document.querySelector('.zzz').style.display = 'none';
+  });
+</script>
+</body>
+</html>

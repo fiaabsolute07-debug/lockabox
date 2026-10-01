@@ -1,7 +1,5 @@
 'use client';
 
-import TokenImage from './TokenImage';
-
 import Link from 'next/link';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -143,6 +141,7 @@ export default function AppShell({ children, disclaimerSeen = false }: { childre
     <AppContext.Provider value={context}>
       <DisclaimerIntro initiallySeen={disclaimerSeen} />
       <Header />
+      <TopNav />
       <FeedTicker />
       {children}
       <AdSlot />
@@ -161,7 +160,6 @@ function Header() {
   return (
     <header className="topbar">
       <Link href="/" className="brand" aria-label={t('brandHome')}><LockyChat placement="below" /><span>lockabox<span className="brand-dot">.</span></span></Link>
-      <div className="search-box"><span className="search-icon" aria-hidden="true">⌕</span><input aria-label={t('searchComingSoon')} disabled placeholder={t('searchComingSoon')} /><kbd>/</kbd></div>
       <div className="top-actions">
         <div className="chain-select-wrap">
           <button className="chip-button" onClick={() => setChainOpen((value) => !value)} aria-expanded={chainOpen}>
@@ -188,31 +186,20 @@ function FeedTicker() {
   return <div className="feed-ticker" aria-label={t('liveFeed')}>{feed.items.slice(0, 8).map((item) => { const symbol = item.symbol ? `$${displaySymbol(item)}` : t('aToken'); const who = item.who ?? t('aWallet'); return <span key={`${item.kind}-${item.ref}`}><i className={item.kind === 'buy' ? 'feed-buy' : 'feed-pull'} />{item.kind === 'buy' ? t('walletBought', { who, symbol }) : t('tokenPulled', { symbol })}<small>{time(item.at)}</small></span>; })}</div>;
 }
 
-export function Sidebar() {
+/** The claim-page look (DECISIONS #26): one row of text links under the header instead of a sidebar. Phones use MobileTabBar. */
+function TopNav() {
   const { t } = useT();
-  const { meta, feed, selectedChain, setSelectedChain } = useAppContext();
   const pathname = usePathname();
-  const pulls = feed?.items.filter((item) => item.kind === 'pull').slice(0, 5) ?? [];
-  return (
-    <aside className="sidebar">
-      <nav className="side-nav" aria-label={t('primaryNavigation')}>
-        <Link className={`nav-item ${pathname === '/' ? 'active' : ''}`} href="/"><span>▣</span>{t('roll')}</Link>
-        <Link className={`nav-item ${pathname === '/leaderboard' ? 'active' : ''}`} href="/leaderboard"><span>↗</span>{t('bestPulls')}</Link>
-        <Link className={`nav-item ${pathname === '/earn' ? 'active' : ''}`} href="/earn"><span>◎</span>{t('earnPoints')}</Link>
-        <Link className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`} href="/verify"><span>✓</span>{t('verifyRolls')}</Link>
-        {donateOn && <Link className={`nav-item nav-support ${pathname === '/support' ? 'active' : ''}`} href="/support"><span>♥</span>{t('supportLocky')}</Link>}
-      </nav>
-      <div className="side-section">{t('chains')}</div>
-      <div className="chain-list">
-        <button className={`chain-row ${selectedChain === 'all' ? 'active' : ''}`} onClick={() => setSelectedChain('all')}><ChainIcon id="all" />{t('allChains')}</button>
-        {orderedChains(meta?.chains).map((chain) => <button key={chain.id} className={`chain-row ${selectedChain === chain.id ? 'active' : ''} ${chain.poolSize ? '' : 'chain-empty'}`} onClick={() => setSelectedChain(chain.id)}><ChainIcon id={chain.id} name={chain.name} />{chain.name}{chain.poolSize ? <small className="chain-count">{chain.poolSize}</small> : null}</button>)}
-      </div>
-      <div className="side-section">{t('hotPulls')}</div>
-      <div className="hot-pulls">
-        {pulls.length ? pulls.map((item, index) => { const symbol = displaySymbol(item); return <Link className="hot-pull" href={`/verify/${item.ref}`} key={`${item.ref}-${item.assetId}`}><span className="rank">{index + 1}</span><span className="token-avatar" style={{ background: `var(--r-${item.tier ?? 'micro'})`, boxShadow: `0 0 0 2px var(--r-${item.tier ?? 'micro'})` }}><TokenImage src={item.imageUrl} symbol={symbol} identity={String(item.assetId)} />{item.chainId ? <span className="avatar-chain"><ChainIcon id={item.chainId} size={11} /></span> : null}</span><span className="hot-name">${symbol}</span><span className="hot-tier">{item.tier ?? t('pull')}</span></Link>; }) : <p className="side-empty">{t('noPullsYet')}</p>}
-      </div>
-    </aside>
-  );
+  const links = [
+    { href: '/', label: t('roll'), active: pathname === '/' },
+    { href: '/leaderboard', label: t('bestPulls'), active: pathname === '/leaderboard' },
+    { href: '/earn', label: t('earnPoints'), active: pathname === '/earn' },
+    { href: '/verify', label: t('verifyRolls'), active: pathname.startsWith('/verify') },
+    ...(donateOn ? [{ href: '/support', label: `♥ ${t('supportLocky')}`, active: pathname === '/support' }] : []),
+  ];
+  return <nav className="top-nav" aria-label={t('primaryNavigation')}>
+    {links.map((link) => <Link key={link.href} href={link.href} className={link.active ? 'active' : ''} aria-current={link.active ? 'page' : undefined}>{link.label}</Link>)}
+  </nav>;
 }
 
 const DISCLAIMER_KEY = 'lab_disclaimer_seen';

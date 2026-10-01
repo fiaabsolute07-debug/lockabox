@@ -21,7 +21,7 @@ export const LOCKY_LINES = [
 ];
 
 /** Locky with a speech bubble on hover. A new line each time, never the same one twice in a row. */
-export function LockyChat({ size, placement = 'above' }: { size?: number; placement?: 'above' | 'below' }) {
+export function LockyChat({ size, placement = 'above', sleeping = false }: { size?: number; placement?: 'above' | 'below'; sleeping?: boolean }) {
   const [line, setLine] = useState<string | null>(null);
   const last = useRef(-1);
   const say = () => {
@@ -32,7 +32,7 @@ export function LockyChat({ size, placement = 'above' }: { size?: number; placem
   };
   return (
     <span className={`locky-chat locky-chat-${placement}`} onMouseEnter={say} onMouseLeave={() => setLine(null)}>
-      <LockyLogo size={size} />
+      <LockyLogo size={size} sleeping={sleeping} />
       {line && <span className="locky-bubble" aria-hidden="true">{line}</span>}
     </span>
   );

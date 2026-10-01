@@ -20,7 +20,7 @@ import {
   type Tier,
 } from './api';
 import { caseTitle, useT, translateApiError } from './i18n';
-import { useAppContext, Sidebar } from './AppShell';
+import { useAppContext } from './AppShell';
 import { LockyChat } from './LockyChat';
 import { ChartEmbed, TokenHeader, TokenInfo, TradesTable } from './MarketView';
 import { RollReel } from './RollReel';
@@ -166,15 +166,16 @@ export default function CaseWorkspace() {
 
   const selectedCase = meta?.cases.find((item) => item.id === caseId);
   const chainName = selectedChain === 'all' ? t('allChains').toUpperCase() : meta?.chains.find((chain) => chain.id === selectedChain)?.name.toUpperCase() ?? 'SOLANA';
+  // Locky naps until the first case of the visit is opened.
+  const napping = !result && !rolling;
   const liveCost = sponsoredLive.reduce((max, item) => Math.max(max, item.costPoints), 0);
 
   return <div className={`workspace-grid ${sponsoredSelected ? 'workspace-sponsored' : ''}`}>
-    <Sidebar />
     <main className="main-column">
       <section className="panel case-panel">
         <div className="sound-row"><button type="button" className="button button-outline sound-toggle" aria-pressed={soundEnabled} aria-label={t('soundLabel')} onClick={() => { const next = !soundEnabled; setSoundEnabled(next); setRollSoundEnabled(next); }}><span aria-hidden="true">{soundEnabled ? '♪' : '♩'}</span> {soundEnabled ? t('soundOn') : t('soundOff')}</button></div>
         <div className="case-hero">
-          {sponsoredSelected ? <div className="case-art"><div className="case-glow" /><LockyChat size={150} /></div> : <button type="button" className="case-art case-contents-trigger" aria-label={t('itemsInCase')} aria-haspopup="dialog" aria-controls="case-contents-dialog" onClick={() => contentsDialog.current?.showModal()}><span className="case-glow" /><LockyChat size={150} /><span className="case-contents-hint">{t('itemsInCase')} <span aria-hidden="true">↗</span></span></button>}
+          {sponsoredSelected ? <div className="case-art"><div className="case-glow" /><LockyChat size={150} /></div> : <button type="button" className="case-art case-contents-trigger" aria-label={t('itemsInCase')} aria-haspopup="dialog" aria-controls="case-contents-dialog" onClick={() => contentsDialog.current?.showModal()}><span className="case-glow" /><LockyChat size={150} sleeping={napping} />{napping && <span className="case-zzz" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></span>}<span className="case-contents-hint">{t('itemsInCase')} <span aria-hidden="true">↗</span></span></button>}
       <div className="case-copy"><span className="eyebrow">{sponsoredSelected ? t('sponsoredDropsLabel') : t('caseLabel', { chain: chainName })}</span><h1>{sponsoredSelected ? t('sponsoredDropsHeading') : selectedCase ? caseTitle(selectedCase, t) : t('trendingCase')}</h1><p>{sponsoredSelected ? t('sponsoredCaseIntro') : summary?.pool ? t('currentPool', { size: summary.pool.size, hash: formatAddress(summary.pool.hash, 5), age: age(summary.pool.createdAt) }) : summary ? t('caseFilling') : summaryError ?? t('loadingPool')}</p>
             <div className="case-tabs">{(meta?.cases ?? []).map((item) => <button key={item.id} className={!sponsoredSelected && item.id === caseId ? 'active' : ''} onClick={() => { setCaseId(item.id); setSponsoredSelected(false); }}>{caseTitle(item, t)}</button>)}{sponsoredLive.length > 0 && <button className={sponsoredSelected ? 'active sponsored-tab' : 'sponsored-tab'} onClick={() => { setSponsoredSelected(true); setSponsoredError(null); }}>{t('sponsored')}</button>}<button className={!sponsoredSelected && filterOpen ? 'active filter-button' : 'filter-button'} aria-expanded={!sponsoredSelected && filterOpen} aria-controls="case-filters" onClick={() => setFilterOpen((value) => !value)} disabled={sponsoredSelected}>{t('filters')} <span>⌄</span></button></div>
             {!sponsoredSelected && <p className="filter-summary">{t('pairAgeSelection', { age: pairAgeLabel(filters.maxAgeHours, t('all')) })}</p>}

@@ -98,7 +98,8 @@ test('every DEX Screener chain is listed with its self-hosted logo; chains with 
     return json(route, body[path] ?? {});
   });
   await page.goto('/');
-  const rows = page.locator('.chain-list .chain-row');
+  await page.locator('.chain-select-wrap .chip-button').click();
+  const rows = page.locator('.chain-menu button');
   await expect(rows).toHaveText(['All chains', 'Solana51', 'Arbitrum24', 'Monad', 'Blast', 'SStory']); // "S" is the lettered badge of a chain without a logo
   await expect(rows.nth(2).locator('img')).toHaveAttribute('src', '/chains/arbitrum.png');
   await expect(rows.nth(3).locator('img')).toHaveAttribute('src', /\/chains\/monad\.(png|svg)$/);

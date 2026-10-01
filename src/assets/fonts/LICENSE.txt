@@ -1,0 +1,3 @@
+Doto by Oriol Esteve and DM Mono by Colophon Foundry, both SIL Open Font License 1.1 (https://openfontlicense.org).
+Latin subsets downloaded from Google Fonts 2026-10-01 and self-hosted so builds never depend on fonts.googleapis.com.
+Doto-Variable.woff2 is a variable font (wght 100–900).
