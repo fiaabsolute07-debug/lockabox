@@ -21,6 +21,7 @@ import { useT } from './i18n';
 import { useIdleSound } from './useIdleSound';
 import { DISCLAIMER_COOKIE } from './language';
 import { LockyLogo } from './LockyLogo';
+import { AdSlot } from './AdSlot';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -143,6 +144,7 @@ export default function AppShell({ children, disclaimerSeen = false }: { childre
       <Header />
       <FeedTicker />
       {children}
+      <AdSlot />
       <Footer />
       <MobileTabBar />
       {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}

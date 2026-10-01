@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const dev = process.env.NODE_ENV !== 'production';
 
-// Security headers (AC-084). Charts and WalletConnect Verify are the only third-party frames (LAB §3.4); nobody may frame Lockabox itself.
+// Security headers (AC-084). Charts, WalletConnect Verify and the A-ADS banner are the only third-party frames (LAB §3.4); nobody may frame Lockabox itself.
 // Scripts stay 'self' + inline (Next hydration); a nonce-based CSP would force every page dynamic, revisit before LIVE.
 const csp = [
   "default-src 'self'",
@@ -12,7 +12,8 @@ const csp = [
   "font-src 'self' data:",
   "connect-src 'self' https: wss:",          // the user's wallet talks to Solana RPC endpoints we don't control
   // WalletConnect Verify: a hidden frame that proves to the wallet which site asked to connect (else wallets see UNKNOWN).
-  'frame-src https://dexscreener.com https://www.geckoterminal.com https://verify.walletconnect.org https://verify.walletconnect.com',
+  // A-ADS: the sandboxed banner above the footer (AdSlot.tsx).
+  'frame-src https://dexscreener.com https://www.geckoterminal.com https://verify.walletconnect.org https://verify.walletconnect.com https://*.a-ads.com https://*.aads.com',
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

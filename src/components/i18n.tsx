@@ -35,6 +35,7 @@ const EN = {
   noPullsYet: 'No pulls yet',
   footerDisclaimer: '18+ · Random pick, not investment advice. Memecoins can go to zero.',
   forProjects: 'For projects',
+  adLabel: 'Ad',
   terms: 'Terms',
   privacy: 'Privacy',
   disclaimer: 'Disclaimer',
