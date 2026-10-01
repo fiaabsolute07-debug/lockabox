@@ -40,6 +40,8 @@ export function LockyLogo({ size = 34, sleeping = false }: { size?: number; slee
   return (
     <svg className="locky-logo" width={size} height={size} viewBox={`0 0 ${ROWS[0].length} ${ROWS.length}`} shapeRendering="crispEdges" role="img" aria-label="Locky">
       {runs.map(r => <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height={1} fill={r.fill} />)}
+      {/* Lids: hidden unless the page animates a blink (globals.css .locky-lid). */}
+      {!sleeping && <g className="locky-lid">{[7, 14].map(x => <rect key={x} x={x} y={6} width={1} height={2} fill={FILL.W} />)}</g>}
     </svg>
   );
 }

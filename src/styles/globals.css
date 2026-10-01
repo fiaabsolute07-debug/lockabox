@@ -945,3 +945,78 @@ body { font: 400 13px/1.5 var(--font-sans); }
   .wallet-button { flex: none; max-width: 124px; padding: 0 6px; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
   .case-zzz { display: none; }
 }
+
+/* ---- Motion and side rails (owner: "no movement, the sides are empty"; DECISIONS #26). All of it stops under reduced motion. ---- */
+body { background: transparent; }  /* html paints the page colour, so the sky can sit behind everything */
+
+/* Dotted sky: clouds drifting across the page and a few twinkling dots, behind every panel. */
+.dot-sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.sky-cloud { position: absolute; left: 0; background-image: radial-gradient(circle, var(--dot) 1.3px, transparent 1.6px); background-size: 6px 6px; opacity: .55;
+             clip-path: polygon(24% 0, 56% 0, 56% 20%, 84% 20%, 84% 52%, 100% 52%, 100% 86%, 8% 86%, 8% 58%, 0 58%, 0 30%, 24% 30%); animation: sky-drift linear infinite; }
+.sky-cloud-a { top: 18%; width: 240px; height: 96px; animation-duration: 140s; animation-delay: -30s; }
+.sky-cloud-b { top: 52%; width: 180px; height: 72px; opacity: .4; animation-duration: 190s; animation-delay: -120s; }
+.sky-cloud-c { top: 80%; width: 300px; height: 118px; opacity: .35; animation-duration: 240s; animation-delay: -60s; }
+@keyframes sky-drift { from { transform: translateX(-340px); } to { transform: translateX(calc(100vw + 40px)); } }
+.sky-star { position: absolute; width: 3px; height: 3px; background: var(--mu); opacity: 0; animation: sky-twinkle 5s steps(1, end) infinite; }
+.sky-star:nth-child(3n) { background: var(--acc); }
+@keyframes sky-twinkle { 0%, 70% { opacity: 0; } 72%, 84% { opacity: .9; } 86%, 100% { opacity: 0; } }
+
+/* Live ticker: a marquee that loops (the items run twice), paused on hover. */
+.feed-track { display: flex; gap: 20px; width: max-content; animation: feed-marquee 60s linear infinite; }
+.feed-copy { display: flex; gap: 20px; padding-right: 20px; }
+.feed-track > span, .feed-copy > span { display: inline-flex; align-items: center; gap: 6px; }
+.feed-ticker:hover .feed-track { animation-play-state: paused; }
+@keyframes feed-marquee { to { transform: translateX(-50%); } }
+
+/* Locky: a slow two-step bob, and a blink every few seconds (lids drawn by LockyLogo). */
+.locky-lid { opacity: 0; }
+.case-art .locky-logo, .rail-tips .locky-logo { animation: locky-bob 2.4s steps(2, end) infinite; }
+.case-art .locky-lid, .rail-tips .locky-lid { animation: locky-blink 5.2s steps(1, end) infinite; }
+.rail-tips .locky-lid { animation-delay: 1.7s; }
+@keyframes locky-bob { 50% { transform: translateY(3px); } }
+@keyframes locky-blink { 0%, 93% { opacity: 0; } 94%, 97% { opacity: 1; } 98%, 100% { opacity: 0; } }
+
+/* OPEN CASE: a pixel glint sweeps across every few seconds while it is ready. */
+@media (min-width: 801px) {
+  .open-button { position: relative; overflow: hidden; }
+  .open-button:not(:disabled)::after { content: ''; position: absolute; top: 0; bottom: 0; left: -20%; width: 12%; background: repeating-linear-gradient(90deg, #ffffff38 0 4px, transparent 4px 8px); transform: skewX(-18deg); animation: open-glint 4.5s steps(14, end) infinite; pointer-events: none; }
+}
+@keyframes open-glint { 0% { left: -20%; } 45%, 100% { left: 115%; } }
+
+/* Side rails: only where the centred column leaves room (912 px column + two 210 px rails + gaps). */
+.side-rail { display: none; }
+@media (min-width: 1360px) {
+  .side-rail { position: fixed; top: 150px; z-index: 5; width: 210px; max-height: calc(100vh - 170px); display: flex; flex-direction: column; gap: 12px; overflow-y: auto; scrollbar-width: none; }
+  .side-rail-left { left: calc(50% - 456px - 226px); }
+  .side-rail-right { right: calc(50% - 456px - 226px); }
+  .side-rail .eyebrow { color: var(--mu); }
+  .rail-feed { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+  .rail-feed li > a, .rail-feed li > div { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; padding: 6px 4px; border-bottom: 2px dotted var(--dot); }
+  .rail-feed li { animation: rail-in .4s steps(4, end); }
+  .rail-feed li > a:hover b { color: var(--acc); }
+  .rail-feed i { grid-row: 1 / 3; width: 8px; height: 8px; margin-top: 5px; }
+  .rail-feed b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .rail-feed span { grid-column: 2; color: var(--mu); font-size: 11px; text-transform: lowercase; }
+  .rail-feed small { grid-column: 3; grid-row: 1; color: var(--dim, #5E6270); font-size: 10px; }
+  .rail-empty-line { color: var(--mu); padding: 6px 4px; }
+  @keyframes rail-in { 0% { opacity: 0; transform: translateY(-8px); } 50% { opacity: .5; } }
+  .rail-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rail-stats div { padding: 8px; border: 2px dotted var(--dot); }
+  .rail-stats strong { display: block; color: var(--acc); font: 900 30px/1 var(--font-display); }
+  .rail-stats span { color: var(--mu); font-size: 11px; }
+  .rail-chains { display: grid; gap: 2px; }
+  .rail-chains button { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 6px; color: var(--mu); background: none; border: 0; text-align: left; }
+  .rail-chains button:hover, .rail-chains button.active { color: var(--tx); box-shadow: inset 3px 0 0 var(--acc); }
+  .rail-chains small { margin-left: auto; color: var(--dim, #5E6270); font-size: 11px; }
+  .rail-tips { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; padding: 10px; border: 2px dotted var(--acc); }
+  .rail-tips p { min-height: 92px; margin: 0; color: var(--tx); font-size: 12px; line-height: 1.5; }
+  .rail-tips .eyebrow { display: block; margin-bottom: 4px; font-size: 11px; color: var(--acc); }
+  .rail-caret { display: inline-block; width: 7px; height: 12px; margin-left: 2px; vertical-align: -1px; background: var(--acc); animation: caret-blink 1s steps(1, end) infinite; }
+  @keyframes caret-blink { 50% { opacity: 0; } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-cloud, .sky-star, .feed-track, .locky-logo, .locky-lid, .open-button::after, .rail-feed li, .rail-caret { animation: none !important; }
+  .sky-star, .open-button::after { display: none; }
+  .feed-copy { display: none; }
+}

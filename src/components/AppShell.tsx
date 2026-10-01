@@ -21,6 +21,7 @@ import { DISCLAIMER_COOKIE } from './language';
 import { LockyLogo } from './LockyLogo';
 import { AdSlot } from './AdSlot';
 import { donateOn } from './donate';
+import { DotSky, SideRails } from './SideRails';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -140,9 +141,11 @@ export default function AppShell({ children, disclaimerSeen = false }: { childre
   return (
     <AppContext.Provider value={context}>
       <DisclaimerIntro initiallySeen={disclaimerSeen} />
+      <DotSky />
       <Header />
       <TopNav />
       <FeedTicker />
+      <SideRails />
       {children}
       <AdSlot />
       <Footer />
@@ -183,7 +186,9 @@ function FeedTicker() {
   const { t, time } = useT();
   const { feed } = useAppContext();
   if (!feed?.items.length) return null;
-  return <div className="feed-ticker" aria-label={t('liveFeed')}>{feed.items.slice(0, 8).map((item) => { const symbol = item.symbol ? `$${displaySymbol(item)}` : t('aToken'); const who = item.who ?? t('aWallet'); return <span key={`${item.kind}-${item.ref}`}><i className={item.kind === 'buy' ? 'feed-buy' : 'feed-pull'} />{item.kind === 'buy' ? t('walletBought', { who, symbol }) : t('tokenPulled', { symbol })}<small>{time(item.at)}</small></span>; })}</div>;
+  const items = feed.items.slice(0, 8).map((item) => { const symbol = item.symbol ? `$${displaySymbol(item)}` : t('aToken'); const who = item.who ?? t('aWallet'); return <span key={`${item.kind}-${item.ref}`}><i className={item.kind === 'buy' ? 'feed-buy' : 'feed-pull'} />{item.kind === 'buy' ? t('walletBought', { who, symbol }) : t('tokenPulled', { symbol })}<small>{time(item.at)}</small></span>; });
+  // The items run twice so the marquee loops without a gap; the copy is hidden from screen readers.
+  return <div className="feed-ticker" aria-label={t('liveFeed')}><div className="feed-track">{items}<span className="feed-copy" aria-hidden="true">{items}</span></div></div>;
 }
 
 /** The claim-page look (DECISIONS #26): one row of text links under the header instead of a sidebar. Phones use MobileTabBar. */
