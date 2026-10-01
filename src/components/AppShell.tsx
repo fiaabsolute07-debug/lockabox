@@ -22,6 +22,7 @@ import { useIdleSound } from './useIdleSound';
 import { DISCLAIMER_COOKIE } from './language';
 import { LockyLogo } from './LockyLogo';
 import { AdSlot } from './AdSlot';
+import { donateOn } from './donate';
 
 type AppContextValue = {
   meta: MetaResponse | null;
@@ -199,6 +200,7 @@ export function Sidebar() {
         <Link className={`nav-item ${pathname === '/leaderboard' ? 'active' : ''}`} href="/leaderboard"><span>↗</span>{t('bestPulls')}</Link>
         <Link className={`nav-item ${pathname === '/earn' ? 'active' : ''}`} href="/earn"><span>◎</span>{t('earnPoints')}</Link>
         <Link className={`nav-item ${pathname.startsWith('/verify') ? 'active' : ''}`} href="/verify"><span>✓</span>{t('verifyRolls')}</Link>
+        {donateOn && <Link className={`nav-item nav-support ${pathname === '/support' ? 'active' : ''}`} href="/support"><span>♥</span>{t('supportLocky')}</Link>}
       </nav>
       <div className="side-section">{t('chains')}</div>
       <div className="chain-list">
@@ -269,5 +271,5 @@ function MobileTabBar() {
 
 function Footer() {
   const { t } = useT();
-  return <footer className="footer"><span>{t('footerDisclaimer')}</span><span><Link href="/verify">{t('verifyRolls')}</Link><Link href="/earn">{t('earnPoints')}</Link><Link href="/sponsor">{t('forProjects')}</Link><Link href="/legal/terms">{t('terms')}</Link><Link href="/legal/privacy">{t('privacy')}</Link><Link href="/legal/disclaimer">{t('disclaimer')}</Link><Link href="/legal/sponsored">{t('sponsoredPolicy')}</Link></span></footer>;
+  return <footer className="footer"><span>{t('footerDisclaimer')}</span><span>{donateOn && <Link href="/support">♥ {t('supportLocky')}</Link>}<Link href="/verify">{t('verifyRolls')}</Link><Link href="/earn">{t('earnPoints')}</Link><Link href="/sponsor">{t('forProjects')}</Link><Link href="/legal/terms">{t('terms')}</Link><Link href="/legal/privacy">{t('privacy')}</Link><Link href="/legal/disclaimer">{t('disclaimer')}</Link><Link href="/legal/sponsored">{t('sponsoredPolicy')}</Link></span></footer>;
 }
