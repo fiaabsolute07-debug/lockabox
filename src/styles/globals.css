@@ -1154,3 +1154,19 @@ body { background: transparent; }  /* html paints the page colour, so the sky ca
 .unboxed-bar .button { padding: 0 10px; font-size: 14px; white-space: nowrap; }
 .unboxed-bar > div:nth-child(2) span, .seed-badge, .unboxed-verify { white-space: nowrap; }
 .workspace-grid.has-pull .seed-badge { display: none; }  /* the proof sits in the right column */
+
+/* "Items in this case" dialog in the dotted 8-bit look, its cards matching the reel. */
+.case-contents-dialog { background: var(--bg); border: 2px dotted var(--acc); border-radius: 0; box-shadow: 10px 10px 0 #ff5b1f33, 0 30px 80px #000c; }
+.case-contents-dialog::backdrop { background: radial-gradient(circle, #1b1d26 1.2px, transparent 1.5px) 0 0 / 8px 8px, #07080bdd; backdrop-filter: none; }
+.contents-dialog-toolbar { padding: 14px 18px 0; }
+.contents-dialog-close { color: var(--mu); background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.contents-dialog-close:hover, .contents-dialog-close:focus-visible { color: var(--tx); border-color: var(--acc); outline: none; }
+.contents-heading > strong { font: 900 22px/1 var(--font-display); letter-spacing: .02em; text-transform: lowercase; }
+.odds-list { font: 700 13px var(--font-display); letter-spacing: .06em; }
+.odds-list i { border-radius: 0; }
+.contents-heading > small { font-family: var(--font-sans); font-weight: 400; }
+.contents-grid { gap: 8px; }
+.content-card { height: 112px; background: linear-gradient(0deg, color-mix(in srgb, var(--rarity) 20%, transparent), transparent 60%), var(--bg); border: 2px dotted var(--dot); border-bottom: 5px solid var(--rarity); }
+.content-card b { font: 900 15px/1.1 var(--font-display); }
+.content-card span { color: var(--rarity); font: 700 11px var(--font-display); letter-spacing: .12em; text-transform: uppercase; }
+.content-card:hover { border-color: var(--rarity); border-style: solid; }
