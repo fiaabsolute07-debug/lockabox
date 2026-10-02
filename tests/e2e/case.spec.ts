@@ -509,6 +509,26 @@ test.describe('"Pick 1 of 3" (DECISIONS #27)', () => {
     expect(await page.evaluate(() => localStorage.getItem('lab_play_mode'))).toBe('pick');
   });
 
+  test('every open deals a fresh full-screen set of face-down cards, not the last one in the page', async ({ page }) => {
+    await fixtures(page);
+    await page.route('**/api/rolls', async (route) => {
+      const pick = route.request().postDataJSON().pick;
+      const cards = [...others]; cards.splice(pick, 0, glorp);
+      await json(route, { ...roll, roll: { ...roll.roll, pick }, asset, picks: { index: pick, cards } }, 201);
+    });
+    await page.addInitScript(() => localStorage.setItem('lab_play_mode', 'pick'));
+    await page.goto('/');
+    for (const round of [1, 2]) {
+      await page.getByRole('button', { name: /OPEN CASE/i }).click();
+      await expect(page.locator('.pick-stage.roll-fullscreen')).toBeVisible();
+      await expect(page.locator('.pick-card.flipped')).toHaveCount(0);
+      await page.getByRole('button', { name: `Card ${round}, face down` }).click();
+      await expect(page.locator('.pull-card')).toBeVisible();
+      await page.locator('.pull-card .pull-bar').getByRole('button', { name: 'Close' }).click();
+      await expect(page.locator('.pick-stage.roll-fullscreen')).toHaveCount(0);
+    }
+  });
+
   test('Escape backs out before a card is chosen and nothing is rolled; keys 1–3 pick', async ({ page }) => {
     const state = await fixtures(page);
     await page.addInitScript(() => localStorage.setItem('lab_play_mode', 'pick'));
