@@ -1072,3 +1072,85 @@ body { background: transparent; }  /* html paints the page colour, so the sky ca
   body:has(.workspace-grid.has-pull) .side-rail { display: none; }
   body:has(.workspace-grid.has-pull) :is(.topbar, .top-nav, .feed-ticker, .footer) { padding-left: max(16px, calc((100% - 1288px) / 2)); padding-right: max(16px, calc((100% - 1288px) / 2)); }
 }
+
+/* ---- Spin, reveal, pull card and market panels in the claim-page look (owner: "make the spin match the site"). ---- */
+/* Reel stage: dotted floor instead of stripes, an orange pixel needle with square caps. */
+.spinner { background: radial-gradient(circle, #1b1d26 1.2px, transparent 1.5px) 0 0 / 8px 8px, var(--bg); border-bottom: 0; }
+.spinner::before { background: linear-gradient(90deg, var(--bg) 10%, transparent); }
+.spinner::after { background: linear-gradient(-90deg, var(--bg) 10%, transparent); }
+.roll-stage.roll-fullscreen { background: radial-gradient(circle, #1b1d26 1.2px, transparent 1.5px) 0 0 / 8px 8px, var(--bg); }
+.marker { width: 4px; background: var(--acc); box-shadow: none; transform: translateX(-2px); }
+.marker::before, .marker::after { left: -5px; width: 14px; height: 8px; border: 0; background: var(--acc); }
+.marker::before { top: -2px; } .marker::after { bottom: -2px; }
+.roll-charging .marker, .roll-spinning .marker { animation: marker-blink .5s steps(1, end) infinite; }
+@keyframes marker-blink { 50% { opacity: .55; } }
+
+/* Reel cards: square, dotted outline, a solid rarity bar, Doto names. */
+.reel-card { background: linear-gradient(0deg, color-mix(in srgb, var(--rarity) 20%, transparent), transparent 60%), var(--bg); border: 2px dotted var(--dot); border-bottom: 6px solid var(--rarity); border-radius: 0; }
+.reel-card b { font: 900 16px/1.1 var(--font-display); letter-spacing: .02em; }
+.reel-card span { font: 700 11px var(--font-display); letter-spacing: .14em; }
+.roll-stage.roll-fullscreen .reel-card { box-shadow: none; }
+.roll-stage.roll-fullscreen .reel-card b { font-size: 20px; }
+.roll-stage.roll-fullscreen .reel-card span { font-size: 12px; }
+.reel-art { box-shadow: none; }
+.reel-strip.settled .reel-card.winner { border: 2px solid var(--rarity); border-bottom-width: 6px; box-shadow: 8px 8px 0 color-mix(in srgb, var(--rarity) 45%, transparent); }
+
+/* Overlay and reveal text in Doto. */
+.reel-overlay-title span, .reveal-title span { font: 700 14px var(--font-display); letter-spacing: .24em; }
+.reel-overlay-title strong { font: 900 clamp(30px, 5vw, 56px)/1 var(--font-display); letter-spacing: .02em; text-transform: lowercase; }
+.reveal-title strong { font-family: var(--font-display); font-weight: 900; letter-spacing: 0; }
+.reel-overlay-hint { font-family: var(--font-sans); font-weight: 400; }
+.reel-skip { padding: 6px 12px; color: var(--mu); background: var(--bg); border: 2px dotted var(--dot); border-radius: 0; font: 900 14px var(--font-display); }
+.reel-skip:hover { color: var(--tx); border-color: var(--acc); }
+
+/* Pull card (the coin card after the reveal). */
+.pull-card { background: var(--bg); border: 2px solid var(--rarity); border-radius: 0; box-shadow: 10px 10px 0 color-mix(in srgb, var(--rarity) 35%, transparent), 0 30px 80px #000c; }
+.pull-bar { background: color-mix(in srgb, var(--bg) 94%, transparent); border-bottom: 2px dotted var(--dot); }
+.pull-eyebrow { font: 700 13px var(--font-display); letter-spacing: .18em; }
+.pull-coin { background: none; }
+.pull-coin h2 { font-family: var(--font-display); font-weight: 900; letter-spacing: 0; }
+.pull-price b { font: 900 30px/1 var(--font-display); }
+.pull-close { border: 2px dotted var(--dot); border-radius: 0; background: none; }
+.pull-close:hover { border-color: var(--acc); }
+.pull-stats div { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.pull-stats span { font: 700 12px var(--font-display); letter-spacing: .12em; }
+.pull-stats b { font-weight: 500; }
+.pull-links a, .pull-links button { border: 2px dotted var(--dot); border-radius: 0; font: 900 14px var(--font-display); letter-spacing: .02em; }
+.pull-links a:hover, .pull-links button:hover { border-color: var(--acc); }
+.pull-chart .chart-panel { border-radius: 0; }
+.pull-buy .swap-card { border: 2px dotted var(--up); box-shadow: none; }
+.pull-buy .button-buy { box-shadow: 0 4px 0 #15803D; animation: none; }
+
+/* "You unboxed" bar. */
+.unboxed-bar { background: color-mix(in srgb, var(--rarity) 10%, transparent); border: 2px dotted var(--dot); border-top: 0; }
+.unboxed-bar > div:nth-child(2) span { font: 700 13px var(--font-display); letter-spacing: .16em; }
+.unboxed-bar > div:nth-child(2) strong { font: 900 26px/1.1 var(--font-display); }
+.seed-badge { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.unboxed-verify { font: 900 14px var(--font-display); }
+
+/* Buttons and market panels: square, dotted, Doto numbers. */
+.button-outline { border: 2px dotted var(--dot); border-radius: 0; }
+.button-outline:hover { border-color: var(--acc); }
+.button-buy { box-shadow: 0 4px 0 #15803D; }
+.button-buy:active { transform: translateY(3px); box-shadow: 0 1px 0 #15803D; }
+.metric, .change-grid, .address-row, .amount-box { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.change-grid div { border-right: 2px dotted var(--dot); }
+.metric span, .change-grid span { font: 700 11px var(--font-display); letter-spacing: .12em; }
+.metric b { font: 900 18px/1.1 var(--font-display); }
+.change-grid b { font: 900 15px var(--font-display); }
+.token-price b { font: 900 28px/1 var(--font-display); }
+.token-heading h1, .token-heading h2, .card-heading h3 { font-family: var(--font-display); font-weight: 900; letter-spacing: .02em; }
+.card-heading h3 { font-size: 18px; }
+.badge { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.badge-pull { border-color: var(--acc); }
+.external-links a { background: none; border: 2px dotted var(--dot); border-radius: 0; font: 900 13px var(--font-display); }
+.external-links a:hover { color: var(--tx); border-color: var(--acc); }
+.token-pill { background: none; border: 2px dotted var(--dot); border-radius: 0; }
+.amount-line input, .amount-line b { font: 900 26px/1 var(--font-display); }
+.quick-amounts button { border: 2px dotted var(--dot); border-radius: 0; font: 900 14px var(--font-display); }
+.quick-amounts button.active, .quick-amounts button:hover { border-color: var(--acc); }
+.slippage-input input { border-radius: 0; }
+.content-card { border-radius: 0; }
+.unboxed-bar .button { padding: 0 10px; font-size: 14px; white-space: nowrap; }
+.unboxed-bar > div:nth-child(2) span, .seed-badge, .unboxed-verify { white-space: nowrap; }
+.workspace-grid.has-pull .seed-badge { display: none; }  /* the proof sits in the right column */
